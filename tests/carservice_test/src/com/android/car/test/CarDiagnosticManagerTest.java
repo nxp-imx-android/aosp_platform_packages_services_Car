@@ -203,10 +203,6 @@ public class CarDiagnosticManagerTest extends MockedCarTestBase {
                 mFreezeFrameProperties.mFreezeFrameClearHandler);
     }
 
-    private boolean isFeatureEnabled() {
-        return FeatureConfiguration.ENABLE_DIAGNOSTIC;
-    }
-
     @Override
     protected void setUp() throws Exception {
         mLiveFrameEventBuilder.addIntSensor(Obd2IntegerSensorIndex.AMBIENT_AIR_TEMPERATURE, 30);
@@ -230,21 +226,12 @@ public class CarDiagnosticManagerTest extends MockedCarTestBase {
 
         super.setUp();
 
-        if (isFeatureEnabled()) {
-            Log.i(TAG, "attempting to get DIAGNOSTIC_SERVICE");
-            mCarDiagnosticManager =
-                    (CarDiagnosticManager) getCar().getCarManager(Car.DIAGNOSTIC_SERVICE);
-        } else {
-            Log.i(TAG, "skipping diagnostic tests as ENABLE_DIAGNOSTIC flag is false");
-        }
+        Log.i(TAG, "attempting to get DIAGNOSTIC_SERVICE");
+        mCarDiagnosticManager =
+                (CarDiagnosticManager) getCar().getCarManager(Car.DIAGNOSTIC_SERVICE);
     }
 
     public void testLiveFrameRead() throws Exception {
-        if (!isFeatureEnabled()) {
-            Log.i(TAG, "skipping testLiveFrameRead as diagnostics API is not enabled");
-            return;
-        }
-
         CarDiagnosticEvent liveFrame = mCarDiagnosticManager.getLatestLiveFrame();
 
         assertNotNull(liveFrame);
@@ -278,15 +265,10 @@ public class CarDiagnosticManagerTest extends MockedCarTestBase {
     }
 
     public void testLiveFrameEvent() throws Exception {
-        if (!isFeatureEnabled()) {
-            Log.i(TAG, "skipping testLiveFrameEvent as diagnostics API is not enabled");
-            return;
-        }
-
         Listener listener = new Listener();
         mCarDiagnosticManager.registerListener(
                 listener,
-                CarDiagnosticManager.FRAME_TYPE_FLAG_LIVE,
+                CarDiagnosticManager.FRAME_TYPE_LIVE,
                 android.car.hardware.CarSensorManager.SENSOR_RATE_NORMAL);
 
         listener.reset();
@@ -307,15 +289,10 @@ public class CarDiagnosticManagerTest extends MockedCarTestBase {
     }
 
     public void testMissingSensorRead() throws Exception {
-        if (!isFeatureEnabled()) {
-            Log.i(TAG, "skipping testMissingSensorRead as diagnostics API is not enabled");
-            return;
-        }
-
         Listener listener = new Listener();
         mCarDiagnosticManager.registerListener(
                 listener,
-                CarDiagnosticManager.FRAME_TYPE_FLAG_LIVE,
+                CarDiagnosticManager.FRAME_TYPE_LIVE,
                 android.car.hardware.CarSensorManager.SENSOR_RATE_NORMAL);
 
         getMockedVehicleHal().injectEvent(mLiveFrameEventBuilder.build());
@@ -346,15 +323,10 @@ public class CarDiagnosticManagerTest extends MockedCarTestBase {
     }
 
     public void testFuelSystemStatus() throws Exception {
-        if (!isFeatureEnabled()) {
-            Log.i(TAG, "skipping testFuelSystemStatus as diagnostics API is not enabled");
-            return;
-        }
-
         Listener listener = new Listener();
         mCarDiagnosticManager.registerListener(
                 listener,
-                CarDiagnosticManager.FRAME_TYPE_FLAG_LIVE,
+                CarDiagnosticManager.FRAME_TYPE_LIVE,
                 android.car.hardware.CarSensorManager.SENSOR_RATE_NORMAL);
 
         getMockedVehicleHal().injectEvent(mLiveFrameEventBuilder.build());
@@ -374,15 +346,10 @@ public class CarDiagnosticManagerTest extends MockedCarTestBase {
     }
 
     public void testSecondaryAirStatus() throws Exception {
-        if (!isFeatureEnabled()) {
-            Log.i(TAG, "skipping testSecondaryAirStatus as diagnostics API is not enabled");
-            return;
-        }
-
         Listener listener = new Listener();
         mCarDiagnosticManager.registerListener(
                 listener,
-                CarDiagnosticManager.FRAME_TYPE_FLAG_LIVE,
+                CarDiagnosticManager.FRAME_TYPE_LIVE,
                 android.car.hardware.CarSensorManager.SENSOR_RATE_NORMAL);
 
         mLiveFrameEventBuilder.addIntSensor(
@@ -408,15 +375,10 @@ public class CarDiagnosticManagerTest extends MockedCarTestBase {
     }
 
     public void testIgnitionMonitors() throws Exception {
-        if (!isFeatureEnabled()) {
-            Log.i(TAG, "skipping testIgnitionMonitors as diagnostics API is not enabled");
-            return;
-        }
-
         Listener listener = new Listener();
         mCarDiagnosticManager.registerListener(
                 listener,
-                CarDiagnosticManager.FRAME_TYPE_FLAG_LIVE,
+                CarDiagnosticManager.FRAME_TYPE_LIVE,
                 android.car.hardware.CarSensorManager.SENSOR_RATE_NORMAL);
 
         // cfr. CarDiagnosticEvent for the meaning of the several bits
@@ -510,15 +472,10 @@ public class CarDiagnosticManagerTest extends MockedCarTestBase {
     }
 
     public void testFuelType() throws Exception {
-        if (!isFeatureEnabled()) {
-            Log.i(TAG, "skipping testFuelType as diagnostics API is not enabled");
-            return;
-        }
-
         Listener listener = new Listener();
         mCarDiagnosticManager.registerListener(
                 listener,
-                CarDiagnosticManager.FRAME_TYPE_FLAG_LIVE,
+                CarDiagnosticManager.FRAME_TYPE_LIVE,
                 android.car.hardware.CarSensorManager.SENSOR_RATE_NORMAL);
 
         mLiveFrameEventBuilder.addIntSensor(
@@ -538,15 +495,10 @@ public class CarDiagnosticManagerTest extends MockedCarTestBase {
     }
 
     public void testDiagnosticJson() throws Exception {
-        if (!isFeatureEnabled()) {
-            Log.i(TAG, "skipping testDiagnosticJson as diagnostics API is not enabled");
-            return;
-        }
-
         Listener listener = new Listener();
         mCarDiagnosticManager.registerListener(
                 listener,
-                CarDiagnosticManager.FRAME_TYPE_FLAG_LIVE,
+                CarDiagnosticManager.FRAME_TYPE_LIVE,
                 android.car.hardware.CarSensorManager.SENSOR_RATE_NORMAL);
 
         mLiveFrameEventBuilder.addIntSensor(Obd2IntegerSensorIndex.ENGINE_OIL_TEMPERATURE, 74);
@@ -591,21 +543,16 @@ public class CarDiagnosticManagerTest extends MockedCarTestBase {
     }
 
     public void testMultipleListeners() throws Exception {
-        if (!isFeatureEnabled()) {
-            Log.i(TAG, "skipping testMultipleListeners as diagnostics API is not enabled");
-            return;
-        }
-
         Listener listener1 = new Listener();
         Listener listener2 = new Listener();
 
         mCarDiagnosticManager.registerListener(
                 listener1,
-                CarDiagnosticManager.FRAME_TYPE_FLAG_LIVE,
+                CarDiagnosticManager.FRAME_TYPE_LIVE,
                 android.car.hardware.CarSensorManager.SENSOR_RATE_NORMAL);
         mCarDiagnosticManager.registerListener(
                 listener2,
-                CarDiagnosticManager.FRAME_TYPE_FLAG_LIVE,
+                CarDiagnosticManager.FRAME_TYPE_LIVE,
                 android.car.hardware.CarSensorManager.SENSOR_RATE_NORMAL);
 
         listener1.reset();
@@ -660,15 +607,10 @@ public class CarDiagnosticManagerTest extends MockedCarTestBase {
     }
 
     public void testFreezeFrameEvent() throws Exception {
-        if (!isFeatureEnabled()) {
-            Log.i(TAG, "skipping testFreezeFrameEvent as diagnostics API is not enabled");
-            return;
-        }
-
         Listener listener = new Listener();
         mCarDiagnosticManager.registerListener(
                 listener,
-                CarDiagnosticManager.FRAME_TYPE_FLAG_FREEZE,
+                CarDiagnosticManager.FRAME_TYPE_FREEZE,
                 android.car.hardware.CarSensorManager.SENSOR_RATE_NORMAL);
 
         listener.reset();
@@ -703,15 +645,10 @@ public class CarDiagnosticManagerTest extends MockedCarTestBase {
     }
 
     public void testFreezeFrameTimestamps() throws Exception {
-        if (!isFeatureEnabled()) {
-            Log.i(TAG, "skipping testFreezeFrameTimestamps as diagnostics API is not enabled");
-            return;
-        }
-
         Listener listener = new Listener();
         mCarDiagnosticManager.registerListener(
                 listener,
-                CarDiagnosticManager.FRAME_TYPE_FLAG_FREEZE,
+                CarDiagnosticManager.FRAME_TYPE_FREEZE,
                 android.car.hardware.CarSensorManager.SENSOR_RATE_NORMAL);
 
         Set<Long> generatedTimestamps = new HashSet<>();
@@ -737,15 +674,10 @@ public class CarDiagnosticManagerTest extends MockedCarTestBase {
     }
 
     public void testClearFreezeFrameTimestamps() throws Exception {
-        if (!isFeatureEnabled()) {
-            Log.i(TAG, "skipping testClearFreezeFrameTimestamps as diagnostics API is not enabled");
-            return;
-        }
-
         Listener listener = new Listener();
         mCarDiagnosticManager.registerListener(
                 listener,
-                CarDiagnosticManager.FRAME_TYPE_FLAG_FREEZE,
+                CarDiagnosticManager.FRAME_TYPE_FREEZE,
                 android.car.hardware.CarSensorManager.SENSOR_RATE_NORMAL);
 
         VehiclePropValue injectedEvent =
@@ -759,20 +691,15 @@ public class CarDiagnosticManagerTest extends MockedCarTestBase {
     }
 
     public void testListenerUnregister() throws Exception {
-        if (!isFeatureEnabled()) {
-            Log.i(TAG, "skipping testListenerUnregister as diagnostics API is not enabled");
-            return;
-        }
-
         Listener listener1 = new Listener();
         Listener listener2 = new Listener();
         mCarDiagnosticManager.registerListener(
             listener1,
-            CarDiagnosticManager.FRAME_TYPE_FLAG_LIVE,
+            CarDiagnosticManager.FRAME_TYPE_LIVE,
             android.car.hardware.CarSensorManager.SENSOR_RATE_NORMAL);
         mCarDiagnosticManager.registerListener(
             listener1,
-            CarDiagnosticManager.FRAME_TYPE_FLAG_FREEZE,
+            CarDiagnosticManager.FRAME_TYPE_FREEZE,
             android.car.hardware.CarSensorManager.SENSOR_RATE_NORMAL);
 
         mCarDiagnosticManager.unregisterListener(listener1);
@@ -781,11 +708,11 @@ public class CarDiagnosticManagerTest extends MockedCarTestBase {
         // your events - add one, but do it *after* unregistering the first listener
         mCarDiagnosticManager.registerListener(
             listener2,
-            CarDiagnosticManager.FRAME_TYPE_FLAG_LIVE,
+            CarDiagnosticManager.FRAME_TYPE_LIVE,
             android.car.hardware.CarSensorManager.SENSOR_RATE_NORMAL);
         mCarDiagnosticManager.registerListener(
             listener2,
-            CarDiagnosticManager.FRAME_TYPE_FLAG_FREEZE,
+            CarDiagnosticManager.FRAME_TYPE_FREEZE,
             android.car.hardware.CarSensorManager.SENSOR_RATE_NORMAL);
 
         VehiclePropValue injectedEvent =
@@ -799,6 +726,13 @@ public class CarDiagnosticManagerTest extends MockedCarTestBase {
         getMockedVehicleHal().injectEvent(mLiveFrameEventBuilder.build(time));
         assertFalse(listener1.waitForEvent(time));
         assertTrue(listener2.waitForEvent(time));
+    }
+
+    public void testIsSupportedApiCalls() throws Exception {
+        assertTrue(mCarDiagnosticManager.isLiveFrameSupported());
+        assertTrue(mCarDiagnosticManager.isFreezeFrameSupported());
+        assertTrue(mCarDiagnosticManager.isFreezeFrameTimestampSupported());
+        assertTrue(mCarDiagnosticManager.isFreezeFrameClearSupported());
     }
 
     class Listener implements CarDiagnosticManager.OnDiagnosticEventListener {

@@ -43,16 +43,16 @@ import java.util.function.Consumer;
 /** API for monitoring car diagnostic data. */
 /** @hide */
 public final class CarDiagnosticManager implements CarManagerBase {
-    public static final int FRAME_TYPE_FLAG_LIVE = 0;
-    public static final int FRAME_TYPE_FLAG_FREEZE = 1;
+    public static final int FRAME_TYPE_LIVE = 0;
+    public static final int FRAME_TYPE_FREEZE = 1;
 
     @Retention(RetentionPolicy.SOURCE)
-    @IntDef({FRAME_TYPE_FLAG_LIVE, FRAME_TYPE_FLAG_FREEZE})
+    @IntDef({FRAME_TYPE_LIVE, FRAME_TYPE_FREEZE})
     public @interface FrameType {}
 
     public static final @FrameType int FRAME_TYPES[] = {
-        FRAME_TYPE_FLAG_LIVE,
-        FRAME_TYPE_FLAG_FREEZE
+        FRAME_TYPE_LIVE,
+        FRAME_TYPE_FREEZE
     };
 
     private static final int MSG_DIAGNOSTIC_EVENTS = 0;
@@ -107,8 +107,8 @@ public final class CarDiagnosticManager implements CarManagerBase {
 
     private void assertFrameType(@FrameType int frameType) {
         switch(frameType) {
-            case FRAME_TYPE_FLAG_FREEZE:
-            case FRAME_TYPE_FLAG_LIVE:
+            case FRAME_TYPE_FREEZE:
+            case FRAME_TYPE_LIVE:
                 return;
             default:
                 throw new IllegalArgumentException(String.format(
@@ -263,6 +263,72 @@ public final class CarDiagnosticManager implements CarManagerBase {
     public boolean clearFreezeFrames(long... timestamps) throws CarNotConnectedException {
         try {
             return mService.clearFreezeFrames(timestamps);
+        } catch (IllegalStateException e) {
+            CarApiUtil.checkCarNotConnectedExceptionFromCarService(e);
+        } catch (RemoteException e) {
+            throw new CarNotConnectedException();
+        }
+        return false;
+    }
+
+    /**
+     * Returns true if this vehicle supports sending live frame information.
+     * @return
+     * @throws CarNotConnectedException
+     */
+    public boolean isLiveFrameSupported() throws CarNotConnectedException {
+        try {
+            return mService.isLiveFrameSupported();
+        } catch (IllegalStateException e) {
+            CarApiUtil.checkCarNotConnectedExceptionFromCarService(e);
+        } catch (RemoteException e) {
+            throw new CarNotConnectedException();
+        }
+        return false;
+    }
+
+    /**
+     * Returns true if this vehicle supports sending freeze frame information.
+     * @return
+     * @throws CarNotConnectedException
+     */
+    public boolean isFreezeFrameSupported() throws CarNotConnectedException {
+        try {
+            return mService.isFreezeFrameSupported();
+        } catch (IllegalStateException e) {
+            CarApiUtil.checkCarNotConnectedExceptionFromCarService(e);
+        } catch (RemoteException e) {
+            throw new CarNotConnectedException();
+        }
+        return false;
+    }
+
+    /**
+     * Returns true if this vehicle supports retrieving freeze frame timestamps.
+     * This is only meaningful if freeze frame data is also supported.
+     * @return
+     * @throws CarNotConnectedException
+     */
+    public boolean isFreezeFrameTimestampSupported() throws CarNotConnectedException {
+        try {
+            return mService.isFreezeFrameTimestampSupported();
+        } catch (IllegalStateException e) {
+            CarApiUtil.checkCarNotConnectedExceptionFromCarService(e);
+        } catch (RemoteException e) {
+            throw new CarNotConnectedException();
+        }
+        return false;
+    }
+
+    /**
+     * Returns true if this vehicle supports clearing freeze frame timestamps.
+     * This is only meaningful if freeze frame data is also supported.
+     * @return
+     * @throws CarNotConnectedException
+     */
+    public boolean isFreezeFrameClearSupported() throws CarNotConnectedException {
+        try {
+            return mService.isFreezeFrameClearSupported();
         } catch (IllegalStateException e) {
             CarApiUtil.checkCarNotConnectedExceptionFromCarService(e);
         } catch (RemoteException e) {

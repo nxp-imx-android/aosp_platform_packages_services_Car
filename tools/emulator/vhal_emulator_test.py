@@ -21,10 +21,13 @@
 
     Protocol Buffer:
         This module relies on VehicleHalProto_pb2.py being in sync with the protobuf in the VHAL.
-        If the VehicleHalProto.proto file has changed, re-generate the python version using:
-
+        If the VehicleHalProto.proto file has changed, re-generate the python version using
+        a command of the form:
             protoc -I=<proto_dir> --python_out=<out_dir> <proto_dir>/VehicleHalProto.proto
-            protoc -I=proto --python_out=proto proto/VehicleHalProto.proto
+        For example:
+            protoDir=~/android/master/hardware/interfaces/automotive/vehicle/2.0/default/impl/vhal_v2_0/proto
+            outDir=~/android/master/packages/services/Car/tools/emulator
+            protoc -I=$protoDir --python_out=$outDir $protoDir/VehicleHalProto.proto
 """
 
 from __future__ import print_function
@@ -57,7 +60,7 @@ class VhalTest:
         elif valType in self._types.TYPE_BYTES:
             # Generate array of integers counting from 0
             testValue = list(range(len(origValue)))
-        elif valType == vhal_consts_2_0.VEHICLE_VALUE_TYPE_BOOLEAN:
+        elif valType == vhal_consts_2_0.VEHICLEPROPERTYTYPE_BOOLEAN:
             testValue = origValue ^ 1
         elif valType in self._types.TYPE_INT32:
             try:
@@ -100,7 +103,7 @@ class VhalTest:
                 value = rxMsg.value[0].string_value
             elif valType in self._types.TYPE_BYTES:
                 value = rxMsg.value[0].bytes_value
-            elif valType == vhal_consts_2_0.VEHICLE_VALUE_TYPE_BOOLEAN:
+            elif valType == vhal_consts_2_0.VEHICLEPROPERTYTYPE_BOOLEAN:
                 value = rxMsg.value[0].int32_values[0]
             elif valType in self._types.TYPE_INT32:
                 value = rxMsg.value[0].int32_values[0]
