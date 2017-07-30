@@ -108,6 +108,20 @@ public class CarDiagnosticEvent implements Parcelable {
         dest.writeValue(dtc);
     }
 
+    /**
+     * Store the contents of this diagnostic event in a JsonWriter.
+     *
+     * The data is stored as a JSON object, with these fields:
+     *  type: either "live" or "freeze" depending on the type of frame;
+     *  timestamp: the timestamp at which this frame was generated;
+     *  intValues: an array of objects each of which has two elements:
+     *    id: the integer identifier of the sensor;
+     *    value: the integer value of the sensor;
+     *  floatValues: an array of objects each of which has two elements:
+     *    id: the integer identifier of the sensor;
+     *    value: the floating-point value of the sensor;
+     *  stringValue: the DTC for a freeze frame, omitted for a live frame
+     */
     public void writeToJson(JsonWriter jsonWriter) throws IOException {
         jsonWriter.beginObject();
 
@@ -174,6 +188,10 @@ public class CarDiagnosticEvent implements Parcelable {
         this.dtc = dtc;
     }
 
+    /**
+     * This class can be used to incrementally construct a CarDiagnosticEvent.
+     * CarDiagnosticEvent instances are immutable once built.
+     */
     public static class Builder {
         private int mType = CarDiagnosticManager.FRAME_TYPE_LIVE;
         private long mTimestamp = 0;
@@ -185,34 +203,41 @@ public class CarDiagnosticEvent implements Parcelable {
             mType = type;
         }
 
+        /** Returns a new Builder for a live frame */
         public static Builder newLiveFrameBuilder() {
             return new Builder(CarDiagnosticManager.FRAME_TYPE_LIVE);
         }
 
+        /** Returns a new Builder for a freeze frame */
         public static Builder newFreezeFrameBuilder() {
             return new Builder(CarDiagnosticManager.FRAME_TYPE_FREEZE);
         }
 
+        /** Sets the timestamp for the frame being built */
         public Builder atTimestamp(long timestamp) {
             mTimestamp = timestamp;
             return this;
         }
 
+        /** Adds an integer-valued sensor to the frame being built */
         public Builder withIntValue(int key, int value) {
             mIntValues.put(key, value);
             return this;
         }
 
+        /** Adds a float-valued sensor to the frame being built */
         public Builder withFloatValue(int key, float value) {
             mFloatValues.put(key, value);
             return this;
         }
 
-        public Builder withDTC(String dtc) {
+        /** Sets the DTC for the frame being built */
+        public Builder withDtc(String dtc) {
             mDtc = dtc;
             return this;
         }
 
+        /** Builds and returns the CarDiagnosticEvent */
         public CarDiagnosticEvent build() {
             return new CarDiagnosticEvent(mType, mTimestamp, mFloatValues, mIntValues, mDtc);
         }
@@ -228,27 +253,30 @@ public class CarDiagnosticEvent implements Parcelable {
         SparseArray<Float> newFloatValues = floatValues.clone();
         for (int i = 0; i < intValues.size(); ++i) {
             int key = intValues.keyAt(i);
-            if (key >= CarDiagnosticSensorIndices.Obd2IntegerSensorIndex.LAST_SYSTEM) {
+            if (key >= CarDiagnosticSensorIndices.IntegerSensorIndex.LAST_SYSTEM) {
                 newIntValues.delete(key);
             }
         }
         for (int i = 0; i < floatValues.size(); ++i) {
             int key = floatValues.keyAt(i);
-            if (key >= CarDiagnosticSensorIndices.Obd2FloatSensorIndex.LAST_SYSTEM) {
+            if (key >= CarDiagnosticSensorIndices.FloatSensorIndex.LAST_SYSTEM) {
                 newFloatValues.delete(key);
             }
         }
         return new CarDiagnosticEvent(frameType, timestamp, newFloatValues, newIntValues, dtc);
     }
 
+    /** Returns true if this object is a live frame, false otherwise */
     public boolean isLiveFrame() {
         return CarDiagnosticManager.FRAME_TYPE_LIVE == frameType;
     }
 
+    /** Returns true if this object is a freeze frame, false otherwise */
     public boolean isFreezeFrame() {
         return CarDiagnosticManager.FRAME_TYPE_FREEZE == frameType;
     }
 
+    /** @hide */
     public boolean isEmptyFrame() {
         boolean empty = (0 == intValues.size());
         empty &= (0 == floatValues.size());
@@ -365,44 +393,76 @@ public class CarDiagnosticEvent implements Parcelable {
                 floatValues.toString());
     }
 
+    /**
+     * Returns the value of the given integer sensor, if present in this frame.
+     * Returns defaultValue otherwise.
+     */
     public int getSystemIntegerSensor(
-            @CarDiagnosticSensorIndices.IntegerSensorIndex int sensor, int defaultValue) {
+            @CarDiagnosticSensorIndices.DiagnosticIntegerSensorIndex int sensor, int defaultValue) {
         return intValues.get(sensor, defaultValue);
     }
 
+    /**
+     * Returns the value of the given float sensor, if present in this frame.
+     * Returns defaultValue otherwise.
+     */
     public float getSystemFloatSensor(
-            @CarDiagnosticSensorIndices.FloatSensorIndex int sensor, float defaultValue) {
+            @CarDiagnosticSensorIndices.DiagnosticFloatSensorIndex int sensor, float defaultValue) {
         return floatValues.get(sensor, defaultValue);
     }
 
+    /**
+     * Returns the value of the given integer sensor, if present in this frame.
+     * Returns defaultValue otherwise.
+     */
     public int getVendorIntegerSensor(int sensor, int defaultValue) {
         return intValues.get(sensor, defaultValue);
     }
 
+    /**
+     * Returns the value of the given float sensor, if present in this frame.
+     * Returns defaultValue otherwise.
+     */
     public float getVendorFloatSensor(int sensor, float defaultValue) {
         return floatValues.get(sensor, defaultValue);
     }
 
+    /**
+     * Returns the value of the given integer sensor, if present in this frame.
+     * Returns null otherwise.
+     */
     public @Nullable Integer getSystemIntegerSensor(
-            @CarDiagnosticSensorIndices.IntegerSensorIndex int sensor) {
+            @CarDiagnosticSensorIndices.DiagnosticIntegerSensorIndex int sensor) {
         int index = intValues.indexOfKey(sensor);
         if (index < 0) return null;
         return intValues.valueAt(index);
     }
 
+    /**
+     * Returns the value of the given float sensor, if present in this frame.
+     * Returns null otherwise.
+     */
     public @Nullable Float getSystemFloatSensor(
-            @CarDiagnosticSensorIndices.FloatSensorIndex int sensor) {
+            @CarDiagnosticSensorIndices.DiagnosticFloatSensorIndex int sensor) {
         int index = floatValues.indexOfKey(sensor);
         if (index < 0) return null;
         return floatValues.valueAt(index);
     }
 
+    /**
+     * Returns the value of the given integer sensor, if present in this frame.
+     * Returns null otherwise.
+     */
     public @Nullable Integer getVendorIntegerSensor(int sensor) {
         int index = intValues.indexOfKey(sensor);
         if (index < 0) return null;
         return intValues.valueAt(index);
     }
 
+    /**
+     * Returns the value of the given float sensor, if present in this frame.
+     * Returns null otherwise.
+     */
     public @Nullable Float getVendorFloatSensor(int sensor) {
         int index = floatValues.indexOfKey(sensor);
         if (index < 0) return null;
@@ -411,7 +471,7 @@ public class CarDiagnosticEvent implements Parcelable {
 
     /**
      * Represents possible states of the fuel system; see {@link
-     * CarDiagnosticSensorIndices.Obd2IntegerSensorIndex#FUEL_SYSTEM_STATUS}
+     * CarDiagnosticSensorIndices.IntegerSensorIndex#FUEL_SYSTEM_STATUS}
      */
     public static final class FuelSystemStatus {
         private FuelSystemStatus() {}
@@ -430,12 +490,13 @@ public class CarDiagnosticEvent implements Parcelable {
             OPEN_SYSTEM_FAILURE,
             CLOSED_LOOP_BUT_FEEDBACK_FAULT
         })
+        /** @hide */
         public @interface Status {}
     }
 
     /**
      * Represents possible states of the secondary air system; see {@link
-     * CarDiagnosticSensorIndices.Obd2IntegerSensorIndex#COMMANDED_SECONDARY_AIR_STATUS}
+     * CarDiagnosticSensorIndices.IntegerSensorIndex#COMMANDED_SECONDARY_AIR_STATUS}
      */
     public static final class SecondaryAirStatus {
         private SecondaryAirStatus() {}
@@ -452,12 +513,13 @@ public class CarDiagnosticEvent implements Parcelable {
             FROM_OUTSIDE_OR_OFF,
             PUMP_ON_FOR_DIAGNOSTICS
         })
+        /** @hide */
         public @interface Status {}
     }
 
     /**
      * Represents possible types of fuel; see {@link
-     * CarDiagnosticSensorIndices.Obd2IntegerSensorIndex#FUEL_TYPE}
+     * CarDiagnosticSensorIndices.IntegerSensorIndex#FUEL_TYPE}
      */
     public static final class FuelType {
         private FuelType() {}
@@ -514,13 +576,14 @@ public class CarDiagnosticEvent implements Parcelable {
             HYBRID_REGENERATIVE,
             BIFUEL_RUNNING_DIESEL
         })
+        /** @hide */
         public @interface Type {}
     }
 
     /**
      * Represents possible states of the ignition monitors on the vehicle; see {@link
-     * CarDiagnosticSensorIndices.Obd2IntegerSensorIndex#IGNITION_MONITORS_SUPPORTED} see {@link
-     * CarDiagnosticSensorIndices.Obd2IntegerSensorIndex#IGNITION_SPECIFIC_MONITORS}
+     * CarDiagnosticSensorIndices.IntegerSensorIndex#IGNITION_MONITORS_SUPPORTED} see {@link
+     * CarDiagnosticSensorIndices.IntegerSensorIndex#IGNITION_SPECIFIC_MONITORS}
      */
     public static final class IgnitionMonitors {
         public static final class IgnitionMonitor {
@@ -725,24 +788,36 @@ public class CarDiagnosticEvent implements Parcelable {
         }
     }
 
+    /**
+     * Returns the state of the fuel system, if present in this frame.
+     * Returns null otherwise.
+     */
     public @Nullable @FuelSystemStatus.Status Integer getFuelSystemStatus() {
         return getSystemIntegerSensor(
-                CarDiagnosticSensorIndices.Obd2IntegerSensorIndex.FUEL_SYSTEM_STATUS);
+                CarDiagnosticSensorIndices.IntegerSensorIndex.FUEL_SYSTEM_STATUS);
     }
 
+    /**
+     * Returns the state of the secondary air system, if present in this frame.
+     * Returns null otherwise.
+     */
     public @Nullable @SecondaryAirStatus.Status Integer getSecondaryAirStatus() {
         return getSystemIntegerSensor(
-                CarDiagnosticSensorIndices.Obd2IntegerSensorIndex.COMMANDED_SECONDARY_AIR_STATUS);
+                CarDiagnosticSensorIndices.IntegerSensorIndex.COMMANDED_SECONDARY_AIR_STATUS);
     }
 
+    /**
+     * Returns data about the ignition monitors, if present in this frame.
+     * Returns null otherwise.
+     */
     public @Nullable IgnitionMonitors.CommonIgnitionMonitors getIgnitionMonitors() {
         Integer ignitionMonitorsType =
                 getSystemIntegerSensor(
-                        CarDiagnosticSensorIndices.Obd2IntegerSensorIndex
+                        CarDiagnosticSensorIndices.IntegerSensorIndex
                                 .IGNITION_MONITORS_SUPPORTED);
         Integer ignitionMonitorsBitmask =
                 getSystemIntegerSensor(
-                        CarDiagnosticSensorIndices.Obd2IntegerSensorIndex
+                        CarDiagnosticSensorIndices.IntegerSensorIndex
                                 .IGNITION_SPECIFIC_MONITORS);
         if (null == ignitionMonitorsType) return null;
         if (null == ignitionMonitorsBitmask) return null;
@@ -756,7 +831,11 @@ public class CarDiagnosticEvent implements Parcelable {
         }
     }
 
+    /**
+     * Returns the fuel type, if present in this frame.
+     * Returns null otherwise.
+     */
     public @Nullable @FuelType.Type Integer getFuelType() {
-        return getSystemIntegerSensor(CarDiagnosticSensorIndices.Obd2IntegerSensorIndex.FUEL_TYPE);
+        return getSystemIntegerSensor(CarDiagnosticSensorIndices.IntegerSensorIndex.FUEL_TYPE);
     }
 }

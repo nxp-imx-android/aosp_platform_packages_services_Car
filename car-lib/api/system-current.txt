@@ -370,7 +370,6 @@ package android.car.hardware {
     method public java.lang.Float getVendorFloatSensor(int);
     method public int getVendorIntegerSensor(int, int);
     method public java.lang.Integer getVendorIntegerSensor(int);
-    method public boolean isEmptyFrame();
     method public boolean isFreezeFrame();
     method public boolean isLiveFrame();
     method public void writeToJson(android.util.JsonWriter) throws java.io.IOException;
@@ -386,7 +385,7 @@ package android.car.hardware {
     method public android.car.hardware.CarDiagnosticEvent build();
     method public static android.car.hardware.CarDiagnosticEvent.Builder newFreezeFrameBuilder();
     method public static android.car.hardware.CarDiagnosticEvent.Builder newLiveFrameBuilder();
-    method public android.car.hardware.CarDiagnosticEvent.Builder withDTC(java.lang.String);
+    method public android.car.hardware.CarDiagnosticEvent.Builder withDtc(java.lang.String);
     method public android.car.hardware.CarDiagnosticEvent.Builder withFloatValue(int, float);
     method public android.car.hardware.CarDiagnosticEvent.Builder withIntValue(int, int);
   }
@@ -484,19 +483,17 @@ package android.car.hardware {
   }
 
   public final class CarDiagnosticManager {
-    ctor public CarDiagnosticManager(android.os.IBinder, android.content.Context, android.os.Handler);
     method public boolean clearFreezeFrames(long...) throws android.car.CarNotConnectedException;
     method public android.car.hardware.CarDiagnosticEvent getFreezeFrame(long) throws android.car.CarNotConnectedException;
     method public long[] getFreezeFrameTimestamps() throws android.car.CarNotConnectedException;
     method public android.car.hardware.CarDiagnosticEvent getLatestLiveFrame() throws android.car.CarNotConnectedException;
-    method public boolean isFreezeFrameClearSupported() throws android.car.CarNotConnectedException;
-    method public boolean isFreezeFrameSupported() throws android.car.CarNotConnectedException;
-    method public boolean isFreezeFrameTimestampSupported() throws android.car.CarNotConnectedException;
+    method public boolean isClearFreezeFramesSupported() throws android.car.CarNotConnectedException;
+    method public boolean isFreezeFrameNotificationSupported() throws android.car.CarNotConnectedException;
+    method public boolean isGetFreezeFrameSupported() throws android.car.CarNotConnectedException;
     method public boolean isLiveFrameSupported() throws android.car.CarNotConnectedException;
     method public void onCarDisconnected();
     method public boolean registerListener(android.car.hardware.CarDiagnosticManager.OnDiagnosticEventListener, int, int) throws android.car.CarNotConnectedException, java.lang.IllegalArgumentException;
     method public void unregisterListener(android.car.hardware.CarDiagnosticManager.OnDiagnosticEventListener);
-    field public static final int[] FRAME_TYPES;
     field public static final int FRAME_TYPE_FREEZE = 1; // 0x1
     field public static final int FRAME_TYPE_LIVE = 0; // 0x0
   }
@@ -512,13 +509,7 @@ package android.car.hardware {
     ctor public CarDiagnosticSensorIndices();
   }
 
-  public static abstract class CarDiagnosticSensorIndices.FloatSensorIndex implements java.lang.annotation.Annotation {
-  }
-
-  public static abstract class CarDiagnosticSensorIndices.IntegerSensorIndex implements java.lang.annotation.Annotation {
-  }
-
-  public static final class CarDiagnosticSensorIndices.Obd2FloatSensorIndex {
+  public static final class CarDiagnosticSensorIndices.FloatSensorIndex {
     field public static final int ABSOLUTE_EVAPORATION_SYSTEM_VAPOR_PRESSURE = 58; // 0x3a
     field public static final int ABSOLUTE_LOAD_VALUE = 48; // 0x30
     field public static final int ABSOLUTE_THROTTLE_POSITION_B = 51; // 0x33
@@ -594,7 +585,7 @@ package android.car.hardware {
     field public static final int VENDOR_START = 71; // 0x47
   }
 
-  public static final class CarDiagnosticSensorIndices.Obd2IntegerSensorIndex {
+  public static final class CarDiagnosticSensorIndices.IntegerSensorIndex {
     field public static final int ABSOLUTE_BAROMETRIC_PRESSURE = 11; // 0xb
     field public static final int AMBIENT_AIR_TEMPERATURE = 13; // 0xd
     field public static final int COMMANDED_SECONDARY_AIR_STATUS = 5; // 0x5
