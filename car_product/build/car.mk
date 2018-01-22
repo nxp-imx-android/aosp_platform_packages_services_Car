@@ -23,8 +23,7 @@ PRODUCT_PACKAGES += \
     Bluetooth \
     CarDeveloperOptions \
     OneTimeInitializer \
-    Provision \
-    SystemUpdater
+    Provision
 
 PRODUCT_PACKAGES += \
     clatd \
