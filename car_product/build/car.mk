@@ -20,8 +20,7 @@ PRODUCT_PACKAGES += \
     Bluetooth \
     OneTimeInitializer \
     Provision \
-    SystemUI \
-    SystemUpdater
+    SystemUI
 
 PRODUCT_PACKAGES += \
     clatd \
