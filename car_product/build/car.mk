@@ -109,10 +109,6 @@ PRODUCT_PACKAGES += \
 # System Server components
 PRODUCT_SYSTEM_SERVER_JARS += car-frameworks-service
 
-# Boot animation
-PRODUCT_COPY_FILES += \
-    packages/services/Car/car_product/bootanimations/bootanimation-832.zip:system/media/bootanimation.zip
-
 PRODUCT_COPY_FILES += \
     packages/services/Car/car_product/init/init.car.rc:system/etc/init/init.car.rc
 
