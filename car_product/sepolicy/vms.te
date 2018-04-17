@@ -1,5 +1,5 @@
 # Vehicle monitor service
-type vms, domain;
+type vms, coredomain;
 type vms_exec, exec_type, file_type;
 
 allow vms system_app:binder { call };

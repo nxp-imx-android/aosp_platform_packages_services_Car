@@ -1,5 +1,5 @@
 # vehicle subsystem
-type hal_vehicle_default, domain;
+type hal_vehicle_default, vehicle_domain, domain;
 hal_server_domain(hal_vehicle_default, hal_vehicle)
 
 # may be started by init
