@@ -173,6 +173,11 @@ void RenderTopView::deactivate() {
 
 
 bool RenderTopView::drawFrame(const BufferDesc& tgtBuffer) {
+     // release resourse to avoid leak
+     if (tgtBuffer.memHandle.getNativeHandle() != nullptr) {
+         detachRenderTarget();
+     }
+
     // Tell GL to render to the given buffer
     if (!attachRenderTarget(tgtBuffer)) {
         ALOGE("Failed to attached render target");
