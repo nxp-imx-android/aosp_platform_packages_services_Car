@@ -87,9 +87,9 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += android.automotive.evs.manager@1.0
 PRODUCT_PACKAGES += evs_app
 # The following packages, or their vendor specific equivalents should be include in the device.mk
-#PRODUCT_PACKAGES += evs_app_default_resources
-#PRODUCT_PACKAGES += android.hardware.automotive.evs@1.0-service
 #PRODUCT_PACKAGES += android.hardware.automotive.evs@1.0-sample
+PRODUCT_PACKAGES += evs_app_default_resources
+PRODUCT_PACKAGES += android.hardware.automotive.evs@1.0-service
 
 # Device running Android is a car
 PRODUCT_COPY_FILES += \
