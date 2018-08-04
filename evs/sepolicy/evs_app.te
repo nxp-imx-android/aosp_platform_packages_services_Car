@@ -1,5 +1,5 @@
 # evs app
-type evs_app, domain;
+type evs_app, evs_domain, domain;
 hal_client_domain(evs_app, hal_evs)
 hal_client_domain(evs_app, hal_vehicle)
 

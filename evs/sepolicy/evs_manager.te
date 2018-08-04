@@ -1,5 +1,5 @@
 # evs manager
-type evs_manager, domain;
+type evs_manager, evs_domain, domain;
 hal_server_domain(evs_manager, hal_evs)
 hal_client_domain(evs_manager, hal_evs)
 
