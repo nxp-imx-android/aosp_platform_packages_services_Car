@@ -255,6 +255,7 @@ bool EvsStateControl::selectStateForCurrentConditions() {
         desiredState = PARKING;
     }
 
+    desiredState = REVERSE;
     // Apply the desire state
     return configureEvsPipeline(desiredState);
 }
