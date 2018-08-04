@@ -23,7 +23,7 @@ LOCAL_SHARED_LIBRARIES := \
     libhwbinder
 
 
-LOCAL_INIT_RC := android.automotive.evs.manager@1.0.rc
+# LOCAL_INIT_RC := android.automotive.evs.manager@1.0.rc
 
 LOCAL_MODULE := android.automotive.evs.manager@1.0
 
