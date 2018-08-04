@@ -1,9 +1,9 @@
 # evs_mock mock hardware driver service
-type hal_evs_driver, domain, coredomain;
+type hal_evs_driver, evs_domain, domain;
 hal_server_domain(hal_evs_driver, hal_evs)
 
 # allow init to launch processes in this context
-type hal_evs_driver_exec, exec_type, file_type;
+type hal_evs_driver_exec, exec_type, vendor_file_type, file_type;
 init_daemon_domain(hal_evs_driver)
 
 # Allow use of USB devices, gralloc buffers, and surface flinger
@@ -16,5 +16,4 @@ binder_call(hal_evs_driver, surfaceflinger);
 allow hal_evs_driver surfaceflinger_service:service_manager find;
 allow hal_evs_driver hal_graphics_composer_default:fd use;
 allow hal_evs_driver hal_graphics_allocator_default_tmpfs:file { read write };
-allow hal_evs_driver self:capability dac_override;
 allow hal_evs_driver servicemanager:binder call;
