@@ -28,7 +28,7 @@ StreamHandler::StreamHandler(android::sp <IEvsCamera> pCamera) :
 {
     // We rely on the camera having at least two buffers available since we'll hold one and
     // expect the camera to be able to capture a new image in the background.
-    pCamera->setMaxFramesInFlight(2);
+    pCamera->setMaxFramesInFlight(3);
 }
 
 
