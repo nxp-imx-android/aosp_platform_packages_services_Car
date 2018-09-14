@@ -15,7 +15,7 @@
   },
   "cameras" : [
     {
-      "cameraId" : "/dev/video5",
+      "cameraId" : "mxc_isi.0.capture",
       "function" : "reverse,park",
       "x" : 0.0,
       "y" : -40.0,
@@ -26,7 +26,7 @@
       "vfov" :103 
     },
     {
-      "cameraId" : "/dev/video45",
+      "cameraId" : "mxc_isi.1.capture",
       "function" : "front,park",
       "x" : 0.0,
       "y" : 100.0,
@@ -37,7 +37,7 @@
       "vfov" : 43
     },
     {
-      "cameraId" : "/dev/video0",
+      "cameraId" : "mxc_isi.2.capture",
       "function" : "right,park",
       "x" : 36.0,
       "y" : 60.0,
