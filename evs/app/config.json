@@ -15,7 +15,7 @@
   },
   "cameras" : [
     {
-      "cameraId" : "mxc_isi.0.capture",
+      "cameraId" : "mxc_isi.1.capture",
       "function" : "reverse,park",
       "x" : 0.0,
       "y" : -40.0,
