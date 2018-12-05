@@ -39,15 +39,9 @@
         <context car:context="call_ring"/>
         <context car:context="notification"/>
         <context car:context="system_sound"/>
-    </group>
-    <group>
         <context car:context="navigation"/>
         <context car:context="voice_command"/>
-    </group>
-    <group>
         <context car:context="call"/>
-    </group>
-    <group>
         <context car:context="alarm"/>
     </group>
 </volumeGroups>
