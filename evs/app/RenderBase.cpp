@@ -122,7 +122,6 @@ bool RenderBase::prepareGL() {
 
 
     // Reserve handles for the color and depth targets we'll be setting up
-    glGenRenderbuffers(1, &sColorBuffer);
     glGenRenderbuffers(1, &sDepthBuffer);
 
     // Set up the frame buffer object we can modify and use for off screen rendering
@@ -145,6 +144,7 @@ bool RenderBase::attachRenderTarget(const BufferDesc& tgtBuffer) {
         return false;
     }
 
+    glGenRenderbuffers(1, &sColorBuffer);
     // create a GraphicBuffer from the existing handle
     sp<GraphicBuffer> pGfxBuffer = new GraphicBuffer(tgtBuffer.memHandle,
                                                      GraphicBuffer::CLONE_HANDLE,
@@ -209,6 +209,7 @@ bool RenderBase::attachRenderTarget(const BufferDesc& tgtBuffer) {
 
 
 void RenderBase::detachRenderTarget() {
+    glDeleteRenderbuffers(1, &sColorBuffer);
     // Drop our external render target
     if (sKHRimage != EGL_NO_IMAGE_KHR) {
         eglDestroyImageKHR(sDisplay, sKHRimage);
