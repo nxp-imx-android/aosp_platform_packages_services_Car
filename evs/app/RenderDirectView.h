@@ -39,6 +39,7 @@ public:
     virtual void deactivate() override;
 
     virtual bool drawFrame(const BufferDesc& tgtBuffer);
+    void renderColorLines();
 
 protected:
     sp<IEvsEnumerator>              mEnumerator;
@@ -47,6 +48,7 @@ protected:
     std::unique_ptr<VideoTex>       mTexture;
 
     GLuint                          mShaderProgram = 0;
+    GLuint                          mLineShaderProgram = 0;
 };
 
 
