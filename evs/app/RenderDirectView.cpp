@@ -19,6 +19,7 @@
 #include "glError.h"
 #include "shader.h"
 #include "shader_simpleTex.h"
+#include "shader_reverseLine.h"
 
 #include <log/log.h>
 #include <math/mat4.h>
@@ -49,13 +50,23 @@ bool RenderDirectView::activate() {
         }
     }
 
+    if (!mLineShaderProgram) {
+        // Create the shader program for reverse line.
+        mLineShaderProgram = buildShaderProgram(vtxShader_reverseLine,
+                                                pixShader_reverseLine,
+                                                "reverseLine");
+        if (!mLineShaderProgram) {
+            ALOGE("Failed to build line shader program");
+        }
+    }
+
     // Construct our video texture
     mTexture.reset(createVideoTexture(mEnumerator, mCameraInfo.cameraId.c_str(), sDisplay));
     if (!mTexture) {
         ALOGE("Failed to set up video texture for %s (%s)",
               mCameraInfo.cameraId.c_str(), mCameraInfo.function.c_str());
 // TODO:  For production use, we may actually want to fail in this case, but not yet...
-//       return false;
+       return false;
     }
 
     return true;
@@ -138,8 +149,84 @@ bool RenderDirectView::drawFrame(const BufferDesc& tgtBuffer) {
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
 
+    renderColorLines();
     // Wait for the rendering to finish
     glFinish();
     detachRenderTarget();
     return true;
+}
+
+void RenderDirectView::renderColorLines()
+{
+    const GLfloat gLineVertices[] = {
+        -1.00f, -1.00f,
+        -0.83f, -0.33f,
+        -0.83f, -0.33f,
+        -0.66f, 0.33f,
+        -0.66f, 0.33f,
+        -0.50f, 1.00f,
+
+        1.00f, -1.00f,
+        0.83f, -0.33f,
+        0.83f, -0.33f,
+        0.66f, 0.33f,
+        0.66f, 0.33f,
+        0.50f, 1.00f,
+
+        -0.91f, -0.66f,
+        -0.75f, -0.66f,
+        -0.75f, 0.00f,
+        -0.58f, 0.00f,
+        -0.58f, 0.66f,
+        -0.41f, 0.66f,
+
+        0.91f, -0.66f,
+        0.75f, -0.66f,
+        0.75f, 0.00f,
+        0.58f, 0.00f,
+        0.58f, 0.66f,
+        0.41f, 0.66f,
+    };
+
+    const GLfloat gLineColors[] = {
+        1.0f, 0.0f, 0.0f, 1.0f,
+        1.0f, 0.0f, 0.0f, 1.0f,
+        1.0f, 1.0f, 0.0f, 1.0f,
+        1.0f, 1.0f, 0.0f, 1.0f,
+        0.0f, 1.0f, 0.0f, 1.0f,
+        0.0f, 1.0f, 0.0f, 1.0f,
+
+        1.0f, 0.0f, 0.0f, 1.0f,
+        1.0f, 0.0f, 0.0f, 1.0f,
+        1.0f, 1.0f, 0.0f, 1.0f,
+        1.0f, 1.0f, 0.0f, 1.0f,
+        0.0f, 1.0f, 0.0f, 1.0f,
+        0.0f, 1.0f, 0.0f, 1.0f,
+
+        1.0f, 0.0f, 0.0f, 1.0f,
+        1.0f, 0.0f, 0.0f, 1.0f,
+        1.0f, 1.0f, 0.0f, 1.0f,
+        1.0f, 1.0f, 0.0f, 1.0f,
+        0.0f, 1.0f, 0.0f, 1.0f,
+        0.0f, 1.0f, 0.0f, 1.0f,
+
+        1.0f, 0.0f, 0.0f, 1.0f,
+        1.0f, 0.0f, 0.0f, 1.0f,
+        1.0f, 1.0f, 0.0f, 1.0f,
+        1.0f, 1.0f, 0.0f, 1.0f,
+        0.0f, 1.0f, 0.0f, 1.0f,
+        0.0f, 1.0f, 0.0f, 1.0f,
+    };
+
+    // Select our screen space simple texture shader
+    glUseProgram(mLineShaderProgram);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glLineWidth(8);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, gLineVertices);
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, gLineColors);
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glDrawArrays(GL_LINES, 0, 24);
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
 }
