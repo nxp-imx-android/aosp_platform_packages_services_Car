@@ -75,6 +75,16 @@ public class CarService extends Service {
     @Override
     public void onCreate() {
         Log.i(CarLog.TAG_SERVICE, "Service onCreate");
+        while(true) {
+            try {
+                Thread.sleep(10);
+                if ("1".equals(SystemProperties.get("vendor.all.system_server.ready"))) {
+                    Log.i(CarLog.TAG_SERVICE, "Android Auto UI showed, continue the Car Service.");
+                    break;
+                }
+            } catch (Exception err) {
+            }
+        }
         mCanBusErrorNotifier = new CanBusErrorNotifier(this /* context */);
         mVehicle = getVehicle();
 
