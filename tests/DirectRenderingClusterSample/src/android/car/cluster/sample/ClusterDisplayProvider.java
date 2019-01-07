@@ -23,6 +23,7 @@ import android.hardware.display.DisplayManager.DisplayListener;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Display;
+import android.os.Handler;
 
 /**
  * This class provides a display for instrument cluster renderer.
@@ -45,20 +46,26 @@ public class ClusterDisplayProvider {
 
     private NetworkedVirtualDisplay mNetworkedVirtualDisplay;
     private int mClusterDisplayId = -1;
+    private Handler mWaitHandler = new Handler();
 
     ClusterDisplayProvider(Context context, DisplayListener clusterDisplayListener) {
         mListener = clusterDisplayListener;
         mDisplayManager = context.getSystemService(DisplayManager.class);
 
-        Display clusterDisplay = getInstrumentClusterDisplay(mDisplayManager);
-        if (clusterDisplay != null) {
-            mClusterDisplayId = clusterDisplay.getDisplayId();
-            clusterDisplayListener.onDisplayAdded(clusterDisplay.getDisplayId());
-            trackClusterDisplay(null /* no need to track display by name */);
-        } else {
-            Log.i(TAG, "No physical cluster display found, starting network display");
-            setupNetworkDisplay(context);
-        }
+        mWaitHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                Display clusterDisplay = getInstrumentClusterDisplay(mDisplayManager);
+                if (clusterDisplay != null) {
+                    mClusterDisplayId = clusterDisplay.getDisplayId();
+                    clusterDisplayListener.onDisplayAdded(clusterDisplay.getDisplayId());
+                    trackClusterDisplay(null /* no need to track display by name */);
+                } else {
+                    Log.i(TAG, "No physical cluster display found, starting network display");
+                    setupNetworkDisplay(context);
+                }
+            }
+        }, 12000);
     }
 
     private void setupNetworkDisplay(Context context) {
