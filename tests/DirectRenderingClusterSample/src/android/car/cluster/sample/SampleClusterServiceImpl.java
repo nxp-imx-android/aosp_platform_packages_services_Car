@@ -32,6 +32,7 @@ import android.hardware.display.DisplayManager;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.SystemClock;
+import android.os.Handler;
 import android.provider.Settings;
 import android.provider.Settings.Global;
 import android.util.Log;
@@ -53,6 +54,7 @@ public class SampleClusterServiceImpl extends InstrumentClusterRenderingService 
     private Listener mListener;
     private final Binder mLocalBinder = new LocalBinder();
     static final String LOCAL_BINDING_ACTION = "local";
+    private Handler mWaitHandler = new Handler();
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -66,17 +68,22 @@ public class SampleClusterServiceImpl extends InstrumentClusterRenderingService 
         super.onCreate();
         Log.i(TAG, "onCreate");
 
-        Display clusterDisplay = getInstrumentClusterDisplay(this);
-        if (clusterDisplay == null) {
-            Log.e(TAG, "Unable to find instrument cluster display");
-            return;
-        }
+        mWaitHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                Display clusterDisplay = getInstrumentClusterDisplay(SampleClusterServiceImpl.this);
+                if (clusterDisplay == null) {
+                    Log.e(TAG, "Unable to find instrument cluster display");
+                    return;
+                }
 
-        ActivityOptions options = ActivityOptions.makeBasic();
-        options.setLaunchDisplayId(clusterDisplay.getDisplayId());
-        Intent intent = new Intent(this, MainClusterActivity.class);
-        intent.setFlags(FLAG_ACTIVITY_NEW_TASK);
-        startActivity(intent, options.toBundle());
+                ActivityOptions options = ActivityOptions.makeBasic();
+                options.setLaunchDisplayId(clusterDisplay.getDisplayId());
+                Intent intent = new Intent(SampleClusterServiceImpl.this, MainClusterActivity.class);
+                intent.setFlags(FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent, options.toBundle());
+            }
+        }, 12000);
     }
 
     @Override
