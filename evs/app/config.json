@@ -46,6 +46,17 @@
       "pitch" : -30,
       "hfov" : 60,
       "vfov" : 42
+    },
+    {
+      "cameraId" : "mxc_isi.3.capture",
+      "function" : "left,park",
+      "x" : -36.0,
+      "y" : 60.0,
+      "z" : 32,
+      "yaw" : 90,
+      "pitch" : -30,
+      "hfov" : 60,
+      "vfov" : 42
     }
   ]
 }
