@@ -65,7 +65,7 @@ public class ClusterDisplayProvider {
                     setupNetworkDisplay(context);
                 }
             }
-        }, 12000);
+        }, 13000);
     }
 
     private void setupNetworkDisplay(Context context) {
