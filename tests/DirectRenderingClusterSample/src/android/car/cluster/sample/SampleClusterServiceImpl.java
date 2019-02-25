@@ -83,7 +83,7 @@ public class SampleClusterServiceImpl extends InstrumentClusterRenderingService 
                 intent.setFlags(FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intent, options.toBundle());
             }
-        }, 12000);
+        }, 13000);
     }
 
     @Override
