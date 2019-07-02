@@ -1,5 +1,5 @@
 # evs_mock mock hardware driver service
-type hal_evs_driver, domain, coredomain;
+type hal_evs_driver, domain, evs_domain;
 hal_server_domain(hal_evs_driver, hal_evs)
 hal_client_domain(hal_evs_driver, hal_evs)
 
