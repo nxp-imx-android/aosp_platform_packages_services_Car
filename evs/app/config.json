@@ -15,8 +15,8 @@
   },
   "cameras" : [
     {
-      "cameraId" : "/dev/video2",
-      "function" : "reverse, park",
+      "cameraId" : "mxc_isi.0.capture",
+      "function" : "reverse,park",
       "x" : 0.0,
       "y" : -40.0,
       "z" : 48,
@@ -24,6 +24,28 @@
       "pitch" : -30,
       "hfov" : 125,
       "vfov" : 103
+    },
+    {
+      "cameraId" : "mxc_isi.1.capture",
+      "function" : "front,park",
+      "x" : 0.0,
+      "y" : 100.0,
+      "z" : 48,
+      "yaw" : 0,
+      "pitch" : -10,
+      "hfov" : 70,
+      "vfov" : 43
+    },
+    {
+      "cameraId" : "mxc_isi.2.capture",
+      "function" : "right,park",
+      "x" : 36.0,
+      "y" : 60.0,
+      "z" : 32,
+      "yaw" : -90,
+      "pitch" : -30,
+      "hfov" : 60,
+      "vfov" : 42
     }
   ]
 }
