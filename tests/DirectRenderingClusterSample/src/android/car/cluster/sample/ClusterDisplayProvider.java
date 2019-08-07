@@ -40,7 +40,7 @@ public class ClusterDisplayProvider {
     private static final int NETWORKED_DISPLAY_WIDTH = 1280;
     private static final int NETWORKED_DISPLAY_HEIGHT = 720;
     private static final int NETWORKED_DISPLAY_DPI = 320;
-
+    private static final int CLUSTER_DISPLAY_ID = 1;
     private final DisplayListener mListener;
     private final DisplayManager mDisplayManager;
 
@@ -52,21 +52,32 @@ public class ClusterDisplayProvider {
         mListener = clusterDisplayListener;
         mDisplayManager = context.getSystemService(DisplayManager.class);
 
-        mWaitHandler.postDelayed(new Runnable() {
+        DisplayListener mDisplayListener=new DisplayManager.DisplayListener(){
             @Override
-            public void run() {
-                Display clusterDisplay = getInstrumentClusterDisplay(mDisplayManager);
-                if (clusterDisplay != null) {
-                    mClusterDisplayId = clusterDisplay.getDisplayId();
-                    clusterDisplayListener.onDisplayAdded(clusterDisplay.getDisplayId());
-                    trackClusterDisplay(null /* no need to track display by name */);
-                } else {
-                    Log.i(TAG, "No physical cluster display found, starting network display");
-                    setupNetworkDisplay(context);
+            public void onDisplayAdded(int displayId){
+                Log.i(TAG,"displayId is"+displayId);
+                if (displayId == CLUSTER_DISPLAY_ID){
+                    Display clusterDisplay = getInstrumentClusterDisplay(mDisplayManager);
+                    if (clusterDisplay != null) {
+                        mClusterDisplayId = clusterDisplay.getDisplayId();
+                        clusterDisplayListener.onDisplayAdded(clusterDisplay.getDisplayId());
+                        trackClusterDisplay(null /* no need to track display by name */);
+                    }
                 }
+        }
+
+            @Override
+            public void onDisplayRemoved(int displayId){
             }
-        }, 13000);
+
+            @Override
+            public void onDisplayChanged(int displayId){
+            }
+       };
+
+       mDisplayManager.registerDisplayListener(mDisplayListener,mWaitHandler);
     }
+
 
     private void setupNetworkDisplay(Context context) {
         mNetworkedVirtualDisplay = new NetworkedVirtualDisplay(context,
