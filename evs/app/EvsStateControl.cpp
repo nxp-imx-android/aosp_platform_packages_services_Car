@@ -76,7 +76,8 @@ EvsStateControl::EvsStateControl(android::sp <IVehicle>       pVnet,
                                 // list all of them and let the UX/rendering logic use one, some
                                 // or all of them as appropriate.
                                 for (auto&& info: config.getCameras()) {
-                                    if (cam.cameraId == info.cameraId) {
+                                    if (strstr(cam.cameraId.c_str(), info.cameraId.c_str())) {
+
                                         // We found a match!
                                         if (info.function.find("reverse") != std::string::npos) {
                                             mCameraList[State::REVERSE].push_back(info);
