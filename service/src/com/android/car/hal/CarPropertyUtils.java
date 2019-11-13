@@ -96,6 +96,7 @@ import java.util.List;
         VehiclePropValue vehicleProp = new VehiclePropValue();
         vehicleProp.prop = halPropId;
         vehicleProp.areaId = carProp.getAreaId();
+        vehicleProp.timestamp = carProp.getTimestamp();
         VehiclePropValue.RawValue v = vehicleProp.value;
 
         Object o = carProp.getValue();
