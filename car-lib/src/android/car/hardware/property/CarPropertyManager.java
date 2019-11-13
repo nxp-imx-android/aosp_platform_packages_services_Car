@@ -27,6 +27,7 @@ import android.car.hardware.CarPropertyConfig;
 import android.car.hardware.CarPropertyValue;
 import android.os.Handler;
 import android.os.RemoteException;
+import android.os.SystemClock;
 import android.util.ArraySet;
 import android.util.Log;
 import android.util.SparseArray;
@@ -490,7 +491,7 @@ public class CarPropertyManager extends CarManagerBase {
                     + ", areaId: 0x" + toHexString(areaId) + ", class: " + clazz + ", val: " + val);
         }
         try {
-            mService.setProperty(new CarPropertyValue<>(propId, areaId, val));
+            mService.setProperty(new CarPropertyValue<>(propId, areaId, 0, SystemClock.elapsedRealtimeNanos(), val));
         } catch (RemoteException e) {
             handleRemoteExceptionFromCarService(e);
         }
