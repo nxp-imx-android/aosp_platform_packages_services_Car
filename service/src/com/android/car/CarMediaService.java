@@ -528,12 +528,14 @@ public class CarMediaService extends ICarMedia.Stub implements CarServiceBase {
                 String newClassName = getClassName(controller);
                 if (!matchPrimaryMediaSource(newPackageName, newClassName)) {
                     ComponentName mediaSource = getMediaSource(newPackageName, newClassName);
-                    if (Log.isLoggable(CarLog.TAG_MEDIA, Log.INFO)) {
-                        Log.i(CarLog.TAG_MEDIA,
-                                "Changing media source due to playback state change: "
-                                + mediaSource.flattenToString());
+                    if(mediaSource != null) {
+                        if (Log.isLoggable(CarLog.TAG_MEDIA, Log.INFO)) {
+                            Log.i(CarLog.TAG_MEDIA,
+                                    "Changing media source due to playback state change: "
+                                    + mediaSource.flattenToString());
+                        }
+                        setPrimaryMediaSource(mediaSource);
                     }
-                    setPrimaryMediaSource(mediaSource);
                 }
                 return;
             }
