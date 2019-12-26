@@ -171,6 +171,17 @@ public interface DisplayInterface {
             mLastBrightnessLevel = percentBright;
             int gamma = (percentBright * GAMMA_SPACE_MAX + 50) / 100;
             int linear = convertGammaToLinear(gamma, mMinimumBacklight, mMaximumBacklight);
+            try {
+                int mLastLinear = System.getIntForUser(
+                    mContentResolver,
+                    System.SCREEN_BRIGHTNESS,
+                    mActivityManager.getCurrentUser());
+                if(Math.abs(mLastLinear - linear) == 1){
+                    linear = mLastLinear;
+                }
+            } catch (SettingNotFoundException e) {
+                Log.e(CarLog.TAG_POWER, "Could not get SCREEN_BRIGHTNESS:  " + e);
+            }
             System.putIntForUser(
                     mContentResolver,
                     System.SCREEN_BRIGHTNESS,
