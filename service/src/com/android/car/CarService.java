@@ -75,7 +75,7 @@ public class CarService extends Service {
     @Override
     public void onCreate() {
         Log.i(CarLog.TAG_SERVICE, "Service onCreate");
-        while(true) {
+        while(!"generic_arm64".equals(SystemProperties.get("ro.product.system.device"))) {
             try {
                 Thread.sleep(10);
                 if ("1".equals(SystemProperties.get("vendor.all.system_server.ready"))) {
