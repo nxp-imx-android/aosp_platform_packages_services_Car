@@ -1,5 +1,5 @@
 # evs_mock mock hardware driver service
-type hal_evs_driver, domain, evs_domain;
+type hal_evs_driver, domain, binder_in_vendor_violators;
 hal_server_domain(hal_evs_driver, hal_evs)
 hal_client_domain(hal_evs_driver, hal_evs)
 
@@ -17,7 +17,6 @@ hal_client_domain(hal_evs_driver, hal_configstore)
 
 allow hal_evs_driver gpu_device:chr_file rw_file_perms;
 binder_call(hal_evs_driver, surfaceflinger);
-allow hal_evs_driver surfaceflinger_service:service_manager find;
 allow hal_evs_driver ion_device:chr_file r_file_perms;
 
 # Allow the driver to access kobject uevents
