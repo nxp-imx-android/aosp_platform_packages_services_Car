@@ -1,5 +1,5 @@
 # evs_mock mock hardware driver service
-type hal_evs_driver, evs_domain, domain;
+type hal_evs_driver, domain, binder_in_vendor_violators;
 hal_server_domain(hal_evs_driver, hal_evs)
 
 # allow init to launch processes in this context
@@ -13,7 +13,6 @@ hal_client_domain(hal_evs_driver, hal_graphics_allocator);
 
 allow hal_evs_driver gpu_device:chr_file { getattr ioctl open read write };
 binder_call(hal_evs_driver, surfaceflinger);
-allow hal_evs_driver surfaceflinger_service:service_manager find;
 allow hal_evs_driver hal_graphics_composer_default:fd use;
 allow hal_evs_driver hal_graphics_allocator_default_tmpfs:file { read write };
 allow hal_evs_driver servicemanager:binder call;
