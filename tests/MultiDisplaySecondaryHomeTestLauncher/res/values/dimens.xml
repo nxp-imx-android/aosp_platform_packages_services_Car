@@ -18,6 +18,7 @@
 <resources>
     <dimen name="activity_horizontal_margin">16dp</dimen>
     <dimen name="activity_vertical_margin">16dp</dimen>
+    <dimen name="view_sheet_margin_top">100dp</dimen>
     <dimen name="app_list_col_width">72dp</dimen>
     <dimen name="app_list_horizontal_spacing">24dp</dimen>
     <dimen name="app_list_vertical_spacing">24dp</dimen>
