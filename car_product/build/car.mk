@@ -153,7 +153,6 @@ PRODUCT_PACKAGES += \
     CarMessengerApp \
     CarHTMLViewer \
     CarHvacApp \
-    CarMapsPlaceholder \
     CarLatinIME \
     CarSettings \
     CarUsbHandler \
