@@ -96,7 +96,6 @@ PRODUCT_PACKAGES += \
     CarMediaApp \
     CarMessengerApp \
     CarHvacApp \
-    CarMapsPlaceholder \
     CarLatinIME \
     CarSettings \
     CarUsbHandler \
