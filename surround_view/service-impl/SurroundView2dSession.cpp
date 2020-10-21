@@ -20,6 +20,7 @@
 #include <android/hardware_buffer.h>
 #include <system/camera_metadata.h>
 #include <utils/SystemClock.h>
+#include <cutils/properties.h>
 
 #include <thread>
 
@@ -70,6 +71,11 @@ static const int kNumFrames = 4;
 static const int kSv2dViewId = 0;
 static const float kUndistortionScales[4] = {1.0f, 1.0f, 1.0f, 1.0f};
 
+// #define DEBUG_SURROUNDVIEW_2D
+#ifdef DEBUG_SURROUNDVIEW_2D
+static int nu=0;
+#endif
+
 SurroundView2dSession::FramesHandler::FramesHandler(
     sp<IEvsCamera> pCamera, sp<SurroundView2dSession> pSession)
     : mCamera(pCamera),
@@ -80,6 +86,22 @@ Return<void> SurroundView2dSession::FramesHandler::deliverFrame(
     LOG(INFO) << "Ignores a frame delivered from v1.0 EVS service.";
     mCamera->doneWithFrame(bufDesc_1_0);
 
+    return {};
+}
+
+Return<void> SurroundView2dSession::dump_frame_to_file(char *pbuf, int size, char *filename)
+{
+    int fd = 0;
+    int len = 0;
+    fd = open(filename, O_CREAT | O_RDWR, 0666);
+
+    if (fd<0) {
+        LOG(ERROR) << "failed to open";
+    }
+    len = write(fd, pbuf, size);
+    if (len < 0)
+        LOG(ERROR) << "failed to write file";
+    close(fd);
     return {};
 }
 
@@ -141,6 +163,10 @@ Return<void> SurroundView2dSession::FramesHandler::deliverFrame_1_1(
         }
     }
 
+#ifdef DEBUG_SURROUNDVIEW_2D
+    nu++;
+#endif
+
     mCamera->doneWithFrame_1_1(buffers);
 
     // Notify the session that a new set of frames is ready
@@ -181,7 +207,7 @@ Return<void> SurroundView2dSession::FramesHandler::notify(const EvsEventDesc& ev
 }
 
 bool SurroundView2dSession::copyFromBufferToPointers(
-    BufferDesc_1_1 buffer, SurroundViewInputBufferPointers pointers) {
+    BufferDesc_1_1 buffer, SurroundViewInputBufferPointers& pointers) {
 
     AHardwareBuffer_Desc* pDesc =
         reinterpret_cast<AHardwareBuffer_Desc *>(&buffer.buffer.description);
@@ -190,7 +216,8 @@ bool SurroundView2dSession::copyFromBufferToPointers(
     sp<GraphicBuffer> inputBuffer = new GraphicBuffer(
         buffer.buffer.nativeHandle, GraphicBuffer::CLONE_HANDLE, pDesc->width,
         pDesc->height, pDesc->format, pDesc->layers,
-        GRALLOC_USAGE_HW_TEXTURE, pDesc->stride);
+        GRALLOC_USAGE_HW_TEXTURE | GRALLOC_USAGE_SW_READ_OFTEN |
+        GRALLOC_USAGE_SW_WRITE_OFTEN, pDesc->stride);
 
     if (inputBuffer == nullptr) {
         LOG(ERROR) << "Failed to allocate GraphicBuffer to wrap image handle";
@@ -210,7 +237,7 @@ bool SurroundView2dSession::copyFromBufferToPointers(
     // lock, return false.
     void* inputDataPtr;
     inputBuffer->lock(
-        GRALLOC_USAGE_SW_READ_OFTEN | GRALLOC_USAGE_SW_WRITE_NEVER,
+        GRALLOC_USAGE_SW_READ_OFTEN | GRALLOC_USAGE_SW_WRITE_OFTEN,
         &inputDataPtr);
     if (!inputDataPtr) {
         LOG(ERROR) << "Failed to gain read access to GraphicBuffer";
@@ -220,11 +247,31 @@ bool SurroundView2dSession::copyFromBufferToPointers(
         LOG(INFO) << "Managed to get read access to GraphicBuffer";
     }
 
-    // Both source and destination are with 4 channels
-    memcpy(pointers.cpu_data_pointer, inputDataPtr,
-           pDesc->height * pDesc->width * kInputNumChannels);
-    LOG(DEBUG) << "Buffer copying finished";
+    int stride = pDesc->stride;
 
+    // readPtr comes from EVS, and it is with 4 channels
+    uint8_t* readPtr = static_cast<uint8_t*>(inputDataPtr);
+
+    // writePtr comes from CV imread, and it is with 3 channels
+    uint8_t* writePtr = static_cast<uint8_t*>(pointers.cpu_data_pointer);
+
+    if (pDesc->format == HAL_PIXEL_FORMAT_RGBA_8888) {
+        // if the evs buffer is RGBA8888, convert it to RGB888 here
+        for (int i=0; i<pDesc->width; i++)
+            for (int j=0; j<pDesc->height; j++) {
+                writePtr[(i + j * stride) * 3 + 0] =
+                    readPtr[(i + j * stride) * 4 + 0];
+                writePtr[(i + j * stride) * 3 + 1] =
+                    readPtr[(i + j * stride) * 4 + 1];
+                writePtr[(i + j * stride) * 3 + 2] =
+                    readPtr[(i + j * stride) * 4 + 2];
+            }
+    } else if (pDesc->format == HAL_PIXEL_FORMAT_RGB_888) {
+        // if the evs buffer is RGB888, just set the input point to output point
+        memcpy(writePtr, readPtr,  pDesc->width * pDesc->height * 3);
+    }
+
+    LOG(INFO) << "Brute force copying finished";
     return true;
 }
 
@@ -493,7 +540,9 @@ bool SurroundView2dSession::handleFrames(int sequenceId) {
                                        mOutputHeight,
                                        HAL_PIXEL_FORMAT_RGB_888,
                                        1,
-                                       GRALLOC_USAGE_HW_TEXTURE,
+                                       GRALLOC_USAGE_HW_TEXTURE |
+                                       GRALLOC_USAGE_SW_READ_OFTEN|
+                                       GRALLOC_USAGE_SW_WRITE_OFTEN,
                                        "SvTexture");
         if (mSvTexture->initCheck() == OK) {
             LOG(INFO) << "Successfully allocated Graphic Buffer";
@@ -504,6 +553,29 @@ bool SurroundView2dSession::handleFrames(int sequenceId) {
     }
 
     LOG(INFO) << "Output Pointer data format: " << mOutputPointer.format;
+
+#ifdef DEBUG_SURROUNDVIEW_2D
+    // dump out the buffer which is the input of Get2dSurroundView
+    for (int i=0; i<4; i++) {
+            char filename[128];
+            memset(filename, 0, 128);
+            if (nu%20 ==0) {
+                sprintf(filename, "/data/%s-frame_final-%d-%d.rgb",
+                       "SV", nu, i);
+                dump_frame_to_file((char *)(mInputPointers[i].cpu_data_pointer),
+                        mInputPointers[i].width  * mInputPointers[i].height * 3, filename);
+            }
+    }
+#endif
+
+    if (mInputPointers.size() == 4
+        && mInputPointers[0].cpu_data_pointer != nullptr) {
+        LOG(INFO) << "ReadImages succeeded";
+    } else {
+        LOG(ERROR) << "Failed to read images";
+        return false;
+    }
+
     if (mSurroundView->Get2dSurroundView(mInputPointers, &mOutputPointer)) {
         LOG(INFO) << "Get2dSurroundView succeeded";
     } else {
@@ -515,7 +587,7 @@ bool SurroundView2dSession::handleFrames(int sequenceId) {
 
     void* textureDataPtr = nullptr;
     mSvTexture->lock(GRALLOC_USAGE_SW_WRITE_OFTEN
-                     | GRALLOC_USAGE_SW_READ_NEVER,
+                     | GRALLOC_USAGE_SW_READ_OFTEN,
                      &textureDataPtr);
     if (!textureDataPtr) {
         LOG(ERROR) << "Failed to gain write access to GraphicBuffer!";
@@ -539,7 +611,8 @@ bool SurroundView2dSession::handleFrames(int sequenceId) {
             readPtr = readPtr + readStride;
         }
     }
-    LOG(DEBUG) << "memcpy finished";
+
+    LOG(INFO) << "memcpy finished";
     mSvTexture->unlock();
 
     ANativeWindowBuffer* buffer = mSvTexture->getNativeBuffer();
@@ -588,14 +661,17 @@ bool SurroundView2dSession::initialize() {
 
     SurroundViewStaticDataParams params =
             SurroundViewStaticDataParams(
-                    mCameraParams,
+                    // currently it can only get the logic cameta metadata, it can't set the physical camera
+                    // cameta metadata. if use mCameraParams, the four camera data is the same.
+                    GetCameras(),
                     mIOModuleConfig->sv2dConfig.sv2dParams,
                     mIOModuleConfig->sv3dConfig.sv3dParams,
-                    vector<float>(std::begin(kUndistortionScales),
-                                  std::end(kUndistortionScales)),
-                    mIOModuleConfig->sv2dConfig.carBoundingBox,
-                    mIOModuleConfig->carModelConfig.carModel.texturesMap,
-                    mIOModuleConfig->carModelConfig.carModel.partsMap);
+                    GetUndistortionScales(),
+                    // set the car model as null now.
+                    // TODO: need refine this part when regulator the sv parameter
+                    GetBoundingBox(),
+                    map<string, CarTexture>(),
+                    map<string, CarPart>());
     mSurroundView->SetStaticData(params);
     if (mSurroundView->Start2dPipeline()) {
         LOG(INFO) << "Start2dPipeline succeeded";
@@ -638,7 +714,9 @@ bool SurroundView2dSession::initialize() {
                                    mOutputHeight,
                                    HAL_PIXEL_FORMAT_RGB_888,
                                    1,
-                                   GRALLOC_USAGE_HW_TEXTURE,
+                                   GRALLOC_USAGE_HW_TEXTURE |
+                                   GRALLOC_USAGE_SW_READ_OFTEN|
+                                   GRALLOC_USAGE_SW_WRITE_OFTEN,
                                    "SvTexture");
 
     // Note: sv2dParams is in meters while mInfo must be in milli-meters.
@@ -698,8 +776,7 @@ bool SurroundView2dSession::setupEvs() {
         for (unsigned idx = 0; idx < streamCfgSize; idx += kStreamCfgSz) {
             if (ptr->direction ==
                 ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT &&
-                ptr->format == HAL_PIXEL_FORMAT_RGBA_8888) {
-
+                ptr->format == HAL_PIXEL_FORMAT_RGB_888) {
                 if (ptr->width * ptr->height > maxArea) {
                     targetCfg->id = ptr->id;
                     targetCfg->width = ptr->width;
@@ -708,7 +785,7 @@ bool SurroundView2dSession::setupEvs() {
                     // This client always wants below input data format
                     targetCfg->format =
                         static_cast<GraphicsPixelFormat>(
-                            HAL_PIXEL_FORMAT_RGBA_8888);
+                            HAL_PIXEL_FORMAT_RGB_888);
 
                     maxArea = ptr->width * ptr->height;
 
@@ -757,6 +834,7 @@ bool SurroundView2dSession::setupEvs() {
     for (auto& camera : mCameraParams) {
         camera.size.width = targetCfg->width;
         camera.size.height = targetCfg->height;
+
         camera.circular_fov = 179;
     }
 

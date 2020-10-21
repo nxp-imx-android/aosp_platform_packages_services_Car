@@ -95,7 +95,7 @@ std::vector<uint64_t> getAnimationPropertiesToRead(const AnimationConfig& animat
 bool SurroundViewService::initialize() {
     // Get the EVS manager service
     LOG(INFO) << "Acquiring EVS Enumerator";
-    mEvs = IEvsEnumerator::getService("default");
+    mEvs = IEvsEnumerator::getService("EvsEnumeratorHw");
     if (mEvs == nullptr) {
         LOG(ERROR) << "getService returned NULL.  Exiting.";
         return false;
@@ -193,9 +193,11 @@ Return<void> SurroundViewService::start3dSession(start3dSession_cb _hidl_cb) {
         LOG(WARNING) << "Only one 3d session is supported at the same time";
         _hidl_cb(nullptr, SvResult::INTERNAL_ERROR);
     } else {
+        // set mAnimationModule as null, it will change the car model when
+        // the vehicle state changed. set it as null. otherwise 3d sv will crash
         sSurroundView3dSession = new SurroundView3dSession(mEvs,
                                                            mVhalHandler,
-                                                           mAnimationModule,
+                                                           nullptr,
                                                            &mConfig);
         if (sSurroundView3dSession->initialize()) {
             _hidl_cb(sSurroundView3dSession, SvResult::OK);

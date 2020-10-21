@@ -83,6 +83,7 @@ public:
     ~SurroundView2dSession();
     bool initialize();
 
+    Return<void> dump_frame_to_file(char *pbuf, int size, char *filename);
     // Methods from ::android::hardware::automotive::sv::V1_0::ISurroundViewSession.
     Return<SvResult> startStream(
         const sp<ISurroundViewStream>& stream) override;
@@ -110,7 +111,7 @@ private:
     bool handleFrames(int sequenceId);
 
     bool copyFromBufferToPointers(BufferDesc_1_1 buffer,
-                                  SurroundViewInputBufferPointers pointers);
+                                  SurroundViewInputBufferPointers &pointers);
 
     enum StreamStateValues {
         STOPPED,
