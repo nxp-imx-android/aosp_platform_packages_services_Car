@@ -22,6 +22,7 @@
 #include <hidlmemory/mapping.h>
 #include <system/camera_metadata.h>
 #include <utils/SystemClock.h>
+#include <cutils/properties.h>
 
 #include <array>
 #include <thread>
@@ -151,7 +152,7 @@ Return<void> SurroundView3dSession::FramesHandler::notify(const EvsEventDesc& ev
 }
 
 bool SurroundView3dSession::copyFromBufferToPointers(
-    BufferDesc_1_1 buffer, SurroundViewInputBufferPointers pointers) {
+    BufferDesc_1_1 buffer, SurroundViewInputBufferPointers &pointers) {
 
     AHardwareBuffer_Desc* pDesc =
         reinterpret_cast<AHardwareBuffer_Desc *>(&buffer.buffer.description);
@@ -160,7 +161,8 @@ bool SurroundView3dSession::copyFromBufferToPointers(
     sp<GraphicBuffer> inputBuffer = new GraphicBuffer(
         buffer.buffer.nativeHandle, GraphicBuffer::CLONE_HANDLE, pDesc->width,
         pDesc->height, pDesc->format, pDesc->layers,
-        GRALLOC_USAGE_HW_TEXTURE, pDesc->stride);
+        GRALLOC_USAGE_HW_TEXTURE | GRALLOC_USAGE_SW_READ_OFTEN | GRALLOC_USAGE_SW_WRITE_OFTEN,
+        pDesc->stride);
 
     if (inputBuffer == nullptr) {
         LOG(ERROR) << "Failed to allocate GraphicBuffer to wrap image handle";
@@ -198,15 +200,21 @@ bool SurroundView3dSession::copyFromBufferToPointers(
     // writePtr is with 3 channels, since that is what SV core lib expects.
     uint8_t* writePtr = static_cast<uint8_t*>(pointers.cpu_data_pointer);
 
-    for (int i = 0; i < pDesc->width; i++)
-        for (int j = 0; j < pDesc->height; j++) {
-            writePtr[(i + j * stride) * 3 + 0] =
-                readPtr[(i + j * stride) * 4 + 0];
-            writePtr[(i + j * stride) * 3 + 1] =
-                readPtr[(i + j * stride) * 4 + 1];
-            writePtr[(i + j * stride) * 3 + 2] =
-                readPtr[(i + j * stride) * 4 + 2];
-        }
+    if (pDesc->format == HAL_PIXEL_FORMAT_RGBA_8888) {
+        // if the evs buffer is RGBA8888, convert it to RGB888 here
+        for (int i = 0; i < pDesc->width; i++)
+            for (int j = 0; j < pDesc->height; j++) {
+                writePtr[(i + j * stride) * 3 + 0] =
+                    readPtr[(i + j * stride) * 4 + 0];
+                writePtr[(i + j * stride) * 3 + 1] =
+                    readPtr[(i + j * stride) * 4 + 1];
+                writePtr[(i + j * stride) * 3 + 2] =
+                    readPtr[(i + j * stride) * 4 + 2];
+            }
+    } else if (pDesc->format == HAL_PIXEL_FORMAT_RGB_888) {
+        // if the evs buffer is RGB888, convert it to RGB888 here
+        memcpy(writePtr, readPtr,  pDesc->width * pDesc->height * 3);
+    }
     LOG(INFO) << "Brute force copying finished";
 
     return true;
@@ -596,7 +604,9 @@ bool SurroundView3dSession::handleFrames(int sequenceId) {
                                        mOutputHeight,
                                        HAL_PIXEL_FORMAT_RGBA_8888,
                                        1,
-                                       GRALLOC_USAGE_HW_TEXTURE,
+                                       GRALLOC_USAGE_HW_TEXTURE |
+                                       GRALLOC_USAGE_SW_READ_OFTEN|
+                                       GRALLOC_USAGE_SW_WRITE_OFTEN,
                                        "SvTexture");
         if (mSvTexture->initCheck() == OK) {
             LOG(INFO) << "Successfully allocated Graphic Buffer";
@@ -652,7 +662,7 @@ bool SurroundView3dSession::handleFrames(int sequenceId) {
 
     void* textureDataPtr = nullptr;
     mSvTexture->lock(GRALLOC_USAGE_SW_WRITE_OFTEN
-                    | GRALLOC_USAGE_SW_READ_NEVER,
+                    | GRALLOC_USAGE_SW_READ_OFTEN,
                     &textureDataPtr);
     if (!textureDataPtr) {
         LOG(ERROR) << "Failed to gain write access to GraphicBuffer!";
@@ -724,13 +734,17 @@ bool SurroundView3dSession::initialize() {
 
     SurroundViewStaticDataParams params =
             SurroundViewStaticDataParams(
-                    mCameraParams,
+                    // currently it can only get the logic cameta metadata, it can't set the physical camera
+                    // cameta metadata. if use mCameraParams, the four camera data is the same.
+                    GetCameras(),
                     mIOModuleConfig->sv2dConfig.sv2dParams,
                     mIOModuleConfig->sv3dConfig.sv3dParams,
                     GetUndistortionScales(),
-                    mIOModuleConfig->sv2dConfig.carBoundingBox,
-                    mIOModuleConfig->carModelConfig.carModel.texturesMap,
-                    mIOModuleConfig->carModelConfig.carModel.partsMap);
+                    // set the car model as null now.
+                    // TODO: need refine this part when regulator the sv parameter
+                    GetBoundingBox(),
+                    map<string, CarTexture>(),
+                    map<string, CarPart>());
     mSurroundView->SetStaticData(params);
 
     mInputPointers.resize(kNumFrames);
@@ -767,7 +781,9 @@ bool SurroundView3dSession::initialize() {
                                    mOutputHeight,
                                    HAL_PIXEL_FORMAT_RGBA_8888,
                                    1,
-                                   GRALLOC_USAGE_HW_TEXTURE,
+                                   GRALLOC_USAGE_HW_TEXTURE |
+                                   GRALLOC_USAGE_SW_READ_OFTEN|
+                                   GRALLOC_USAGE_SW_WRITE_OFTEN,
                                    "SvTexture");
 
     if (mSvTexture->initCheck() == OK) {
@@ -821,8 +837,7 @@ bool SurroundView3dSession::setupEvs() {
         for (unsigned idx = 0; idx < streamCfgSize; idx += kStreamCfgSz) {
             if (ptr->direction ==
                 ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT &&
-                ptr->format == HAL_PIXEL_FORMAT_RGBA_8888) {
-
+                ptr->format == HAL_PIXEL_FORMAT_RGB_888) {
                 if (ptr->width * ptr->height > maxArea) {
                     targetCfg->id = ptr->id;
                     targetCfg->width = ptr->width;
@@ -831,7 +846,7 @@ bool SurroundView3dSession::setupEvs() {
                     // This client always wants below input data format
                     targetCfg->format =
                         static_cast<GraphicsPixelFormat>(
-                            HAL_PIXEL_FORMAT_RGBA_8888);
+                            HAL_PIXEL_FORMAT_RGB_888);
 
                     maxArea = ptr->width * ptr->height;
 

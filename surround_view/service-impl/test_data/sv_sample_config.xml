@@ -3,12 +3,12 @@
     <Version>1.0</Version>
 
     <CameraConfig>
-        <EvsGroupId>v4l2loopback_group0</EvsGroupId>
+        <EvsGroupId>group0</EvsGroupId>
         <EvsCameraIds>
-            <Front>/dev/video60</Front>
-            <Right>/dev/video61</Right>
-            <Rear>/dev/video62</Rear>
-            <Left>/dev/video63</Left>
+            <Front>mxc_isi.0.capture</Front>
+            <Right>mxc_isi.1.capture</Right>
+            <Rear>mxc_isi.2.capture</Rear>
+            <Left>mxc_isi.3.capture</Left>
         </EvsCameraIds>
         <Masks>
             <Front>/vendor/mask_front.png</Front>
