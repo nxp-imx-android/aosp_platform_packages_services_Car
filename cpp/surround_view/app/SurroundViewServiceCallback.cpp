@@ -435,6 +435,11 @@ Return<void> SurroundViewServiceCallback::receiveFrames(
             tgtBuffer = buff;
         });
 
+        // release resourse to avoid leak
+        if (tgtBuffer.memHandle.getNativeHandle() != nullptr) {
+           detachRenderTarget();
+        }
+
         if (!attachRenderTarget(convertBufferDesc(tgtBuffer))) {
             LOG(ERROR) << "Failed to attach render target";
             return {};
@@ -536,10 +541,6 @@ Return<void> SurroundViewServiceCallback::receiveFrames(
 
         glDisableVertexAttribArray(0);
         glDisableVertexAttribArray(1);
-
-        // Now that everything is submitted, release our hold on the
-        // texture resource
-        detachRenderTarget();
 
         // Wait for the rendering to finish
         glFinish();
