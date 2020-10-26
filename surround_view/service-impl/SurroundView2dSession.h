@@ -142,6 +142,7 @@ private:
     // Used to signal a set of frames is ready
     condition_variable mFramesSignal GUARDED_BY(mAccessLock);
     bool mProcessingEvsFrames GUARDED_BY(mAccessLock);
+    bool mHandleFrameDirect;
 
     int mSequenceId;
 

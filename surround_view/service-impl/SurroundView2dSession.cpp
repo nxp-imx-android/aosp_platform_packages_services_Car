@@ -167,10 +167,23 @@ Return<void> SurroundView2dSession::FramesHandler::deliverFrame_1_1(
     nu++;
 #endif
 
-    mCamera->doneWithFrame_1_1(buffers);
+    // if the format of some buffer are not RGB888, return the buffer directly.
+    // if the format of all buffer are RGB888, return the buffer until handle
+    // the frame(convert to the outbuffer)
+    if (!mSession->mHandleFrameDirect)
+        mCamera->doneWithFrame_1_1(buffers);
 
     // Notify the session that a new set of frames is ready
     mSession->mFramesSignal.notify_all();
+
+    if (mSession->mHandleFrameDirect) {
+        {
+            unique_lock<mutex> lock(mSession->mAccessLock);
+            mSession->mFramesSignal.wait(lock, [this]() { return !mSession->mProcessingEvsFrames; });
+        }
+
+        mCamera->doneWithFrame_1_1(buffers);
+    }
 
     return {};
 }
@@ -266,9 +279,15 @@ bool SurroundView2dSession::copyFromBufferToPointers(
                 writePtr[(i + j * stride) * 3 + 2] =
                     readPtr[(i + j * stride) * 4 + 2];
             }
+        mHandleFrameDirect = false;
     } else if (pDesc->format == HAL_PIXEL_FORMAT_RGB_888) {
         // if the evs buffer is RGB888, just set the input point to output point
+        // return evs buffer until inputpoint convert to outpoint, if mHandleFrameDirect is true.
+        // return evs buffer until evs buffer convert to inputpoint, if mHandleFrameDirect is false.
         memcpy(writePtr, readPtr,  pDesc->width * pDesc->height * 3);
+        mHandleFrameDirect = false;
+        //pointers.cpu_data_pointer = (void*)readPtr;
+        // mHandleFrameDirect = true;
     }
 
     LOG(INFO) << "Brute force copying finished";
@@ -293,6 +312,9 @@ void SurroundView2dSession::processFrames() {
             // Set the boolean to false to receive the next set of frames.
             scoped_lock<mutex> lock(mAccessLock);
             mProcessingEvsFrames = false;
+        }
+        if (mHandleFrameDirect) {
+            mFramesSignal.notify_all();
         }
     }
 
@@ -363,6 +385,7 @@ Return<SvResult> SurroundView2dSession::startStream(
     LOG(DEBUG) << "Notify SvEvent::STREAM_STARTED";
     mStream->notify(SvEvent::STREAM_STARTED);
     mProcessingEvsFrames = false;
+    mHandleFrameDirect = true;
 
     // Start the frame generation thread
     mStreamState = RUNNING;

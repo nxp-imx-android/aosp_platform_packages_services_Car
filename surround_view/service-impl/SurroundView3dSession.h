@@ -147,6 +147,7 @@ private:
     condition_variable mFramesSignal GUARDED_BY(mAccessLock);
     bool mProcessingEvsFrames GUARDED_BY(mAccessLock);
 
+    bool mHandleFrameDirect;
     int mSequenceId;
 
     struct FramesRecord {

@@ -155,10 +155,20 @@ Return<void> SurroundView3dSession::FramesHandler::deliverFrame_1_1(
         }
     }
 
-    mCamera->doneWithFrame_1_1(buffers);
+    if (!mSession->mHandleFrameDirect)
+        mCamera->doneWithFrame_1_1(buffers);
 
     // Notify the session that a new set of frames is ready
     mSession->mFramesSignal.notify_all();
+
+    if (mSession->mHandleFrameDirect) {
+        {
+            unique_lock<mutex> lock(mSession->mAccessLock);
+            mSession->mFramesSignal.wait(lock, [this]() { return !mSession->mProcessingEvsFrames; });
+        }
+
+        mCamera->doneWithFrame_1_1(buffers);
+    }
 
     return {};
 }
@@ -254,9 +264,15 @@ bool SurroundView3dSession::copyFromBufferToPointers(
                 writePtr[(i + j * stride) * 3 + 2] =
                     readPtr[(i + j * stride) * 4 + 2];
             }
+        mHandleFrameDirect = false;
     } else if (pDesc->format == HAL_PIXEL_FORMAT_RGB_888) {
         // if the evs buffer is RGB888, convert it to RGB888 here
+        // return evs buffer until inputpoint convert to outpoint, if mHandleFrameDirect is true.
+        // return evs buffer until evs buffer convert to inputpoint, if mHandleFrameDirect is false.
         memcpy(writePtr, readPtr,  pDesc->width * pDesc->height * 3);
+        mHandleFrameDirect = false;
+        // pointers.cpu_data_pointer = (void*)readPtr;
+        // mHandleFrameDirect = true;
     }
     LOG(INFO) << "Brute force copying finished";
 
@@ -288,6 +304,10 @@ void SurroundView3dSession::processFrames() {
             // Set the boolean to false to receive the next set of frames.
             scoped_lock<mutex> lock(mAccessLock);
             mProcessingEvsFrames = false;
+        }
+
+        if (mHandleFrameDirect) {
+            mFramesSignal.notify_all();
         }
     }
 
