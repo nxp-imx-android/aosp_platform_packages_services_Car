@@ -129,7 +129,7 @@ bool run2dSurroundView(sp<ISurroundViewService> pSurroundViewService,
     }
 
     // Let the SV algorithm run for 10 seconds for HIGH_QUALITY
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+    std::this_thread::sleep_for(std::chrono::seconds(60));
 
     // Switch to low quality and lower resolution
     Sv2dConfig config;
@@ -141,7 +141,7 @@ bool run2dSurroundView(sp<ISurroundViewService> pSurroundViewService,
     }
 
     // Let the SV algorithm run for 10 seconds for LOW_QUALITY
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+    std::this_thread::sleep_for(std::chrono::seconds(60));
 
     // TODO(b/150412555): wait for the last frame
     // Stop the 2d stream and session
@@ -218,12 +218,7 @@ bool run3dSurroundView(sp<ISurroundViewService> pSurroundViewService,
     const int totalViewingTimeSecs = 10;
     const std::chrono::milliseconds
             perPoseSleepTimeMs(totalViewingTimeSecs * 1000 / kPoseCount);
-    for(uint32_t i = 1; i < kPoseCount; i++) {
-        if (!setView(surroundView3dSession, i, i, kHorizontalFov)) {
-            LOG(WARNING) << "Failed to setView of pose index :" << i;
-        }
-        std::this_thread::sleep_for(perPoseSleepTimeMs);
-    }
+    std::this_thread::sleep_for(perPoseSleepTimeMs);
 
     // Switch to low quality and lower resolution
     Sv3dConfig config;
@@ -236,12 +231,7 @@ bool run3dSurroundView(sp<ISurroundViewService> pSurroundViewService,
     }
 
     // Let the SV algorithm run for 10 seconds for LOW_QUALITY
-    for(uint32_t i = 0; i < kPoseCount; i++) {
-        if(!setView(surroundView3dSession, i + kPoseCount, i, kHorizontalFov)) {
-            LOG(WARNING) << "Failed to setView of pose index :" << i;
-        }
-        std::this_thread::sleep_for(perPoseSleepTimeMs);
-    }
+    std::this_thread::sleep_for(perPoseSleepTimeMs);
 
     // TODO(b/150412555): wait for the last frame
     // Stop the 3d stream and session
@@ -283,7 +273,7 @@ int main(int argc, char** argv) {
 
     // Try to connect to EVS service
     LOG(INFO) << "Acquiring EVS Enumerator";
-    sp<IEvsEnumerator> evs = IEvsEnumerator::getService();
+    sp<IEvsEnumerator> evs = IEvsEnumerator::getService("EvsEnumeratorHw");
     if (evs == nullptr) {
         LOG(ERROR) << "getService(default) returned NULL.  Exiting.";
         return EXIT_FAILURE;
