@@ -652,7 +652,7 @@ bool SurroundView2dSession::initialize() {
             SurroundViewStaticDataParams(
                     // currently it can only get the logic cameta metadata, it can't set the physical camera
                     // cameta metadata. if use mCameraParams, the four camera data is the same.
-                    GetCameras(),
+                    mCameraParams,
                     mIOModuleConfig->sv2dConfig.sv2dParams,
                     mIOModuleConfig->sv3dConfig.sv3dParams,
                     GetUndistortionScales(),
