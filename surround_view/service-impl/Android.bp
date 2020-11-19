@@ -169,6 +169,7 @@ cc_library{
         "libanimation_module",
         "libbase",
         "libbinder",
+        "liblog",
         "libcamera_metadata",
         "libcore_lib_shared",
         "libcutils",
@@ -190,6 +191,7 @@ cc_library{
         "sv_sample_config.xml",
         "sv_sample_car_model_config.xml",
     ],
+    static_libs: ["libimxsv_base"],
     // Disable builds except for arm64 and emulator devices
     enabled : false,
     arch : {
@@ -203,6 +205,13 @@ cc_library{
             enabled : true,
         },
     },
+    cflags: ["-DENABLE_IMX_CORELIB"],
+    header_libs: [
+        "libeigen",
+    ],
+    include_dirs: [
+        "vendor/nxp-opensource/imx/sv/corelib/include/"
+    ],
 }
 
 cc_test{
@@ -217,6 +226,10 @@ cc_test{
     ],
     include_dirs: [
         "packages/services/Car/evs/sampleDriver",
+        "vendor/nxp-opensource/imx/sv/corelib/include/"
+    ],
+    header_libs: [
+        "libeigen",
     ],
     shared_libs : [
         "android.hardware.automotive.evs@1.0",
@@ -297,6 +310,12 @@ cc_binary{
     ],
     // Disable builds except for arm64 and emulator devices
     enabled : false,
+    include_dirs: [
+        "vendor/nxp-opensource/imx/sv/corelib/include/"
+    ],
+    header_libs: [
+        "libeigen",
+    ],
     arch : {
         arm64 : {
             enabled : true,

@@ -617,7 +617,8 @@ bool SurroundView3dSession::handleFrames(int sequenceId) {
             return false;
         }
 
-        Size2dInteger size = Size2dInteger(mOutputWidth, mOutputHeight);
+        android_auto::surround_view::Size2dInteger size =
+                   android_auto::surround_view::Size2dInteger(mOutputWidth, mOutputHeight);
         mSurroundView->Update3dOutputResolution(size);
 
         mSvTexture = new GraphicBuffer(mOutputWidth,
@@ -910,7 +911,7 @@ bool SurroundView3dSession::setupEvs() {
     }
 
     mCameraParams =
-            convertToSurroundViewCameraParams(cameraIdToAndroidParameters);
+            convertToSurroundViewCameraParams(cameraIdToAndroidParameters, mIOModuleConfig);
 
     for (auto& camera : mCameraParams) {
         camera.size.width = targetCfg->width;

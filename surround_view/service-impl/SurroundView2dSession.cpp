@@ -30,6 +30,7 @@
 
 using ::android::hardware::automotive::evs::V1_0::EvsResult;
 using ::android::hardware::camera::device::V3_2::Stream;
+using namespace imx;
 
 using GraphicsPixelFormat = ::android::hardware::graphics::common::V1_0::PixelFormat;
 
@@ -523,7 +524,8 @@ bool SurroundView2dSession::handleFrames(int sequenceId) {
             return false;
         }
 
-        Size2dInteger size = Size2dInteger(mOutputWidth, mOutputHeight);
+        android_auto::surround_view::Size2dInteger size =
+                      android_auto::surround_view::Size2dInteger(mOutputWidth, mOutputHeight);
         mSurroundView->Update2dOutputResolution(size);
 
         mSvTexture = new GraphicBuffer(mOutputWidth,
@@ -565,6 +567,8 @@ bool SurroundView2dSession::handleFrames(int sequenceId) {
         return false;
     }
 
+
+#ifndef ENABLE_IMX_CORELIB
     if (mSurroundView->Get2dSurroundView(mInputPointers, &mOutputPointer)) {
         LOG(INFO) << "Get2dSurroundView succeeded";
     } else {
@@ -573,6 +577,15 @@ bool SurroundView2dSession::handleFrames(int sequenceId) {
         memset(mOutputPointer.data_pointer, kGrayColor,
                mOutputHeight * mOutputWidth * kNumChannels);
     }
+#else
+    bool ret;
+    ret = mImx2DSV->GetSVBuffer(mInputPoint, mOutputPointer.data_pointer, 3);
+
+    if (!ret) {
+        memset(mOutputPointer.data_pointer, kGrayColor,
+            mOutputHeight * mOutputWidth * kNumChannels);
+    }
+#endif
 
     void* textureDataPtr = nullptr;
     mSvTexture->lock(GRALLOC_USAGE_SW_WRITE_OFTEN
@@ -648,6 +661,7 @@ bool SurroundView2dSession::initialize() {
     // description.
     mSurroundView = unique_ptr<SurroundView>(Create());
 
+#ifndef ENABLE_IMX_CORELIB
     SurroundViewStaticDataParams params =
             SurroundViewStaticDataParams(
                     // currently it can only get the logic cameta metadata, it can't set the physical camera
@@ -668,7 +682,20 @@ bool SurroundView2dSession::initialize() {
         LOG(ERROR) << "Start2dPipeline failed";
         return false;
     }
+#else
+    mImx2DSV = new Imx2DSV();
+    ImxSV2DParams sv2DParams = ImxSV2DParams(imx::Size2dInteger(mCameraParams[0].size.width,
+                 mCameraParams[0].size.height),
+                 imx::Size2dInteger(mIOModuleConfig->sv2dConfig.sv2dParams.resolution.width,
+                    mIOModuleConfig->sv2dConfig.sv2dParams.resolution.height),
+                 imx::Size2dFloat(mIOModuleConfig->sv2dConfig.sv2dParams.physical_size.width,
+                    mIOModuleConfig->sv2dConfig.sv2dParams.physical_size.height));
 
+    mImx2DSV->SetConfigs(sv2DParams, mImxCameraParams.mEvsRotations,
+                mImxCameraParams.mEvsTransforms, mImxCameraParams.mKs, mImxCameraParams.mDs);
+    mImx2DSV->startSV();
+
+#endif
     mInputPointers.resize(kNumFrames);
     for (int i = 0; i < kNumFrames; i++) {
         mInputPointers[i].width = mCameraParams[i].size.width;
@@ -678,6 +705,11 @@ bool SurroundView2dSession::initialize() {
                 (void*)new uint8_t[mInputPointers[i].width *
                                    mInputPointers[i].height *
                                    kNumChannels];
+        // NOTE: do not make mInputPoint as local variable, because it will release cpu_data_pointer
+        // once this function is done.
+        // it cause sv camera do not work from the second frame.
+        shared_ptr<char> p((char *)mInputPointers[i].cpu_data_pointer);
+        mInputPoint.push_back(p);
     }
     LOG(INFO) << "Allocated " << kNumFrames << " input pointers";
 
@@ -818,15 +850,17 @@ bool SurroundView2dSession::setupEvs() {
     }
 
     mCameraParams =
-            convertToSurroundViewCameraParams(cameraIdToAndroidParameters);
+            convertToSurroundViewCameraParams(cameraIdToAndroidParameters, mIOModuleConfig);
 
     for (auto& camera : mCameraParams) {
         camera.size.width = targetCfg->width;
         camera.size.height = targetCfg->height;
 
-        camera.circular_fov = 179;
+        camera.circular_fov = 120;
     }
 
+    mImxCameraParams =
+         convertToImxSurroundViewCameraParams(cameraIdToAndroidParameters, mIOModuleConfig);
     return true;
 }
 

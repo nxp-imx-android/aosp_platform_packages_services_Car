@@ -18,6 +18,8 @@
 
 #include "CoreLibSetupHelper.h"
 #include "IOModule.h"
+#include "Imx2DSurroundView.hpp"
+#include "ImxSurroundViewTypes.hpp"
 
 #include <android/hardware/automotive/evs/1.1/IEvsCamera.h>
 #include <android/hardware/automotive/evs/1.1/IEvsCameraStream.h>
@@ -41,6 +43,7 @@ using ::android::hardware::Return;
 using ::android::hardware::hidl_vec;
 using ::android::sp;
 using ::std::condition_variable;
+using namespace imx;
 
 using BufferDesc_1_0  = ::android::hardware::automotive::evs::V1_0::BufferDesc;
 using BufferDesc_1_1  = ::android::hardware::automotive::evs::V1_1::BufferDesc;
@@ -130,6 +133,7 @@ private:
     sp<IEvsCamera> mCamera;
     CameraDesc mCameraDesc;
     vector<SurroundViewCameraParams> mCameraParams;
+    ImxSurroundViewCameraParams mImxCameraParams;
 
     // Stream subscribed for the session.
     sp<ISurroundViewStream> mStream GUARDED_BY(mAccessLock);
@@ -146,6 +150,7 @@ private:
     bool mHandleFrameDirect;
 
     int mSequenceId;
+    vector<shared_ptr<char>> mInputPoint;;
 
     struct FramesRecord {
         SvFramesDesc frames;
@@ -161,6 +166,7 @@ private:
     vector<string> mEvsCameraIds GUARDED_BY(mAccessLock);
 
     unique_ptr<SurroundView> mSurroundView GUARDED_BY(mAccessLock);
+    imx::Imx2DSV * mImx2DSV;
 
     vector<SurroundViewInputBufferPointers>
         mInputPointers GUARDED_BY(mAccessLock);
