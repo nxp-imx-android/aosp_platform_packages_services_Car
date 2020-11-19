@@ -22,10 +22,13 @@
 #include <string>
 #include <vector>
 
+#include "ImxSurroundViewTypes.hpp"
 #include "core_lib.h"
+#include "IOModule.h"
 
 using ::android::hardware::automotive::evs::V1_1::IEvsCamera;
 using ::android_auto::surround_view::SurroundViewCameraParams;
+using namespace imx;
 
 namespace android {
 namespace hardware {
@@ -37,7 +40,7 @@ namespace implementation {
 const int kSizeLensDistortion = 5;
 const int kSizeLensIntrinsicCalibration = 5;
 const int kSizeLensPoseTranslation = 3;
-const int kSizeLensPoseRotation = 4;
+const int kSizeLensPoseRotation = 3;
 
 // Camera parameters that the Android Camera team defines.
 struct AndroidCameraParams {
@@ -61,8 +64,12 @@ bool getAndroidCameraParams(android::sp<IEvsCamera> camera,
 // Converts the camera parameters from Android Camera format into Surround View
 // core lib format.
 std::vector<SurroundViewCameraParams> convertToSurroundViewCameraParams(
-        const std::map<std::string, AndroidCameraParams>& androidCameraParamsMap);
+        const std::map<std::string, AndroidCameraParams>& androidCameraParamsMap,
+        IOModuleConfig* ioModuleConfig);
 
+ImxSurroundViewCameraParams convertToImxSurroundViewCameraParams(
+        const std::map<std::string, AndroidCameraParams>& androidCameraParamsMap,
+        IOModuleConfig* ioModuleConfig);
 }  // namespace implementation
 }  // namespace V1_0
 }  // namespace sv

@@ -5,10 +5,10 @@
     <CameraConfig>
         <EvsGroupId>group0</EvsGroupId>
         <EvsCameraIds>
-            <Front>mxc_isi.0.capture</Front>
-            <Right>mxc_isi.1.capture</Right>
-            <Rear>mxc_isi.2.capture</Rear>
-            <Left>mxc_isi.3.capture</Left>
+            <Front>mxc_isi.3.capture</Front>
+            <Right>mxc_isi.2.capture</Right>
+            <Rear>mxc_isi.1.capture</Rear>
+            <Left>mxc_isi.0.capture</Left>
         </EvsCameraIds>
         <Masks>
             <Front>/vendor/mask_front.png</Front>
@@ -25,8 +25,8 @@
             <Height>768</Height>
         </OutputResolution>
         <GroundMapping>
-            <Width>8.0</Width>
-            <Height>6.0</Height>
+            <Width>4.0</Width>
+            <Height>3.0</Height>
             <Center>
                 <X>0.0</X>
                 <Y>0.0</Y>
