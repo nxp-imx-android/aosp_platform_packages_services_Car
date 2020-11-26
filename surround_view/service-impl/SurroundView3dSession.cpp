@@ -237,12 +237,14 @@ bool SurroundView3dSession::copyFromBufferToPointers(
 }
 
 void SurroundView3dSession::processFrames() {
+#ifndef ENABLE_IMX_CORELIB
     if (mSurroundView->Start3dPipeline()) {
         LOG(INFO) << "Start3dPipeline succeeded";
     } else {
         LOG(ERROR) << "Start3dPipeline failed";
         return;
     }
+#endif
 
     while (true) {
         {
@@ -617,9 +619,11 @@ bool SurroundView3dSession::handleFrames(int sequenceId) {
             return false;
         }
 
+#ifndef ENABLE_IMX_CORELIB
         android_auto::surround_view::Size2dInteger size =
                    android_auto::surround_view::Size2dInteger(mOutputWidth, mOutputHeight);
         mSurroundView->Update3dOutputResolution(size);
+#endif
 
         mSvTexture = new GraphicBuffer(mOutputWidth,
                                        mOutputHeight,
@@ -665,6 +669,7 @@ bool SurroundView3dSession::handleFrames(int sequenceId) {
         LOG(WARNING) << "AnimationModule is null. Ignored";
     }
 
+#ifndef ENABLE_IMX_CORELIB
     if (!params.empty()) {
         mSurroundView->SetAnimations(params);
     } else {
@@ -680,6 +685,23 @@ bool SurroundView3dSession::handleFrames(int sequenceId) {
         memset(mOutputPointer.data_pointer, kGrayColor,
                mOutputHeight * mOutputWidth * kNumChannels);
     }
+#else
+    bool ret;
+    mImx3DSV = new Imx3DView(mImxCameraParams.mEvsRotations,
+                             mImxCameraParams.mEvsTransforms,
+                             mImxCameraParams.mKs,
+                             mImxCameraParams.mDs);
+
+    ret = mImx3DSV->renderSV(mInputPoint,
+                           (char *)mOutputPointer.data_pointer,
+                           mCameraParams[0].size.width, mCameraParams[0].size.height,
+                           mOutputWidth, mOutputHeight);
+
+    if (!ret) {
+        memset(mOutputPointer.data_pointer, kGrayColor,
+            mOutputHeight * mOutputWidth * kNumChannels);
+    }
+#endif
 
     void* textureDataPtr = nullptr;
     mSvTexture->lock(GRALLOC_USAGE_SW_WRITE_OFTEN
@@ -753,6 +775,7 @@ bool SurroundView3dSession::initialize() {
     // description.
     mSurroundView = unique_ptr<SurroundView>(Create());
 
+#ifndef ENABLE_IMX_CORELIB
     SurroundViewStaticDataParams params =
             SurroundViewStaticDataParams(
                     // currently it can only get the logic cameta metadata, it can't set the physical camera
@@ -767,6 +790,7 @@ bool SurroundView3dSession::initialize() {
                     map<string, CarTexture>(),
                     map<string, CarPart>());
     mSurroundView->SetStaticData(params);
+#endif
 
     mInputPointers.resize(kNumFrames);
     for (int i = 0; i < kNumFrames; i++) {
@@ -777,7 +801,16 @@ bool SurroundView3dSession::initialize() {
                 (void*)new uint8_t[mInputPointers[i].width *
                                    mInputPointers[i].height *
                                    kNumChannels];
+
+#ifdef ENABLE_IMX_CORELIB
+        // NOTE: do not make mInputPoint as local variable, because it will release cpu_data_pointer
+        // once this function is done.
+        // it cause sv camera do not work from the second frame.
+        shared_ptr<unsigned char> p((unsigned char *)mInputPointers[i].cpu_data_pointer);
+        mInputPoint.push_back(p);
+#endif
     }
+
     LOG(INFO) << "Allocated " << kNumFrames << " input pointers";
 
     mOutputWidth = mIOModuleConfig->sv3dConfig.sv3dParams.resolution.width;
@@ -918,6 +951,11 @@ bool SurroundView3dSession::setupEvs() {
         camera.size.height = targetCfg->height;
         camera.circular_fov = 179;
     }
+
+#ifdef ENABLE_IMX_CORELIB
+    mImxCameraParams =
+                    convertToImxSurroundViewCameraParams(cameraIdToAndroidParameters, mIOModuleConfig);
+#endif
 
     return true;
 }

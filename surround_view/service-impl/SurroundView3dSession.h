@@ -30,6 +30,11 @@
 #include "CoreLibSetupHelper.h"
 #include "VhalHandler.h"
 
+#ifdef ENABLE_IMX_CORELIB
+#include "Imx3DView.hpp"
+#include "ImxSurroundViewTypes.hpp"
+#endif
+
 #include <thread>
 
 #include <ui/GraphicBuffer.h>
@@ -38,6 +43,7 @@ using namespace ::android::hardware::automotive::evs::V1_1;
 using namespace ::android::hardware::automotive::sv::V1_0;
 using namespace ::android::hardware::automotive::vehicle::V2_0;
 using namespace ::android_auto::surround_view;
+using namespace imx;
 
 using ::android::hardware::Return;
 using ::android::hardware::hidl_vec;
@@ -135,6 +141,10 @@ private:
     CameraDesc mCameraDesc;
     vector<SurroundViewCameraParams> mCameraParams;
 
+#ifdef ENABLE_IMX_CORELIB
+    ImxSurroundViewCameraParams mImxCameraParams;
+#endif
+
     // Stream subscribed for the session.
     sp<ISurroundViewStream> mStream GUARDED_BY(mAccessLock);
     StreamStateValues mStreamState GUARDED_BY(mAccessLock);
@@ -150,6 +160,10 @@ private:
 
     bool mHandleFrameDirect;
     int mSequenceId;
+
+#ifdef ENABLE_IMX_CORELIB
+    vector<shared_ptr<unsigned char>> mInputPoint;
+#endif
 
     struct FramesRecord {
         SvFramesDesc frames;
@@ -168,6 +182,10 @@ private:
     vector<string> mEvsCameraIds GUARDED_BY(mAccessLock);
 
     unique_ptr<SurroundView> mSurroundView GUARDED_BY(mAccessLock);
+
+#ifdef ENABLE_IMX_CORELIB
+    Imx3DView * mImx3DSV;
+#endif
 
     vector<SurroundViewInputBufferPointers>
         mInputPointers GUARDED_BY(mAccessLock);

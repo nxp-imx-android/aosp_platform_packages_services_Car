@@ -180,6 +180,9 @@ cc_library{
         "libui",
         "libutils",
         "libvhal_handler",
+        "libGLESv3",
+        "libGLESv2",
+        "libEGL",
     ],
     required : [
         "cam0.png",
@@ -210,7 +213,8 @@ cc_library{
         "libeigen",
     ],
     include_dirs: [
-        "vendor/nxp-opensource/imx/sv/corelib/include/"
+        "vendor/nxp-opensource/imx/sv/corelib/include/",
+        "frameworks/native/opengl/include",
     ],
 }
 
@@ -226,7 +230,8 @@ cc_test{
     ],
     include_dirs: [
         "packages/services/Car/evs/sampleDriver",
-        "vendor/nxp-opensource/imx/sv/corelib/include/"
+        "vendor/nxp-opensource/imx/sv/corelib/include/",
+        "frameworks/native/opengl/include",
     ],
     header_libs: [
         "libeigen",
@@ -311,7 +316,8 @@ cc_binary{
     // Disable builds except for arm64 and emulator devices
     enabled : false,
     include_dirs: [
-        "vendor/nxp-opensource/imx/sv/corelib/include/"
+        "vendor/nxp-opensource/imx/sv/corelib/include/",
+        "frameworks/native/opengl/include",
     ],
     header_libs: [
         "libeigen",
