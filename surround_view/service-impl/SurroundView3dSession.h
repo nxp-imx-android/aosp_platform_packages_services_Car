@@ -43,7 +43,9 @@ using namespace ::android::hardware::automotive::evs::V1_1;
 using namespace ::android::hardware::automotive::sv::V1_0;
 using namespace ::android::hardware::automotive::vehicle::V2_0;
 using namespace ::android_auto::surround_view;
+#ifdef ENABLE_IMX_CORELIB
 using namespace imx;
+#endif
 
 using ::android::hardware::Return;
 using ::android::hardware::hidl_vec;
