@@ -739,11 +739,13 @@ bool SurroundView2dSession::initialize() {
                 (void*)new uint8_t[mInputPointers[i].width *
                                    mInputPointers[i].height *
                                    kInputNumChannels];
+#ifdef ENABLE_IMX_CORELIB
         // NOTE: do not make mInputPoint as local variable, because it will release cpu_data_pointer
         // once this function is done.
         // it cause sv camera do not work from the second frame.
         shared_ptr<char> p((char *)mInputPointers[i].cpu_data_pointer);
         mInputPoint.push_back(p);
+#endif
     }
     LOG(INFO) << "Allocated " << kNumFrames << " input pointers";
 
@@ -893,8 +895,11 @@ bool SurroundView2dSession::setupEvs() {
         camera.circular_fov = 120;
     }
 
+#ifdef ENABLE_IMX_CORELIB
     mImxCameraParams =
          convertToImxSurroundViewCameraParams(cameraIdToAndroidParameters, mIOModuleConfig);
+#endif
+
     return true;
 }
 
