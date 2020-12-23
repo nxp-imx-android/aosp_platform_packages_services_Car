@@ -70,7 +70,6 @@ static const int kInputNumChannels = 4;
 static const int kOutputNumChannels = 3;
 static const int kNumFrames = 4;
 static const int kSv2dViewId = 0;
-static const float kUndistortionScales[4] = {1.0f, 1.0f, 1.0f, 1.0f};
 
 // #define DEBUG_SURROUNDVIEW_2D
 #ifdef DEBUG_SURROUNDVIEW_2D

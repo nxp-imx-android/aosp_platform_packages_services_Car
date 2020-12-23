@@ -75,7 +75,6 @@ static const uint8_t kGrayColor = 128;
 static const int kNumFrames = 4;
 static const int kInputNumChannels = 4;
 static const int kOutputNumChannels = 4;
-static const float kUndistortionScales[4] = {1.0f, 1.0f, 1.0f, 1.0f};
 
 SurroundView3dSession::FramesHandler::FramesHandler(
     sp<IEvsCamera> pCamera, sp<SurroundView3dSession> pSession)
