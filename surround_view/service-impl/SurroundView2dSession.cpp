@@ -66,7 +66,7 @@ typedef struct {
 
 static const size_t kStreamCfgSz = sizeof(RawStreamConfig) / sizeof(int32_t);
 static const uint8_t kGrayColor = 128;
-static const int kInputNumChannels = 4;
+static const int kInputNumChannels = 3;
 static const int kOutputNumChannels = 3;
 static const int kNumFrames = 4;
 static const int kSv2dViewId = 0;
@@ -723,7 +723,7 @@ bool SurroundView2dSession::initialize() {
     for (int i = 0; i < kNumFrames; i++) {
         mInputPointers[i].width = mCameraParams[i].size.width;
         mInputPointers[i].height = mCameraParams[i].size.height;
-        mInputPointers[i].format = Format::RGBA;
+        mInputPointers[i].format = Format::RGB;
         mInputPointers[i].cpu_data_pointer =
                 (void*)new uint8_t[mInputPointers[i].width *
                                    mInputPointers[i].height *

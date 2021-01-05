@@ -73,7 +73,7 @@ typedef struct {
 static const size_t kStreamCfgSz = sizeof(RawStreamConfig) / sizeof(int32_t);
 static const uint8_t kGrayColor = 128;
 static const int kNumFrames = 4;
-static const int kInputNumChannels = 4;
+static const int kInputNumChannels = 3;
 static const int kOutputNumChannels = 4;
 
 SurroundView3dSession::FramesHandler::FramesHandler(
@@ -657,7 +657,7 @@ bool SurroundView3dSession::handleFrames(int sequenceId) {
         mOutputHeight = mConfig.height;
         mOutputPointer.height = mOutputHeight;
         mOutputPointer.width = mOutputWidth;
-        mOutputPointer.format = Format::RGBA;
+        mOutputPointer.format = Format::RGB;
         mOutputPointer.data_pointer =
             new char[mOutputHeight * mOutputWidth * kOutputNumChannels];
 
