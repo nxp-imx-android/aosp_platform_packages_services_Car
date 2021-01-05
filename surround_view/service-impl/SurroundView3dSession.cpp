@@ -121,24 +121,7 @@ Return<void> SurroundView3dSession::FramesHandler::deliverFrame_1_1(
     {
         scoped_lock<mutex> lock(mSession->mAccessLock);
 
-        // The incoming frames may not follow the same order as listed cameras.
-        // We should re-order them following the camera ids listed in camera
-        // config.
-        vector<int> indices;
-        for (const auto& id
-                : mSession->mIOModuleConfig->cameraConfig.evsCameraIds) {
-            for (int i = 0; i < kNumFrames; i++) {
-                if (buffers[i].deviceId == id) {
-                    indices.emplace_back(i);
-                    break;
-                }
-            }
-        }
-
-        // If the size of indices is smaller than the kNumFrames, it means that
-        // there is frame(s) that comes from different camera(s) than we
-        // expected.
-        if (indices.size() != kNumFrames) {
+        if (mSession->mIOModuleConfig->cameraConfig.evsCameraIds.size() != kNumFrames) {
             LOG(ERROR) << "The frames are not from the cameras we expected!";
             mSession->mProcessingEvsFrames = false;
             mCamera->doneWithFrame_1_1(buffers);
@@ -147,9 +130,9 @@ Return<void> SurroundView3dSession::FramesHandler::deliverFrame_1_1(
 
         for (int i = 0; i < kNumFrames; i++) {
             LOG(DEBUG) << "Copying buffer from camera ["
-                       << buffers[indices[i]].deviceId
+                       << buffers[i].deviceId
                        << "] to Surround View Service";
-            mSession->copyFromBufferToPointers(buffers[indices[i]],
+            mSession->copyFromBufferToPointers(buffers[i],
                                                mSession->mInputPointers[i]);
         }
     }
