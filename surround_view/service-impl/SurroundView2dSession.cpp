@@ -824,12 +824,7 @@ bool SurroundView2dSession::setupEvs() {
         // Stream configurations are found in metadata
         RawStreamConfig *ptr = reinterpret_cast<RawStreamConfig *>(
             streamCfgs.data.i32);
-        unsigned streamCfgSize = calculate_camera_metadata_entry_data_size(
-                                   get_camera_metadata_tag_type(
-                                   ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS
-                                   ),
-                                   streamCfgs.count);
-        for (unsigned idx = 0; idx < streamCfgSize; idx += kStreamCfgSz) {
+        for (unsigned idx = 0; idx < streamCfgs.count; idx += kStreamCfgSz) {
             if (ptr->direction ==
                 ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT &&
                 ptr->format == HAL_PIXEL_FORMAT_RGB_888) {
