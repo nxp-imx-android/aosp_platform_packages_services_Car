@@ -214,10 +214,10 @@ bool run3dSurroundView(sp<ISurroundViewService> pSurroundViewService,
         return false;
     }
 
-    // Let the SV algorithm run for 10 seconds for HIGH_QUALITY
-    const int totalViewingTimeSecs = 10;
+    // Let the SV algorithm run for 60 seconds for HIGH_QUALITY
+    const int totalViewingTimeSecs = 60;
     const std::chrono::milliseconds
-            perPoseSleepTimeMs(totalViewingTimeSecs * 1000 / kPoseCount);
+            perPoseSleepTimeMs(totalViewingTimeSecs * 1000);
     std::this_thread::sleep_for(perPoseSleepTimeMs);
 
     // Switch to low quality and lower resolution
