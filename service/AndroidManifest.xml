@@ -812,6 +812,15 @@
                 android:label="@string/car_permission_label_control_car_power_policy"
                 android:description="@string/car_permission_desc_control_car_power_policy"/>
 
+    <!-- Allows an application to render template-based UI metadata on behalf of another
+         application.
+         <p>Protection level: signature|privileged
+    -->
+    <permission android:name="android.car.permission.TEMPLATE_RENDERER"
+                android:protectionLevel="signature|privileged"
+                android:label="@string/car_permission_label_template_renderer"
+                android:description="@string/car_permission_desc_template_renderer"/>
+
     <uses-permission android:name="android.permission.CALL_PHONE"/>
     <uses-permission android:name="android.permission.DEVICE_POWER"/>
     <uses-permission android:name="android.permission.GRANT_RUNTIME_PERMISSIONS"/>
@@ -835,6 +844,8 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.PROVIDE_TRUST_AGENT"/>
     <uses-permission android:name="android.permission.READ_LOGS"/>
+    <!--  Used by NotificationHelper to change the notifications app name -->
+    <uses-permission android:name="android.permission.SUBSTITUTE_NOTIFICATION_APP_NAME"/>
 
     <application android:label="@string/app_title"
          android:directBootAware="true"
@@ -875,6 +886,12 @@
             </intent-filter>
         </activity>
         <activity android:name="com.android.car.am.ContinuousBlankActivity"
+             android:excludeFromRecents="true"
+             android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+             android:exported="false"
+             android:launchMode="singleTask">
+        </activity>
+        <activity android:name="com.android.car.ui.FactoryResetActivity"
              android:excludeFromRecents="true"
              android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
              android:exported="false"

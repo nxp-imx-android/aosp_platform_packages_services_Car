@@ -493,9 +493,25 @@
     <!-- Permission text: apps control car power policy [CHAR LIMIT=NONE] -->
     <string name="car_permission_desc_control_car_power_policy">Control car power policy.</string>
 
+    <!-- Permission text: app can render templates provided by another app [CHAR LIMIT=NONE] -->
+    <string name="car_permission_label_template_renderer">render templates</string>
+    <!-- Permission text: app can render templates provided by another app [CHAR LIMIT=NONE] -->
+    <string name="car_permission_desc_template_renderer">Render templates.</string>
+
     <!-- The default name of device enrolled as trust device [CHAR LIMIT=NONE] -->
     <string name="trust_device_default_name">My Device</string>
 
     <!-- Default name for new guest users [CHAR LIMIT=20] -->
     <string name="default_guest_name">Guest</string>
+
+    <!-- Name of the high-importance notification channel [CHAR LIMIT=40] -->
+    <string name="importance_high">High importance</string>
+
+    <!--  TODO(b/171603586): once the strings below are properly defined, remove translatable=false and add proper description / CHAR_LIMIT  -->
+    <string name="factory_reset_notification_title" translatable="false">Factory reset</string>
+    <string name="factory_reset_notification_text" translatable="false">A factory reset is imminent</string>
+    <string name="factory_reset_full_text" translatable="false">A factory reset is imminent, if you don\'t accept it now, it will be automatically done after reboot.\n\nDo you want to factory reset now?</string>
+    <string name="factory_reset_now" translatable="false">Now</string>
+    <string name="factory_reset_later" translatable="false">Later</string>
+
 </resources>
