@@ -35,6 +35,8 @@ import android.os.UserHandle;
 import android.os.UserManager;
 import android.util.Log;
 
+import androidx.test.filters.FlakyTest;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -138,6 +140,7 @@ public final class CarDevicePolicyManagerTest extends CarApiTestBase {
     }
 
     @Test
+    @FlakyTest(bugId = 178475817)
     public void testLockNow_unsafe() throws Exception {
         lockNowTest(/* safe= */ false);
     }

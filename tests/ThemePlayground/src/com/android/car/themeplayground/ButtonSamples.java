@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
-package com.android.car
+package com.android.car.themeplayground;
+
+import android.os.Bundle;
 
 /**
- * Identical to [also]. Use to communicate intent of guarding against null. Compatible with
- * `?:` (elvis operator) if else block is needed.
- *
- * Example:
- * ```
- * array.firstOrNull()?.guard { Log.d(TAG, "$it is guaranteed to not be null here") }
- * ```
- *
+ * Activity that shows buttons from the device default theme
  */
-internal inline fun <T> T.guard(block: (T) -> Unit): T {
-    return this.also(block)
+public final class ButtonSamples extends AbstractSampleActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        Utils.onActivityCreateSetTheme(this);
+        setContentView(R.layout.button_samples);
+    }
 }
