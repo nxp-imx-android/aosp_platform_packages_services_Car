@@ -49,7 +49,6 @@ import org.xmlpull.v1.XmlPullParserException;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -110,7 +109,8 @@ final class PolicyReader {
             PowerComponent.AUDIO, PowerComponent.MEDIA, PowerComponent.DISPLAY,
             PowerComponent.BLUETOOTH, PowerComponent.PROJECTION, PowerComponent.NFC,
             PowerComponent.INPUT, PowerComponent.VOICE_INTERACTION,
-            PowerComponent.VISUAL_INTERACTION, PowerComponent.LOCATION, PowerComponent.MICROPHONE
+            PowerComponent.VISUAL_INTERACTION, PowerComponent.LOCATION, PowerComponent.MICROPHONE,
+            PowerComponent.CPU
     };
     private static final Set<Integer> SYSTEM_POLICY_CONFIGURABLE_COMPONENTS =
             new ArraySet<>(Arrays.asList(PowerComponent.BLUETOOTH, PowerComponent.NFC,
@@ -179,6 +179,12 @@ final class PolicyReader {
     @Nullable
     String definePowerPolicy(String policyId, String[] enabledComponents,
             String[] disabledComponents) {
+        if (policyId == null) {
+            return "policyId cannot be null";
+        }
+        if (policyId.startsWith(SYSTEM_POWER_POLICY_PREFIX)) {
+            return "policyId should not start with " + SYSTEM_POWER_POLICY_PREFIX;
+        }
         if (mRegisteredPowerPolicies.containsKey(policyId)) {
             return policyId + " is already registered";
         }
@@ -197,31 +203,29 @@ final class PolicyReader {
         return null;
     }
 
-    void dump(PrintWriter writer) {
-        try (IndentingPrintWriter pw = new IndentingPrintWriter(writer)) {
-            pw.printf("Registered power policies:%s\n",
-                    mRegisteredPowerPolicies.size() == 0 ? " none" : "");
-            pw.increaseIndent();
-            for (Map.Entry<String, CarPowerPolicy> entry : mRegisteredPowerPolicies.entrySet()) {
-                pw.println(toString(entry.getValue()));
-            }
-            pw.decreaseIndent();
-            pw.printf("Power policy groups:%s\n", mPolicyGroups.isEmpty() ? " none" : "");
-            pw.increaseIndent();
-            for (Map.Entry<String, SparseArray<String>> entry : mPolicyGroups.entrySet()) {
-                pw.printf("%s\n", entry.getKey());
-                pw.increaseIndent();
-                SparseArray<String> group = entry.getValue();
-                for (int i = 0; i < group.size(); i++) {
-                    pw.printf("- %s --> %s\n", powerStateToString(group.keyAt(i)),
-                            group.valueAt(i));
-                }
-                pw.decreaseIndent();
-            }
-            pw.decreaseIndent();
-            pw.printf("System power policy: %s\n",
-                    toString(mSystemPowerPolicy.get(SYSTEM_POWER_POLICY_NO_USER_INTERACTION)));
+    void dump(IndentingPrintWriter writer) {
+        writer.printf("Registered power policies:%s\n",
+                mRegisteredPowerPolicies.size() == 0 ? " none" : "");
+        writer.increaseIndent();
+        for (Map.Entry<String, CarPowerPolicy> entry : mRegisteredPowerPolicies.entrySet()) {
+            writer.println(toString(entry.getValue()));
         }
+        writer.decreaseIndent();
+        writer.printf("Power policy groups:%s\n", mPolicyGroups.isEmpty() ? " none" : "");
+        writer.increaseIndent();
+        for (Map.Entry<String, SparseArray<String>> entry : mPolicyGroups.entrySet()) {
+            writer.printf("%s\n", entry.getKey());
+            writer.increaseIndent();
+            SparseArray<String> group = entry.getValue();
+            for (int i = 0; i < group.size(); i++) {
+                writer.printf("- %s --> %s\n", powerStateToString(group.keyAt(i)),
+                        group.valueAt(i));
+            }
+            writer.decreaseIndent();
+        }
+        writer.decreaseIndent();
+        writer.printf("System power policy: %s\n",
+                toString(mSystemPowerPolicy.get(SYSTEM_POWER_POLICY_NO_USER_INTERACTION)));
     }
 
     @VisibleForTesting
@@ -607,10 +611,6 @@ final class PolicyReader {
                 return VehicleApPowerStateReport.WAIT_FOR_VHAL;
             case POWER_STATE_ON:
                 return VehicleApPowerStateReport.ON;
-            case POWER_STATE_DEEP_SLEEP_ENTRY:
-                return VehicleApPowerStateReport.DEEP_SLEEP_ENTRY;
-            case POWER_STATE_SHUTDOWN_START:
-                return VehicleApPowerStateReport.SHUTDOWN_START;
             default:
                 return INVALID_POWER_STATE;
         }
@@ -622,10 +622,6 @@ final class PolicyReader {
                 return POWER_STATE_WAIT_FOR_VHAL;
             case VehicleApPowerStateReport.ON:
                 return POWER_STATE_ON;
-            case VehicleApPowerStateReport.DEEP_SLEEP_ENTRY:
-                return POWER_STATE_DEEP_SLEEP_ENTRY;
-            case VehicleApPowerStateReport.SHUTDOWN_START:
-                return POWER_STATE_SHUTDOWN_START;
             default:
                 return "unknown power state";
         }

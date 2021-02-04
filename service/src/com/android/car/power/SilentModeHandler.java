@@ -18,6 +18,7 @@ package com.android.car.power;
 import android.annotation.NonNull;
 import android.os.FileObserver;
 import android.os.SystemProperties;
+import android.util.IndentingPrintWriter;
 import android.util.Slog;
 
 import com.android.car.CarLog;
@@ -30,23 +31,24 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.Objects;
 
 /**
  * Class to handle Silent Mode and Non-Silent Mode.
  *
- * <p>This monitors {@code /sys/power/silentmode_gpio} to figure out when to switch to Silent Mode
- * and updates {@code /sys/power/kernelsilentmode} to tell early-init services about Silent Mode
- * change. Also, it handles forced Silent Mode for testing purpose, which is given through reboot
- * reason.
+ * <p>This monitors {@code /sys/power/pm_silentmode_hw_state} to figure out when to switch to Silent
+ * Mode and updates {@code /sys/power/pm_silentmode_kernel} to tell early-init services about Silent
+ * Mode change. Also, it handles forced Silent Mode for testing purpose, which is given through
+ * reboot reason.
  */
 final class SilentModeHandler {
     private static final String TAG = CarLog.TAG_POWER + "_"
             + SilentModeHandler.class.getSimpleName();
 
-    private static final String SYSFS_FILENAME_GPIO_MONITORING = "/sys/power/silentmode_gpio";
-    private static final String SYSFS_FILENAME_KERNEL_SILENTMODE = "/sys/power/kernelsilentmode";
+    private static final String SYSFS_FILENAME_GPIO_MONITORING =
+            "/sys/power/pm_silentmode_hw_state";
+    private static final String SYSFS_FILENAME_KERNEL_SILENTMODE =
+            "/sys/power/pm_silentmode_kernel";
     private static final String VALUE_SILENT_MODE = "1";
     private static final String VALUE_NON_SILENT_MODE = "0";
     private static final String SYSTEM_BOOT_REASON = "sys.boot.reason";
@@ -116,7 +118,7 @@ final class SilentModeHandler {
         }
     }
 
-    void dump(PrintWriter writer) {
+    void dump(IndentingPrintWriter writer) {
         synchronized (mLock) {
             writer.printf("Monitoring GPIO signal: %b\n", mFileObserver != null);
             writer.printf("Silent mode by GPIO signal: %b\n", mSilentModeByGpio);
