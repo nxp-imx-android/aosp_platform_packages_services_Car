@@ -16,15 +16,32 @@
 
 package com.android.car.audio.hal;
 
+import android.annotation.IntDef;
+import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.media.AudioAttributes.AttributeUsage;
 import android.util.IndentingPrintWriter;
+
+import com.android.car.audio.CarDuckingInfo;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
  * AudioControlWrapper wraps IAudioControl HAL interface, handling version specific support so that
  * the rest of CarAudioService doesn't need to know about it.
  */
 public interface AudioControlWrapper {
+    int AUDIOCONTROL_FEATURE_AUDIO_FOCUS = 0;
+    int AUDIOCONTROL_FEATURE_AUDIO_DUCKING = 1;
+
+    @IntDef({
+            AUDIOCONTROL_FEATURE_AUDIO_FOCUS,
+            AUDIOCONTROL_FEATURE_AUDIO_DUCKING
+    })
+    @Retention(RetentionPolicy.SOURCE)
+    @interface AudioControlFeature {
+    }
 
     /**
      * Closes the focus listener that's registered on the AudioControl HAL
@@ -32,9 +49,13 @@ public interface AudioControlWrapper {
     void unregisterFocusListener();
 
     /**
-     * Indicates if HAL can support making and abandoning audio focus requests.
+     * Indicates if HAL can support specified feature
+     *
+     * @param feature to check support for. it's expected to be one of the features defined by
+     * {@link AudioControlWrapper.AudioControlFeature}.
+     * @return boolean indicating whether feature is supported
      */
-    boolean supportsHalAudioFocus();
+    boolean supportsFeature(@AudioControlFeature int feature);
 
     /**
      * Registers listener for HAL audio focus requests with IAudioControl. Only works if
@@ -75,7 +96,16 @@ public interface AudioControlWrapper {
     void setBalanceTowardRight(float value);
 
     /**
+     * Notifies HAL of changes in usages holding focus and the corresponding ducking changes for a
+     * given zone.
+     *
+     * @param carDuckingInfo information about focus and addresses to duck to relay to the HAL.
+     */
+    void onDevicesToDuckChange(@NonNull CarDuckingInfo carDuckingInfo);
+
+    /**
      * Registers recipient to be notified if AudioControl HAL service dies.
+     *
      * @param deathRecipient to be notified upon HAL service death.
      */
     void linkToDeath(@Nullable AudioControlDeathRecipient deathRecipient);

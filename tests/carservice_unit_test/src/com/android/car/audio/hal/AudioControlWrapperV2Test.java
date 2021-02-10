@@ -16,12 +16,16 @@
 
 package com.android.car.audio.hal;
 
+import static com.android.car.audio.hal.AudioControlWrapper.AUDIOCONTROL_FEATURE_AUDIO_DUCKING;
+import static com.android.car.audio.hal.AudioControlWrapper.AUDIOCONTROL_FEATURE_AUDIO_FOCUS;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertThrows;
 
 import android.hardware.automotive.audiocontrol.V2_0.IAudioControl;
 import android.hardware.automotive.audiocontrol.V2_0.ICloseHandle;
@@ -69,10 +73,26 @@ public class AudioControlWrapperV2Test {
     }
 
     @Test
-    public void supportsHalAudioFocus_returnsTrue() {
+    public void supportsFeature_audioFocus_returnsTrue() {
         AudioControlWrapperV2 audioControlWrapperV2 = new AudioControlWrapperV2(mAudioControlV2);
 
-        assertThat(audioControlWrapperV2.supportsHalAudioFocus()).isTrue();
+        assertThat(audioControlWrapperV2.supportsFeature(AUDIOCONTROL_FEATURE_AUDIO_FOCUS))
+                .isTrue();
+    }
+
+    @Test
+    public void supportsFeature_withUnknownFeature_returnsFalse() {
+        AudioControlWrapperV2 audioControlWrapperV2 = new AudioControlWrapperV2(mAudioControlV2);
+
+        assertThat(audioControlWrapperV2.supportsFeature(-1)).isFalse();
+    }
+
+    @Test
+    public void supportsFeature_withAudioDucking_returnsFalse() {
+        AudioControlWrapperV2 audioControlWrapperV2 = new AudioControlWrapperV2(mAudioControlV2);
+
+        assertThat(audioControlWrapperV2.supportsFeature(AUDIOCONTROL_FEATURE_AUDIO_DUCKING))
+                .isFalse();
     }
 
     @Test
@@ -106,5 +126,13 @@ public class AudioControlWrapperV2Test {
         audioControlWrapperV2.onAudioFocusChange(USAGE, ZONE_ID, FOCUS_GAIN);
 
         verify(mAudioControlV2).onAudioFocusChange(USAGE, ZONE_ID, FOCUS_GAIN);
+    }
+
+    @Test
+    public void onDevicesToDuckChange_throws() {
+        AudioControlWrapperV2 audioControlWrapperV2 = new AudioControlWrapperV2(mAudioControlV2);
+
+        assertThrows(UnsupportedOperationException.class,
+                () -> audioControlWrapperV2.onDevicesToDuckChange(null));
     }
 }

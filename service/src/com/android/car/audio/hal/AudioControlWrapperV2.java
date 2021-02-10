@@ -27,6 +27,8 @@ import android.util.IndentingPrintWriter;
 import android.util.Log;
 import android.util.Slog;
 
+import com.android.car.audio.CarDuckingInfo;
+
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
@@ -69,8 +71,11 @@ public final class AudioControlWrapperV2 implements AudioControlWrapper {
     }
 
     @Override
-    public boolean supportsHalAudioFocus() {
-        return true;
+    public boolean supportsFeature(int feature) {
+        if (feature == AUDIOCONTROL_FEATURE_AUDIO_FOCUS) {
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -103,6 +108,12 @@ public final class AudioControlWrapperV2 implements AudioControlWrapper {
         writer.println("*AudioControlWrapperV2*");
         writer.increaseIndent();
         writer.printf("Focus listener registered on HAL? %b\n", (mCloseHandle != null));
+
+        writer.println("Supported Features");
+        writer.increaseIndent();
+        writer.println("- AUDIOCONTROL_FEATURE_AUDIO_FOCUS");
+        writer.decreaseIndent();
+
         writer.decreaseIndent();
     }
 
@@ -122,6 +133,11 @@ public final class AudioControlWrapperV2 implements AudioControlWrapper {
         } catch (RemoteException e) {
             Slog.e(TAG, "setBalanceTowardRight failed", e);
         }
+    }
+
+    @Override
+    public void onDevicesToDuckChange(CarDuckingInfo carDuckingInfo) {
+        throw new UnsupportedOperationException("HAL ducking is unsupported for IAudioControl@2.0");
     }
 
     @Override

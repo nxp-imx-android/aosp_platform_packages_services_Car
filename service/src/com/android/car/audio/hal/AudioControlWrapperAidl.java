@@ -16,7 +16,9 @@
 
 package com.android.car.audio.hal;
 
+import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.hardware.automotive.audiocontrol.DuckingInfo;
 import android.hardware.automotive.audiocontrol.IAudioControl;
 import android.hardware.automotive.audiocontrol.IFocusListener;
 import android.media.AudioAttributes;
@@ -28,6 +30,8 @@ import android.os.ServiceManager;
 import android.util.IndentingPrintWriter;
 import android.util.Log;
 import android.util.Slog;
+
+import com.android.car.audio.CarDuckingInfo;
 
 import java.util.Objects;
 
@@ -45,12 +49,8 @@ public final class AudioControlWrapperAidl implements AudioControlWrapper {
     private AudioControlDeathRecipient mDeathRecipient;
 
     static @Nullable IBinder getService() {
-        IBinder binder = Binder.allowBlocking(ServiceManager.waitForDeclaredService(
+        return Binder.allowBlocking(ServiceManager.waitForDeclaredService(
                 AUDIO_CONTROL_SERVICE));
-        if (binder != null) {
-            return binder;
-        }
-        return null;
     }
 
     AudioControlWrapperAidl(IBinder binder) {
@@ -64,8 +64,9 @@ public final class AudioControlWrapperAidl implements AudioControlWrapper {
     }
 
     @Override
-    public boolean supportsHalAudioFocus() {
-        return true;
+    public boolean supportsFeature(int feature) {
+        return feature == AUDIOCONTROL_FEATURE_AUDIO_FOCUS
+                || feature == AUDIOCONTROL_FEATURE_AUDIO_DUCKING;
     }
 
     @Override
@@ -102,6 +103,13 @@ public final class AudioControlWrapperAidl implements AudioControlWrapper {
         writer.println("*AudioControlWrapperAidl*");
         writer.increaseIndent();
         writer.printf("Focus listener registered on HAL? %b\n", mListenerRegistered);
+
+        writer.println("Supported Features");
+        writer.increaseIndent();
+        writer.println("- AUDIOCONTROL_FEATURE_AUDIO_FOCUS");
+        writer.println("- AUDIOCONTROL_FEATURE_AUDIO_DUCKING");
+        writer.decreaseIndent();
+
         writer.decreaseIndent();
     }
 
@@ -120,6 +128,19 @@ public final class AudioControlWrapperAidl implements AudioControlWrapper {
             mAudioControl.setBalanceTowardRight(value);
         } catch (RemoteException e) {
             Slog.e(TAG, "setBalanceTowardRight with " + value + " failed", e);
+        }
+    }
+
+    @Override
+    public void onDevicesToDuckChange(@NonNull CarDuckingInfo carDuckingInfo) {
+        Objects.requireNonNull(carDuckingInfo);
+        DuckingInfo duckingInfo = carDuckingInfo.generateDuckingInfo();
+
+        try {
+            mAudioControl.onDevicesToDuckChange(new DuckingInfo[] {duckingInfo});
+        } catch (RemoteException e) {
+            Slog.e(TAG, "onDevicesToDuckChange for zone " + carDuckingInfo.mZoneId
+                    + " failed", e);
         }
     }
 
@@ -150,7 +171,7 @@ public final class AudioControlWrapperAidl implements AudioControlWrapper {
         }
     }
 
-    private final class FocusListenerWrapper extends IFocusListener.Stub {
+    private static final class FocusListenerWrapper extends IFocusListener.Stub {
         private final HalFocusListener mListener;
 
         FocusListenerWrapper(HalFocusListener halFocusListener) {
@@ -158,14 +179,13 @@ public final class AudioControlWrapperAidl implements AudioControlWrapper {
         }
 
         @Override
-        public void requestAudioFocus(String usage, int zoneId, int focusGain)
-                throws RemoteException {
+        public void requestAudioFocus(String usage, int zoneId, int focusGain) {
             @AttributeUsage int usageValue = AudioAttributes.xsdStringToUsage(usage);
             mListener.requestAudioFocus(usageValue, zoneId, focusGain);
         }
 
         @Override
-        public void abandonAudioFocus(String usage, int zoneId) throws RemoteException {
+        public void abandonAudioFocus(String usage, int zoneId) {
             @AttributeUsage int usageValue = AudioAttributes.xsdStringToUsage(usage);
             mListener.abandonAudioFocus(usageValue, zoneId);
         }
