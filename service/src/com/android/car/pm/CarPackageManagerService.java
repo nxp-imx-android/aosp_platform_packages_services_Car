@@ -210,7 +210,6 @@ public class CarPackageManagerService extends ICarPackageManager.Stub implements
                 res.getStringArray(R.array.allowedAppInstallSources));
         mVendorServiceController = new VendorServiceController(
                 mContext, mHandler.getLooper());
-        mSystemActivityMonitoringService.registerActivityLaunchListener(mActivityLaunchListener);
     }
 
 
@@ -498,6 +497,7 @@ public class CarPackageManagerService extends ICarPackageManager.Stub implements
             mCarUxRestrictionsService.registerUxRestrictionsChangeListener(listener, displayId);
         }
         mVendorServiceController.init();
+        mSystemActivityMonitoringService.registerActivityLaunchListener(mActivityLaunchListener);
     }
 
     private void doParseInstalledPackage(String packageName) {
@@ -1229,7 +1229,7 @@ public class CarPackageManagerService extends ICarPackageManager.Stub implements
      * Reading policy and setting policy can take time. Run it in a separate handler thread.
      */
     private static final class PackageHandler extends Handler {
-        private static final String TAG = PackageHandler.class.getSimpleName();
+        private static final String TAG = CarLog.tagFor(CarPackageManagerService.class);
 
         private static final int MSG_INIT = 0;
         private static final int MSG_PARSE_PKG = 1;
