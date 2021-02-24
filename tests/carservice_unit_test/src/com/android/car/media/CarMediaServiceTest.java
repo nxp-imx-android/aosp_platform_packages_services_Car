@@ -57,7 +57,6 @@ import com.android.car.CarLocalServices;
 import com.android.car.CarMediaService;
 import com.android.car.R;
 import com.android.car.power.CarPowerManagementService;
-import com.android.car.power.SilentModeController;
 import com.android.car.systeminterface.SystemInterface;
 import com.android.car.user.CarUserService;
 import com.android.internal.app.IVoiceInteractionManagerService;
@@ -95,8 +94,6 @@ public class CarMediaServiceTest extends AbstractExtendedMockitoTestCase {
     @Mock private CarPowerManagementService mMockCarPowerManagementService;
 
     private CarMediaService mCarMediaService;
-    private SilentModeController mSilentModeController;
-    private SilentModeController.SilentModeListener mSilentModeListener;
 
     @Override
     protected void onSessionBuilder(CustomMockitoSessionBuilder builder) {
@@ -117,18 +114,12 @@ public class CarMediaServiceTest extends AbstractExtendedMockitoTestCase {
         doReturn(mMediaSessionManager).when(mContext).getSystemService(MediaSessionManager.class);
 
         mCarMediaService = new CarMediaService(mContext, mUserService);
-        mSilentModeController = new SilentModeController(mContext, mMockSystemInterface,
-                mMockVoiceService, "");
-        CarLocalServices.addService(SilentModeController.class, mSilentModeController);
         CarLocalServices.addService(CarPowerManagementService.class,
                 mMockCarPowerManagementService);
-        mSilentModeController.init();
-        mSilentModeController.setPowerOnForTest(true);
     }
 
     @After
     public void tearDown() {
-        CarLocalServices.removeServiceForTest(SilentModeController.class);
         CarLocalServices.removeServiceForTest(CarPowerManagementService.class);
     }
 
@@ -348,11 +339,11 @@ public class CarMediaServiceTest extends AbstractExtendedMockitoTestCase {
 
         doAnswer(invocation -> {
             MediaSessionManager.OnActiveSessionsChangedListener callback =
-                    invocation.getArgument(0);
+                    invocation.getArgument(3);
             callback.onActiveSessionsChanged(controllers);
             return null;
-        }).when(mMediaSessionManager).addOnActiveSessionsChangedListener(any(
-                MediaSessionManager.OnActiveSessionsChangedListener.class), any(), any(), any());
+        }).when(mMediaSessionManager).addOnActiveSessionsChangedListener(any(), any(), any(),
+                any(MediaSessionManager.OnActiveSessionsChangedListener.class));
     }
 
     // This method sets up PackageManager queries to return mocked media components if specified
