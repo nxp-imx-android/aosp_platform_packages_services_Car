@@ -14,26 +14,6 @@
  * limitations under the License.
  */
 
-package android.automotive.watchdog.internal;
+package android.car.evs;
 
-import android.automotive.watchdog.IoOveruseStats;
-
-/**
- * Structure that describes the I/O overuse stats for a package.
- */
-parcelable PackageIoOveruseStats {
-  /**
-   * UID of the package whose stats are stored in the below fields.
-   */
-  int uid;
-
-  /**
-   * Indicates whether or not to notify the overuse listeners for the package.
-   */
-  boolean shouldNotify;
-
-   /**
-    * I/O overuse stats for the package.
-    */
-  IoOveruseStats ioOveruseStats;
-}
+parcelable CarEvsStatus;

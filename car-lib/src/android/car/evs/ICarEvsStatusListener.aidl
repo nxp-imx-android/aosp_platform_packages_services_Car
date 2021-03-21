@@ -16,6 +16,8 @@
 
 package android.car.evs;
 
+import android.car.evs.CarEvsStatus;
+
 /**
  * Binder method for CarEvsStatusListener.
  *
@@ -25,5 +27,5 @@ oneway interface ICarEvsStatusListener {
     /**
      * Called when the status of CarEvsService gets changed.
      */
-    void onStatusChanged(int type, int status);
+    void onStatusChanged(in CarEvsStatus status);
 }
