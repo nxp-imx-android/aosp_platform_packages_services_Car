@@ -47,8 +47,6 @@ Status CarTelemetryImpl::write(const std::vector<CarData>& dataList) {
 }
 
 status_t CarTelemetryImpl::dump(int fd, const android::Vector<android::String16>& args) {
-    dprintf(fd, "CarTelemetryImpl:\n");
-    mRingBuffer->dump(fd, /* indent= */ 2);
     return android::OK;
 }
 }  // namespace telemetry
