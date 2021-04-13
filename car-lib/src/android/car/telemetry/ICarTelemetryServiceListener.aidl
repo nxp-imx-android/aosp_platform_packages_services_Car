@@ -14,31 +14,24 @@
  * limitations under the License.
  */
 
-package android.automotive.watchdog.internal;
+package android.car.telemetry;
+
+import java.util.List;
 
 /**
- * Describes the action taken on resource overuse.
+ * Binder interface implemented by {@code CarTelemetryManager}. Enables sending results from
+ * {@code CarTelemetryService} to {@code CarTelemetryManager}.
+ *
+ * @hide
  */
-@Backing(type="int")
-enum ResourceOveruseActionType {
-  /**
-   * The package is not killed because either it is not killable, internal error occurred, or
-   * already disabled.
-   */
-  NOT_KILLED,
+oneway interface ICarTelemetryServiceListener {
 
-  /**
-   * The package is not killed as the user opted-out the package from killing on resource overuse.
-   */
-  NOT_KILLED_USER_OPTED,
-
-  /**
-   * The package is killed on resource overuse.
-   */
-  KILLED,
-
-  /**
-   * The package is killed as it has recurring resource overuse pattern.
-   */
-  KILLED_RECURRING_OVERUSE,
+    /**
+     * Called by {@code CarTelemetryService} when there is a list of data to send to the
+     * cloud app.
+     *
+     * @param data the serialized bytes of a message, e.g. the script execution results
+     * or errors.
+     */
+    void onDataReceived(in byte[] data);
 }

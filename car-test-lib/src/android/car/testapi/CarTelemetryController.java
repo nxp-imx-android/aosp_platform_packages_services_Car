@@ -14,31 +14,17 @@
  * limitations under the License.
  */
 
-package android.automotive.watchdog.internal;
+package android.car.testapi;
 
 /**
- * Describes the action taken on resource overuse.
+ * Controller to manipulate and verify {@link android.car.telemetry.CarTelemetryManager} in
+ * unit tests.
  */
-@Backing(type="int")
-enum ResourceOveruseActionType {
-  /**
-   * The package is not killed because either it is not killable, internal error occurred, or
-   * already disabled.
-   */
-  NOT_KILLED,
-
-  /**
-   * The package is not killed as the user opted-out the package from killing on resource overuse.
-   */
-  NOT_KILLED_USER_OPTED,
-
-  /**
-   * The package is killed on resource overuse.
-   */
-  KILLED,
-
-  /**
-   * The package is killed as it has recurring resource overuse pattern.
-   */
-  KILLED_RECURRING_OVERUSE,
+public interface CarTelemetryController {
+    /**
+     * Returns {@code true} if a {@link
+     * android.car.telemetry.CarTelemetryManager.CarTelemetryResultsListener} is
+     * registered with the manager, otherwise returns {@code false}.
+     */
+    boolean isListenerSet();
 }
