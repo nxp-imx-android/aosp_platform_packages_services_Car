@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
-package android.car.cluster;
+package android.automotive.watchdog.internal;
 
-import android.graphics.Insets;
-import android.graphics.Rect;
+import android.automotive.watchdog.internal.IoOveruseConfiguration;
 
-/** @hide */
-parcelable ClusterState {
-    boolean on;
-    Rect bounds;
-    Insets insets;
-    int uiType;
+/**
+ * Overuse configuration interface for specific resource types.
+ */
+union ResourceSpecificConfiguration {
+  /**
+   * I/O overuse configuration.
+   */
+  IoOveruseConfiguration ioOveruseConfiguration;
+  // Overuse configuration for other resource types may be added in the future.
 }

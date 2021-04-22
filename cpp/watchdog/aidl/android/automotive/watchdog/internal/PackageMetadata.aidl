@@ -14,15 +14,23 @@
  * limitations under the License.
  */
 
-package android.car.cluster;
+package android.automotive.watchdog.internal;
 
-import android.graphics.Insets;
-import android.graphics.Rect;
+import android.automotive.watchdog.internal.ApplicationCategoryType;
 
-/** @hide */
-parcelable ClusterState {
-    boolean on;
-    Rect bounds;
-    Insets insets;
-    int uiType;
+/**
+ * Structure that describes the package metadata.
+ */
+parcelable PackageMetadata {
+  /**
+   * Name of the package.
+   */
+  @utf8InCpp String packageName;
+
+  /**
+   * Application category type of the package.
+   *
+   * This must be defined only by the system and vendor component configurations.
+   */
+  ApplicationCategoryType appCategoryType = ApplicationCategoryType.OTHERS;
 }

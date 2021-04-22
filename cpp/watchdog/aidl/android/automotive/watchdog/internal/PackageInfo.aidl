@@ -48,5 +48,5 @@ parcelable PackageInfo {
   /**
    * Application category type of the package and the owned packages.
    */
-  ApplicationCategoryType appCategoryType;
+  ApplicationCategoryType appCategoryType = ApplicationCategoryType.OTHERS;
 }
