@@ -32,6 +32,7 @@ namespace watchdog {
 using ::android::defaultServiceManager;
 using ::android::IBinder;
 using ::android::sp;
+using ::android::String16;
 using ::android::base::Error;
 using ::android::base::Join;
 using ::android::base::ParseUint;
@@ -170,7 +171,6 @@ status_t WatchdogBinderMediator::dump(int fd, const Vector<String16>& args) {
         ALOGW("Failed to dump I/O perf collection: %s", ret.error().message().c_str());
         return ret.error().code();
     }
-    // TODO(b/167240592): Add a dump call to I/O overuse monitor and relevant tests.
     return OK;
 }
 

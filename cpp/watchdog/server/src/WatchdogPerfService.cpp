@@ -15,6 +15,7 @@
  */
 
 #define LOG_TAG "carwatchdogd"
+#define DEBUG false  // STOPSHIP if true.
 
 #include "WatchdogPerfService.h"
 
@@ -36,6 +37,7 @@ namespace automotive {
 namespace watchdog {
 
 using ::android::String16;
+using ::android::String8;
 using ::android::base::Error;
 using ::android::base::Join;
 using ::android::base::ParseUint;
@@ -140,6 +142,9 @@ Result<void> WatchdogPerfService::registerDataProcessor(
     }
     Mutex::Autolock lock(mMutex);
     mDataProcessors.push_back(processor);
+    if (DEBUG) {
+        ALOGD("Successfully registered %s to %s", processor->name().c_str(), kServiceName);
+    }
     return {};
 }
 
@@ -241,6 +246,9 @@ void WatchdogPerfService::terminate() {
     }
     if (mCollectionThread.joinable()) {
         mCollectionThread.join();
+        if (DEBUG) {
+            ALOGD("%s collection thread terminated", kServiceName);
+        }
     }
 }
 
@@ -260,6 +268,9 @@ Result<void> WatchdogPerfService::onBootFinished() {
     mBoottimeCollection.lastUptime = mHandlerLooper->now();
     mHandlerLooper->removeMessages(this);
     mHandlerLooper->sendMessage(this, SwitchMessage::END_BOOTTIME_COLLECTION);
+    if (DEBUG) {
+        ALOGD("Boot-time event finished");
+    }
     return {};
 }
 
@@ -471,6 +482,9 @@ Result<void> WatchdogPerfService::endCustomCollection(int fd) {
         }
     }
 
+    if (DEBUG) {
+        ALOGD("Custom event finished");
+    }
     WriteStringToFd(kDumpMajorDelimiter, fd);
     return {};
 }
@@ -564,6 +578,9 @@ Result<void> WatchdogPerfService::processCollectionEvent(
               toString(mCurrCollectionEvent));
         return {};
     }
+    if (DEBUG) {
+        ALOGD("Processing %s collection event", toString(metadata->eventType));
+    }
     if (metadata->interval < kMinEventInterval) {
         return Error()
                 << "Collection interval of "
@@ -635,6 +652,9 @@ Result<void> WatchdogPerfService::processMonitorEvent(
         WatchdogPerfService::EventMetadata* metadata) {
     if (metadata->eventType != static_cast<int>(EventType::PERIODIC_MONITOR)) {
         return Error() << "Invalid monitor event " << toString(metadata->eventType);
+    }
+    if (DEBUG) {
+        ALOGD("Processing %s monitor event", toString(metadata->eventType));
     }
     if (metadata->interval < kMinEventInterval) {
         return Error()
