@@ -31,16 +31,11 @@ namespace telemetry {
 
 using ::aidl::android::frameworks::automotive::telemetry::CarData;
 
-CarTelemetryImpl::CarTelemetryImpl(RingBuffer* buffer) : mRingBuffer(buffer) {}
+CarTelemetryImpl::CarTelemetryImpl(TelemetryServer* server) : mTelemetryServer(server) {}
 
-// TODO(b/174608802): Add 10kb size check for the `dataList`, see the AIDL for the limits
 ndk::ScopedAStatus CarTelemetryImpl::write(const std::vector<CarData>& dataList) {
     uid_t publisherUid = ::AIBinder_getCallingUid();
-    for (auto&& data : dataList) {
-        mRingBuffer->push({.mId = data.id,
-                           .mContent = std::move(data.content),
-                           .mPublisherUid = publisherUid});
-    }
+    mTelemetryServer->writeCarData(dataList, publisherUid);
     return ndk::ScopedAStatus::ok();
 }
 
