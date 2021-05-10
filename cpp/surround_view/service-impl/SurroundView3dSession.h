@@ -27,7 +27,13 @@
 #include <hidl/Status.h>
 
 #include "AnimationModule.h"
+#include "CoreLibSetupHelper.h"
 #include "VhalHandler.h"
+
+#ifdef ENABLE_IMX_CORELIB
+#include "Imx3DView.hpp"
+#include "ImxSurroundViewTypes.hpp"
+#endif
 
 #include <thread>
 
@@ -37,6 +43,9 @@ using namespace ::android::hardware::automotive::evs::V1_1;
 using namespace ::android::hardware::automotive::sv::V1_0;
 using namespace ::android::hardware::automotive::vehicle::V2_0;
 using namespace ::android_auto::surround_view;
+#ifdef ENABLE_IMX_CORELIB
+using namespace imx;
+#endif
 
 using ::android::hardware::Return;
 using ::android::hardware::hidl_vec;
@@ -117,7 +126,7 @@ private:
     bool handleFrames(int sequenceId);
 
     bool copyFromBufferToPointers(BufferDesc_1_1 buffer,
-                                  SurroundViewInputBufferPointers pointers);
+                                  SurroundViewInputBufferPointers &pointers);
 
     enum StreamStateValues {
         STOPPED,
@@ -132,13 +141,17 @@ private:
     // Instance and metadata for the opened Evs Camera
     sp<IEvsCamera> mCamera;
     CameraDesc mCameraDesc;
-    std::vector<SurroundViewCameraParams> mCameraParams;
+    vector<SurroundViewCameraParams> mCameraParams;
+
+#ifdef ENABLE_IMX_CORELIB
+    ImxSurroundViewCameraParams mImxCameraParams;
+#endif
 
     // Stream subscribed for the session.
     sp<ISurroundViewStream> mStream GUARDED_BY(mAccessLock);
     StreamStateValues mStreamState GUARDED_BY(mAccessLock);
 
-    std::thread mProcessThread; // The thread we'll use to process frames
+    thread mProcessThread; // The thread we'll use to process frames
 
     // Reference to the inner class, to handle the incoming Evs frames
     sp<FramesHandler> mFramesHandler;
@@ -147,7 +160,12 @@ private:
     condition_variable mFramesSignal GUARDED_BY(mAccessLock);
     bool mProcessingEvsFrames GUARDED_BY(mAccessLock);
 
+    bool mHandleFrameDirect;
     int mSequenceId;
+
+#ifdef ENABLE_IMX_CORELIB
+    vector<shared_ptr<unsigned char>> mInputPoint;
+#endif
 
     struct FramesRecord {
         SvFramesDesc frames;
@@ -157,17 +175,21 @@ private:
     FramesRecord mFramesRecord GUARDED_BY(mAccessLock);
 
     // Synchronization necessary to deconflict mCaptureThread from the main service thread
-    std::mutex mAccessLock;
+    mutex mAccessLock;
 
-    std::vector<View3d> mViews GUARDED_BY(mAccessLock);
+    vector<View3d> mViews GUARDED_BY(mAccessLock);
 
     Sv3dConfig mConfig GUARDED_BY(mAccessLock);
 
-    std::vector<std::string> mEvsCameraIds GUARDED_BY(mAccessLock);
+    vector<string> mEvsCameraIds GUARDED_BY(mAccessLock);
 
-    std::unique_ptr<SurroundView> mSurroundView GUARDED_BY(mAccessLock);
+    unique_ptr<SurroundView> mSurroundView GUARDED_BY(mAccessLock);
 
-    std::vector<SurroundViewInputBufferPointers>
+#ifdef ENABLE_IMX_CORELIB
+    Imx3DView * mImx3DSV;
+#endif
+
+    vector<SurroundViewInputBufferPointers>
         mInputPointers GUARDED_BY(mAccessLock);
     SurroundViewResultPointer mOutputPointer GUARDED_BY(mAccessLock);
     int mOutputWidth, mOutputHeight GUARDED_BY(mAccessLock);
@@ -179,9 +201,6 @@ private:
     VhalHandler* mVhalHandler;
     AnimationModule* mAnimationModule;
     IOModuleConfig* mIOModuleConfig;
-
-    std::vector<Overlay> mOverlays GUARDED_BY(mAccessLock);
-    bool mOverlayIsUpdated GUARDED_BY(mAccessLock) = false;
 
     std::vector<VehiclePropValue> mPropertyValues;
 };

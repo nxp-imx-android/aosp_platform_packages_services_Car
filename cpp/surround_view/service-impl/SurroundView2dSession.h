@@ -16,7 +16,12 @@
 
 #pragma once
 
+#include "CoreLibSetupHelper.h"
 #include "IOModule.h"
+#ifdef ENABLE_IMX_CORELIB
+#include "Imx2DSurroundView.hpp"
+#include "ImxSurroundViewTypes.hpp"
+#endif
 
 #include <android/hardware/automotive/evs/1.1/IEvsCamera.h>
 #include <android/hardware/automotive/evs/1.1/IEvsCameraStream.h>
@@ -40,6 +45,9 @@ using ::android::hardware::Return;
 using ::android::hardware::hidl_vec;
 using ::android::sp;
 using ::std::condition_variable;
+#ifdef ENABLE_IMX_CORELIB
+using namespace imx;
+#endif
 
 using BufferDesc_1_0  = ::android::hardware::automotive::evs::V1_0::BufferDesc;
 using BufferDesc_1_1  = ::android::hardware::automotive::evs::V1_1::BufferDesc;
@@ -83,6 +91,7 @@ public:
     ~SurroundView2dSession();
     bool initialize();
 
+    Return<void> dump_frame_to_file(char *pbuf, int size, char *filename);
     // Methods from ::android::hardware::automotive::sv::V1_0::ISurroundViewSession.
     Return<SvResult> startStream(
         const sp<ISurroundViewStream>& stream) override;
@@ -110,7 +119,7 @@ private:
     bool handleFrames(int sequenceId);
 
     bool copyFromBufferToPointers(BufferDesc_1_1 buffer,
-                                  SurroundViewInputBufferPointers pointers);
+                                  SurroundViewInputBufferPointers &pointers);
 
     enum StreamStateValues {
         STOPPED,
@@ -127,13 +136,16 @@ private:
     // Instance and metadata for the opened Evs Camera
     sp<IEvsCamera> mCamera;
     CameraDesc mCameraDesc;
-    std::vector<SurroundViewCameraParams> mCameraParams;
+    vector<SurroundViewCameraParams> mCameraParams;
+#ifdef ENABLE_IMX_CORELIB
+    ImxSurroundViewCameraParams mImxCameraParams;
+#endif
 
     // Stream subscribed for the session.
     sp<ISurroundViewStream> mStream GUARDED_BY(mAccessLock);
     StreamStateValues mStreamState GUARDED_BY(mAccessLock);
 
-    std::thread mProcessThread; // The thread we'll use to process frames
+    thread mProcessThread; // The thread we'll use to process frames
 
     // Reference to the inner class, to handle the incoming Evs frames
     sp<FramesHandler> mFramesHandler;
@@ -141,8 +153,12 @@ private:
     // Used to signal a set of frames is ready
     condition_variable mFramesSignal GUARDED_BY(mAccessLock);
     bool mProcessingEvsFrames GUARDED_BY(mAccessLock);
+    bool mHandleFrameDirect;
 
     int mSequenceId;
+#ifdef ENABLE_IMX_CORELIB
+    vector<shared_ptr<char>> mInputPoint;;
+#endif
 
     struct FramesRecord {
         SvFramesDesc frames;
@@ -153,13 +169,16 @@ private:
 
     // Synchronization necessary to deconflict mCaptureThread from the main
     // service thread
-    std::mutex mAccessLock;
+    mutex mAccessLock;
 
-    std::vector<std::string> mEvsCameraIds GUARDED_BY(mAccessLock);
+    vector<string> mEvsCameraIds GUARDED_BY(mAccessLock);
 
-    std::unique_ptr<SurroundView> mSurroundView GUARDED_BY(mAccessLock);
+    unique_ptr<SurroundView> mSurroundView GUARDED_BY(mAccessLock);
+#ifdef ENABLE_IMX_CORELIB
+    imx::Imx2DSV * mImx2DSV;
+#endif
 
-    std::vector<SurroundViewInputBufferPointers>
+    vector<SurroundViewInputBufferPointers>
         mInputPointers GUARDED_BY(mAccessLock);
     SurroundViewResultPointer mOutputPointer GUARDED_BY(mAccessLock);
 
@@ -169,14 +188,10 @@ private:
     // TODO(b/158479099): Rename it to mMappingInfo
     Sv2dMappingInfo mInfo GUARDED_BY(mAccessLock);
     int mOutputWidth, mOutputHeight GUARDED_BY(mAccessLock);
-    sp<GraphicBuffer> mOutputHolder;
 
     sp<GraphicBuffer> mSvTexture GUARDED_BY(mAccessLock);
 
     bool mIsInitialized GUARDED_BY(mAccessLock) = false;
-
-    bool mGpuAccelerationEnabled;
-    hidl_vec<BufferDesc_1_1> mEvsGraphicBuffers;
 };
 
 }  // namespace implementation

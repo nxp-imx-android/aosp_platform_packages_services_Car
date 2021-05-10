@@ -16,6 +16,7 @@
 
 #include <android-base/logging.h>
 
+#include "CoreLibSetupHelper.h"
 #include "SurroundViewService.h"
 
 using namespace android_auto::surround_view;
@@ -35,24 +36,14 @@ sp<SurroundView3dSession> SurroundViewService::sSurroundView3dSession;
 const std::string kCameraIds[] = {"0", "1", "2", "3"};
 static const int kVhalUpdateRate = 10;
 
-SurroundViewService::SurroundViewService() :
-      mVhalHandler(nullptr), mAnimationModule(nullptr), mIOModule(nullptr) {
+SurroundViewService::SurroundViewService() {
     mVhalHandler = new VhalHandler();
     mIOModule = new IOModule("/vendor/etc/automotive/sv/sv_sample_config.xml");
 }
 
 SurroundViewService::~SurroundViewService() {
-    if (mVhalHandler != nullptr) {
-        delete mVhalHandler;
-    }
-
-    if (mIOModule != nullptr) {
-        delete mIOModule;
-    }
-
-    if (mAnimationModule != nullptr) {
-        delete mAnimationModule;
-    }
+    delete mVhalHandler;
+    delete mAnimationModule;
 }
 
 sp<SurroundViewService> SurroundViewService::getInstance() {
@@ -95,7 +86,7 @@ std::vector<uint64_t> getAnimationPropertiesToRead(const AnimationConfig& animat
 bool SurroundViewService::initialize() {
     // Get the EVS manager service
     LOG(INFO) << "Acquiring EVS Enumerator";
-    mEvs = IEvsEnumerator::getService("default");
+    mEvs = IEvsEnumerator::getService("EvsEnumeratorHw");
     if (mEvs == nullptr) {
         LOG(ERROR) << "getService returned NULL.  Exiting.";
         return false;
@@ -193,9 +184,11 @@ Return<void> SurroundViewService::start3dSession(start3dSession_cb _hidl_cb) {
         LOG(WARNING) << "Only one 3d session is supported at the same time";
         _hidl_cb(nullptr, SvResult::INTERNAL_ERROR);
     } else {
+        // set mAnimationModule as null, it will change the car model when
+        // the vehicle state changed. set it as null. otherwise 3d sv will crash
         sSurroundView3dSession = new SurroundView3dSession(mEvs,
                                                            mVhalHandler,
-                                                           mAnimationModule,
+                                                           nullptr,
                                                            &mConfig);
         if (sSurroundView3dSession->initialize()) {
             _hidl_cb(sSurroundView3dSession, SvResult::OK);

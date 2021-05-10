@@ -108,8 +108,11 @@ Return<void> MockEvsEnumerator::getCameraList_1_1(
 
 Return<sp<IEvsCamera_1_1>> MockEvsEnumerator::openCamera_1_1(
         const hidl_string& cameraId, const Stream& streamCfg) {
-    LOG(INFO) << __FUNCTION__ << ": " << streamCfg.width << ", " << streamCfg.height;
-    return new MockEvsCamera(cameraId, streamCfg);
+    // Not implemented.
+
+    (void)cameraId;
+    (void)streamCfg;
+    return new MockEvsCamera();
 }
 
 Return<void> MockEvsEnumerator::getDisplayIdList(getDisplayIdList_cb _list_cb) {

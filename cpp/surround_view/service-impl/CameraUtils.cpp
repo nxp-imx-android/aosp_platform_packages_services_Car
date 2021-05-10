@@ -15,6 +15,7 @@
  */
 
 #include "CameraUtils.h"
+#include "IOModule.h"
 
 #include <android-base/logging.h>
 #include <android/hardware/automotive/evs/1.1/types.h>
@@ -212,12 +213,16 @@ bool getAndroidCameraParams(sp<IEvsCamera> camera,
 }
 
 vector<SurroundViewCameraParams> convertToSurroundViewCameraParams(
-        const map<string, AndroidCameraParams>& androidCameraParamsMap) {
+        const map<string, AndroidCameraParams>& androidCameraParamsMap,
+        IOModuleConfig* ioModuleConfig) {
     vector<SurroundViewCameraParams> result;
 
-    // TODO(b/156101189): the cameras are in random order now. They need to be
-    // sorted based on the camera position info from config file.
-    for (const auto& entry : androidCameraParamsMap) {
+    // it will push_back according setting in EvsCameraIds(front/right/rear/left)
+    // the order of androidCameraParamsMap is like (mxc_isi.0.capture/mxc_isi.1.capture/mxc_isi.2.capture)
+    // it may lead the miss match with the frame report from EVS hal if use the order of androidCameraParamsMap
+    map<string, AndroidCameraParams>::const_iterator entry;
+    for (const auto& id : ioModuleConfig->cameraConfig.evsCameraIds) {
+        entry = androidCameraParamsMap.find(id);
         SurroundViewCameraParams svParams;
 
         // Android Camera format for intrinsics: [f_x, f_y, c_x, c_y, s]
@@ -227,7 +232,7 @@ vector<SurroundViewCameraParams> convertToSurroundViewCameraParams(
         //         [ f_x,   s, c_x,
         //             0, f_y, c_y,
         //             0,   0,   1 ];
-        const float* intrinsics = &entry.second.lensIntrinsicCalibration[0];
+        const float* intrinsics = &entry->second.lensIntrinsicCalibration[0];
         svParams.intrinsics[0] = intrinsics[0];
         svParams.intrinsics[1] = intrinsics[4];
         svParams.intrinsics[2] = intrinsics[2];
@@ -245,47 +250,116 @@ vector<SurroundViewCameraParams> convertToSurroundViewCameraParams(
         // To corelib:
         // SurroundViewCameraParams.distortion =
         //         [kappa_1, kappa_2, kappa_3, kappa_4];
-        const float* distortion = &entry.second.lensDistortion[0];
+        const float* distortion = &entry->second.lensDistortion[0];
         svParams.distorion[0] = distortion[0];
         svParams.distorion[1] = distortion[1];
         svParams.distorion[2] = distortion[2];
         svParams.distorion[3] = distortion[3];
 
-        // Android Camera format for rotation:
-        //         quaternion coefficients (x,y,z,w)
-        //
-        // To corelib:
-        //         theta = 2 * acos(w)
-        //         a_x = x / sin(theta/2)
-        //         a_y = y / sin(theta/2)
-        //         a_z = z / sin(theta/2)
-        // SurroundViewCameraParams.rvec =
-        //         [theta * a_x, theta * a_y, theta * a_z];
-        const float* rotation = &entry.second.lensPoseRotation[0];
-        const float theta = 2 * acos(rotation[3]);
-        const float a_x = rotation[0] / sin(theta / 2);
-        const float a_y = rotation[1] / sin(theta / 2);
-        const float a_z = rotation[2] / sin(theta / 2);
-        svParams.rvec[0] = theta * a_x;
-        svParams.rvec[1] = theta * a_y;
-        svParams.rvec[2] = theta * a_z;
+        // use rotation directly instead of quaternion coefficients
+        const float* rotation = &entry->second.lensPoseRotation[0];
+        svParams.rvec[0] = rotation[0];
+        svParams.rvec[1] = rotation[1];
+        svParams.rvec[2] = rotation[2];
 
         // Android Camera format for translation: Translation = (x,y,z)
         //
         // To corelib:
         // SurroundViewCameraParams.tvec = [x, y, z];
-        const float* translation = &entry.second.lensPoseTranslation[0];
+        const float* translation = &entry->second.lensPoseTranslation[0];
         svParams.tvec[0] = translation[0];
         svParams.tvec[1] = translation[1];
         svParams.tvec[2] = translation[2];
 
-        LOG(INFO) << "Camera parameters for " << entry.first
+        LOG(INFO) << "Camera parameters for " << entry->first
                   << " have been converted to SV core lib format successfully";
         result.emplace_back(svParams);
     }
 
     return result;
 }
+
+ImxSurroundViewCameraParams convertToImxSurroundViewCameraParams(
+        const map<string, AndroidCameraParams>& androidCameraParamsMap,
+        IOModuleConfig* ioModuleConfig) {
+    ImxSurroundViewCameraParams result;
+
+    map<string, AndroidCameraParams>::const_iterator entry;
+
+    Vector3d r;
+    vector<Vector3d> evsRota;
+    Vector3d t;
+    vector<Vector3d> evsTrans;
+    Matrix<double, 3, 3> k;
+    vector<Matrix<double, 3, 3>> Ks;
+    Matrix<double, 1, 4> d;
+    vector<Matrix<double, 1, 4>> Ds;
+
+    // it will push_back according setting in EvsCameraIds(front/right/rear/left)
+    // the order of androidCameraParamsMap is like (mxc_isi.0.capture/mxc_isi.1.capture/mxc_isi.2.capture)
+    // it may lead the miss match with the frame report from EVS hal if use the order of androidCameraParamsMap
+    for (const auto& id : ioModuleConfig->cameraConfig.evsCameraIds) {
+        entry = androidCameraParamsMap.find(id);
+        SurroundViewCameraParams svParams;
+
+        // Android Camera format for intrinsics: [f_x, f_y, c_x, c_y, s]
+        //
+        // To corelib:
+        // SurroundViewCameraParams.intrinsics =
+        //         [ f_x,   s, c_x,
+        //             0, f_y, c_y,
+        //             0,   0,   1 ];
+        const float* intrinsics = &entry->second.lensIntrinsicCalibration[0];
+        k(0,0) = intrinsics[0];
+        k(0,1) = intrinsics[4];
+        k(0,2) = intrinsics[2];
+        k(1,0) = 0;
+        k(1,1) = intrinsics[1];
+        k(1,2) = intrinsics[3];
+        k(2,0) = 0;
+        k(2,1) = 0;
+        k(2,2) = 1;
+        Ks.push_back(k);
+
+        // Android Camera format for lens distortion:
+        //         Radial: [kappa_1, kappa_2, kappa_3]
+        //         Tangential: [kappa_4, kappa_5]
+        //
+        // To corelib:
+        // SurroundViewCameraParams.distortion =
+        //         [kappa_1, kappa_2, kappa_3, kappa_4];
+        const float* distortion = &entry->second.lensDistortion[0];
+        d(0,0) = distortion[0];
+        d(0,1) = distortion[1];
+        d(0,2) = distortion[2];
+        d(0,3) = distortion[3];
+        Ds.push_back(d);
+
+        const float* rotation = &entry->second.lensPoseRotation[0];
+        r(0) = rotation[0];
+        r(1) = rotation[1];
+        r(2) = rotation[2];
+        evsRota.push_back(r);
+
+        // Android Camera format for translation: Translation = (x,y,z)
+        //
+        // To corelib:
+        // SurroundViewCameraParams.tvec = [x, y, z];
+        const float* translation = &entry->second.lensPoseTranslation[0];
+        t(0) = translation[0];
+        t(1) = translation[1];
+        t(2) = translation[2];
+        evsTrans.push_back(t);
+
+    }
+
+    result.mEvsRotations = evsRota;
+    result.mEvsTransforms = evsTrans;
+    result.mKs = Ks;
+    result.mDs = Ds;
+    return result;
+}
+
 
 }  // namespace implementation
 }  // namespace V1_0
