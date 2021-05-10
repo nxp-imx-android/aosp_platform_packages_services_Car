@@ -45,10 +45,10 @@ TEST(ConfigReaderTests, ReadConfigSuccess) {
     EXPECT_EQ(svConfig.cameraConfig.evsGroupId, "v4l2loopback_group0");
 
     // Camera Ids
-    EXPECT_EQ(svConfig.cameraConfig.evsCameraIds[0], "/dev/video60");
-    EXPECT_EQ(svConfig.cameraConfig.evsCameraIds[1], "/dev/video61");
-    EXPECT_EQ(svConfig.cameraConfig.evsCameraIds[2], "/dev/video62");
-    EXPECT_EQ(svConfig.cameraConfig.evsCameraIds[3], "/dev/video63");
+    EXPECT_EQ(svConfig.cameraConfig.evsCameraIds[0], "/dev/video90");
+    EXPECT_EQ(svConfig.cameraConfig.evsCameraIds[1], "/dev/video91");
+    EXPECT_EQ(svConfig.cameraConfig.evsCameraIds[2], "/dev/video92");
+    EXPECT_EQ(svConfig.cameraConfig.evsCameraIds[3], "/dev/video93");
 
     // Masks
     EXPECT_EQ(svConfig.cameraConfig.maskFilenames.size(), 4);
@@ -59,13 +59,12 @@ TEST(ConfigReaderTests, ReadConfigSuccess) {
 
     // Surround view 2D
     EXPECT_EQ(svConfig.sv2dConfig.sv2dEnabled, true);
-    EXPECT_EQ(svConfig.sv2dConfig.sv2dParams.resolution.width, 768);
-    EXPECT_EQ(svConfig.sv2dConfig.sv2dParams.resolution.height, 1024);
-    EXPECT_EQ(svConfig.sv2dConfig.sv2dParams.physical_size.width, 9.0);
-    EXPECT_EQ(svConfig.sv2dConfig.sv2dParams.physical_size.height, 12.0);
+    EXPECT_EQ(svConfig.sv2dConfig.sv2dParams.resolution.width, 600);
+    EXPECT_EQ(svConfig.sv2dConfig.sv2dParams.resolution.height, 900);
+    EXPECT_EQ(svConfig.sv2dConfig.sv2dParams.physical_size.width, 6.0);
+    EXPECT_EQ(svConfig.sv2dConfig.sv2dParams.physical_size.height, 9.0);
     EXPECT_EQ(svConfig.sv2dConfig.sv2dParams.physical_center.x, 0.0);
     EXPECT_EQ(svConfig.sv2dConfig.sv2dParams.physical_center.y, 0.0);
-    EXPECT_EQ(svConfig.sv2dConfig.sv2dParams.gpu_acceleration_enabled, false);
     EXPECT_EQ(svConfig.sv2dConfig.carBoundingBox.width, 2.0);
     EXPECT_EQ(svConfig.sv2dConfig.carBoundingBox.height, 3.0);
     EXPECT_EQ(svConfig.sv2dConfig.carBoundingBox.x, 1.0);
@@ -79,12 +78,12 @@ TEST(ConfigReaderTests, ReadConfigSuccess) {
     EXPECT_EQ(svConfig.sv3dConfig.sv3dEnabled, true);
     EXPECT_NE(svConfig.sv3dConfig.carModelConfigFile, "");
     EXPECT_NE(svConfig.sv3dConfig.carModelObjFile, "");
-    EXPECT_EQ(svConfig.sv3dConfig.sv3dParams.plane_radius, 8.0);
-    EXPECT_EQ(svConfig.sv3dConfig.sv3dParams.plane_divisions, 50);
-    EXPECT_EQ(svConfig.sv3dConfig.sv3dParams.curve_height, 6.0);
-    EXPECT_EQ(svConfig.sv3dConfig.sv3dParams.curve_divisions, 50);
-    EXPECT_EQ(svConfig.sv3dConfig.sv3dParams.angular_divisions, 90);
-    EXPECT_EQ(svConfig.sv3dConfig.sv3dParams.curve_coefficient, 3.0);
+    EXPECT_EQ(svConfig.sv3dConfig.sv3dParams.plane_radius, 6.0);
+    EXPECT_EQ(svConfig.sv3dConfig.sv3dParams.plane_divisions, 20);
+    EXPECT_EQ(svConfig.sv3dConfig.sv3dParams.curve_height, 5.0);
+    EXPECT_EQ(svConfig.sv3dConfig.sv3dParams.curve_divisions, 30);
+    EXPECT_EQ(svConfig.sv3dConfig.sv3dParams.angular_divisions, 50);
+    EXPECT_EQ(svConfig.sv3dConfig.sv3dParams.curve_coefficient, 2.0);
     EXPECT_EQ(svConfig.sv3dConfig.sv3dParams.high_details_shadows, true);
     EXPECT_EQ(svConfig.sv3dConfig.sv3dParams.high_details_reflections, true);
 }

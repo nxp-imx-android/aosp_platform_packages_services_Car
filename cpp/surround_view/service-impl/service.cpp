@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#define ATRACE_TAG ATRACE_TAG_CAMERA
-
 #include <android-base/logging.h>
 #include <android/hardware/automotive/sv/1.0/ISurroundViewStream.h>
 #include <android/hardware_buffer.h>
@@ -25,7 +23,6 @@
 #include <utils/Errors.h>
 #include <utils/StrongPointer.h>
 #include <utils/SystemClock.h>
-#include <utils/Trace.h>
 
 #include "SurroundViewService.h"
 
@@ -42,8 +39,6 @@ int main() {
 
     configureRpcThreadpool(1, true /* callerWillJoin */);
 
-    ATRACE_BEGIN("SurroundViewServiceImpl: registerAsService");
-
     // Register our service -- if somebody is already registered by our name,
     // they will be killed (their thread pool will throw an exception).
     android::status_t status = service->registerAsService();
@@ -52,8 +47,6 @@ int main() {
         LOG(ERROR) << "Could not register default Surround View Service. Status: "
                    << status;
     }
-
-    ATRACE_END();
 
     joinRpcThreadpool();
 

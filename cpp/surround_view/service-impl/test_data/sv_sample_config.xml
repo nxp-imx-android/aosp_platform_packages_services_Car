@@ -3,12 +3,12 @@
     <Version>1.0</Version>
 
     <CameraConfig>
-        <EvsGroupId>v4l2loopback_group0</EvsGroupId>
+        <EvsGroupId>group0</EvsGroupId>
         <EvsCameraIds>
-            <Front>/dev/video60</Front>
-            <Right>/dev/video61</Right>
-            <Rear>/dev/video62</Rear>
-            <Left>/dev/video63</Left>
+            <Front>mxc_isi.3.capture</Front>
+            <Right>mxc_isi.2.capture</Right>
+            <Rear>mxc_isi.1.capture</Rear>
+            <Left>mxc_isi.0.capture</Left>
         </EvsCameraIds>
         <Masks>
             <Front>/vendor/etc/automotive/sv/mask_front.png</Front>
@@ -21,12 +21,12 @@
     <Sv2dEnabled>true</Sv2dEnabled>
     <Sv2dParams>
         <OutputResolution>
-            <Width>768</Width>
-            <Height>1024</Height>
+            <Width>1024</Width>
+            <Height>768</Height>
         </OutputResolution>
         <GroundMapping>
-            <Width>9.0</Width>
-            <Height>12.0</Height>
+            <Width>4.0</Width>
+            <Height>3.0</Height>
             <Center>
                 <X>0.0</X>
                 <Y>0.0</Y>
@@ -44,7 +44,6 @@
             <HighQuality>multiband</HighQuality>
             <LowQuality>alpha</LowQuality>
         </BlendingType>
-        <GpuAccelerationEnabled>false</GpuAccelerationEnabled>
     </Sv2dParams>
 
     <Sv3dEnabled>true</Sv3dEnabled>
@@ -53,8 +52,8 @@
     <CarModelObjFile>/vendor/etc/automotive/sv/sample_car.obj</CarModelObjFile>
     <Sv3dParams>
         <OutputResolution>
-            <Width>1920</Width>
-            <Height>1080</Height>
+            <Width>1024</Width>
+            <Height>768</Height>
         </OutputResolution>
         <BowlParams>
             <PlaneRadius>8.0</PlaneRadius>

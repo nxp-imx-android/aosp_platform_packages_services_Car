@@ -45,7 +45,7 @@ TEST(CarModelConfigReaderTests, CarModelReadConfigSuccess) {
     {
         AnimationInfo doorAnimation = animationConfig.animations.at(0);
         EXPECT_EQ(doorAnimation.partId, "door");
-        EXPECT_EQ(doorAnimation.childIds.size(), 1);
+        EXPECT_EQ(doorAnimation.childIds.size(), 2);
         EXPECT_EQ(doorAnimation.pose, gMat4Identity);
 
         EXPECT_EQ(doorAnimation.rotationOpsMap.size(), 1);

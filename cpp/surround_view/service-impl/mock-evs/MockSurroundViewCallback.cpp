@@ -18,12 +18,8 @@
 
 #include <android-base/logging.h>
 
-#include <thread>
-
 using ::android::sp;
 using ::android::hardware::Return;
-
-using ::std::thread;
 
 namespace android {
 namespace hardware {
@@ -33,8 +29,9 @@ namespace V1_0 {
 namespace implementation {
 
 MockSurroundViewCallback::MockSurroundViewCallback(
-        sp<ISurroundViewSession> pSession) :
-        mSession(pSession) {}
+        sp<ISurroundViewSession> pSession) {
+    (void)pSession;
+}
 
 Return<void> MockSurroundViewCallback::notify(SvEvent svEvent) {
     LOG(INFO) << __FUNCTION__ << "SvEvent received: " << (int)svEvent;
@@ -45,34 +42,7 @@ Return<void> MockSurroundViewCallback::receiveFrames(
         const SvFramesDesc& svFramesDesc) {
     LOG(INFO) << __FUNCTION__ << svFramesDesc.svBuffers.size()
               << " frames are received";
-
-    // Increment the count of received frames.
-    {
-        std::scoped_lock<std::mutex> lock(mAccessLock);
-        mReceivedFramesCount++;
-    }
-
-    // Create a separate thread to return the frames to the session. This
-    // simulates the behavior of oneway HIDL method call.
-    thread mockHidlThread([this, &svFramesDesc]() {
-        mSession->doneWithFrames(svFramesDesc);
-    });
-    mockHidlThread.detach();
     return {};
-}
-
-int MockSurroundViewCallback::getReceivedFramesCount() {
-    {
-        std::scoped_lock<std::mutex> lock(mAccessLock);
-        return mReceivedFramesCount;
-    }
-}
-
-void MockSurroundViewCallback::clearReceivedFramesCount() {
-    {
-        std::scoped_lock<std::mutex> lock(mAccessLock);
-        mReceivedFramesCount = 0;
-    }
 }
 
 }  // namespace implementation
