@@ -66,7 +66,7 @@ PRODUCT_PACKAGES += \
 include packages/services/Car/cpp/evs/manager/evsmanager.mk
 
 # Automotive Telemetry services
-include packages/services/Car/cpp/telemetry/products/telemetry.mk
+include packages/services/Car/cpp/telemetry/cartelemetryd/products/telemetry.mk
 
 # EVS manager overrides cameraserver on automotive implementations so
 # we need to configure Camera API to not connect to it
@@ -81,6 +81,10 @@ PRODUCT_PACKAGES += evs_app \
                     android.frameworks.automotive.display@1.0-service
 include packages/services/Car/cpp/evs/apps/sepolicy/evsapp.mk
 include packages/services/Car/cpp/evs/sampleDriver/sepolicy/evsdriver.mk
+endif
+ifeq ($(ENABLE_CAREVSSERVICE_SAMPLE), true)
+PRODUCT_PACKAGES += CarEvsCameraPreviewApp \
+                    CarSystemUIEvsRRO
 endif
 ifeq ($(ENABLE_REAR_VIEW_CAMERA_SAMPLE), true)
 PRODUCT_PACKAGES += SampleRearViewCamera
