@@ -14,14 +14,12 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <!-- IME should not hide nav bar -->
-    <bool name="config_automotiveHideNavBarForKeyboard">false</bool>
-
-    <!-- Class name of the device specific implementation of DisplayAreaPolicy.Provider
-    or empty if the default should be used. -->
-    <string translatable="false" name="config_deviceSpecificDisplayAreaPolicyProvider">
-        com.android.server.wm.CarDisplayAreaPolicyProvider
-    </string>
-</resources>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+        android:width="@dimen/rear_view_camera_exit_icon_width"
+        android:height="@dimen/rear_view_camera_exit_icon_height"
+        android:viewportWidth="26"
+        android:viewportHeight="26">
+    <path
+        android:pathData="M25.8327 2.75199L23.2477 0.166992L12.9994 10.4153L2.75102 0.166992L0.166016 2.75199L10.4144 13.0003L0.166016 23.2487L2.75102 25.8337L12.9994 15.5853L23.2477 25.8337L25.8327 23.2487L15.5844 13.0003L25.8327 2.75199Z"
+        android:fillColor="@color/rear_view_camera_exit_icon_color" />
+</vector>

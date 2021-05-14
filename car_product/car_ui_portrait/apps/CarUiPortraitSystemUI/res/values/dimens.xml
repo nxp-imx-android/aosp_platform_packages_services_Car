@@ -15,13 +15,14 @@
   ~ limitations under the License.
   -->
 
-<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <!-- IME should not hide nav bar -->
-    <bool name="config_automotiveHideNavBarForKeyboard">false</bool>
+<resources>
+    <!-- dimensions for rear view camera -->
+    <dimen name="rear_view_camera_width">1020dp</dimen>
+    <dimen name="rear_view_camera_height">720dp</dimen>
 
-    <!-- Class name of the device specific implementation of DisplayAreaPolicy.Provider
-    or empty if the default should be used. -->
-    <string translatable="false" name="config_deviceSpecificDisplayAreaPolicyProvider">
-        com.android.server.wm.CarDisplayAreaPolicyProvider
-    </string>
+    <dimen name="rear_view_camera_exit_button_width">48dp</dimen>
+    <dimen name="rear_view_camera_exit_button_height">48dp</dimen>
+    <dimen name="rear_view_camera_exit_button_margin">24dp</dimen>
+    <dimen name="rear_view_camera_exit_icon_width">26dp</dimen>
+    <dimen name="rear_view_camera_exit_icon_height">26dp</dimen>
 </resources>
