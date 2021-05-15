@@ -21,6 +21,7 @@ import static com.android.internal.util.function.pooled.PooledLambda.obtainMessa
 import android.annotation.CallbackExecutor;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
 import android.annotation.SystemApi;
 import android.car.Car;
@@ -297,6 +298,14 @@ public final class CarWatchdogManager extends CarManagerBase {
     @Retention(RetentionPolicy.SOURCE)
     public @interface MinimumStatsFlag {}
 
+    /** @hide */
+    @IntDef(flag = true, prefix = { "RETURN_CODE_" }, value = {
+            RETURN_CODE_SUCCESS,
+            RETURN_CODE_ERROR,
+    })
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface ReturnCode {}
+
     /**
      * Constants that define the stats period in days.
      */
@@ -326,6 +335,14 @@ public final class CarWatchdogManager extends CarManagerBase {
     /** @hide */
     @SystemApi
     public static final int FLAG_MINIMUM_STATS_IO_1_GB = 1 << 2;
+
+    // Return codes used to indicate the result of a request.
+    /** @hide */
+    @SystemApi
+    public static final int RETURN_CODE_SUCCESS = 0;
+    /** @hide */
+    @SystemApi
+    public static final int RETURN_CODE_ERROR = -1;
 
     /**
      * Returns resource overuse stats for the calling package. Returns {@code null}, if no stats.
@@ -508,13 +525,9 @@ public final class CarWatchdogManager extends CarManagerBase {
                 return;
             }
             mResourceOveruseListenerInfos.remove(index);
-            if (!mResourceOveruseListenerImpl.hasListeners()) {
-                return;
-            }
-            shouldReAddToService =
+            shouldRemoveFromService =
                     mResourceOveruseListenerImpl.maybeRemoveFlag(resourceOveruseFlag);
-            shouldRemoveFromService = mResourceOveruseListenerInfos.isEmpty()
-                    || shouldReAddToService;
+            shouldReAddToService = mResourceOveruseListenerImpl.hasListeners();
         }
         if (shouldRemoveFromService) {
             removeResourceOveruseListenerImpl();
@@ -599,13 +612,9 @@ public final class CarWatchdogManager extends CarManagerBase {
                 return;
             }
             mResourceOveruseListenerForSystemInfos.remove(index);
-            if (!mResourceOveruseListenerForSystemImpl.hasListeners()) {
-                return;
-            }
-            shouldReAddToService =
+            shouldRemoveFromService =
                     mResourceOveruseListenerForSystemImpl.maybeRemoveFlag(resourceOveruseFlag);
-            shouldRemoveFromService = mResourceOveruseListenerForSystemInfos.isEmpty()
-                    || shouldReAddToService;
+            shouldReAddToService = mResourceOveruseListenerForSystemImpl.hasListeners();
         }
         if (shouldRemoveFromService) {
             removeResourceOveruseListenerForSystemImpl();
@@ -672,27 +681,40 @@ public final class CarWatchdogManager extends CarManagerBase {
      * @param resourceOveruseFlag Flag to indicate the types of resource overuse configurations to
      *                            set.
      *
+     * @return - {@link #RETURN_CODE_SUCCESS} if the set request is successful.
+     *         - {@link #RETURN_CODE_ERROR} if the set request cannot be completed and the client
+     *         should retry later.
+     *
      * @throws IllegalArgumentException if {@code configurations} are invalid.
      *
      * @hide
      */
     @SystemApi
     @RequiresPermission(Car.PERMISSION_CONTROL_CAR_WATCHDOG_CONFIG)
-    public void setResourceOveruseConfigurations(
+    @ReturnCode
+    public int setResourceOveruseConfigurations(
             @NonNull List<ResourceOveruseConfiguration> configurations,
             @ResourceOveruseFlag int resourceOveruseFlag) {
         try {
-            mService.setResourceOveruseConfigurations(configurations, resourceOveruseFlag);
+            return mService.setResourceOveruseConfigurations(configurations, resourceOveruseFlag);
         } catch (RemoteException e) {
             handleRemoteExceptionFromCarService(e);
+            return RETURN_CODE_ERROR;
         }
     }
 
     /**
      * Returns the current resource overuse configurations for all components.
      *
+     * <p>This call is blocking and may take few seconds to return if the service is temporarily
+     * unavailable.
+     *
      * @param resourceOveruseFlag Flag to indicate the types of resource overuse configurations to
      *                            return.
+     *
+     * @return If the server process is alive and connected, returns list of available resource
+     *         overuse configurations for all components. If the server process is dead,
+     *         returns {@code null} value.
      *
      * @throws IllegalStateException if the system is in an invalid state.
      * @hide
@@ -700,13 +722,13 @@ public final class CarWatchdogManager extends CarManagerBase {
     @SystemApi
     @RequiresPermission(anyOf = {Car.PERMISSION_CONTROL_CAR_WATCHDOG_CONFIG,
             Car.PERMISSION_COLLECT_CAR_WATCHDOG_METRICS})
-    @NonNull
+    @Nullable
     public List<ResourceOveruseConfiguration> getResourceOveruseConfigurations(
             @ResourceOveruseFlag int resourceOveruseFlag) {
         try {
             return mService.getResourceOveruseConfigurations(resourceOveruseFlag);
         } catch (RemoteException e) {
-            return handleRemoteExceptionFromCarService(e, new ArrayList<>());
+            return handleRemoteExceptionFromCarService(e, null);
         }
     }
 
