@@ -524,10 +524,15 @@ bool SurroundView2dSession::handleFrames(int sequenceId) {
             return false;
         }
 
+#ifdef ENABLE_IMX_CORELIB
+        mImx2DSV->stopSV();
+        mImx2DSV->Update2dOutputResolution(mOutputWidth, mOutputHeight);
+        mImx2DSV->startSV();
+#else
         android_auto::surround_view::Size2dInteger size =
                       android_auto::surround_view::Size2dInteger(mOutputWidth, mOutputHeight);
         mSurroundView->Update2dOutputResolution(size);
-
+#endif
         mSvTexture = new GraphicBuffer(mOutputWidth,
                                        mOutputHeight,
                                        HAL_PIXEL_FORMAT_RGB_888,
