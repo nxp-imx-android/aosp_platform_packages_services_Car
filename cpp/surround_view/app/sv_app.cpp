@@ -41,8 +41,8 @@ using DisplayState = android::hardware::automotive::evs::V1_0::DisplayState;
 using namespace android::hardware::automotive::sv::V1_0;
 using namespace android::hardware::automotive::evs::V1_1;
 
-const int kLowResolutionWidth = 120;
-const int kLowResolutionHeight = 90;
+const int kLowResolutionWidth = 320;
+const int kLowResolutionHeight = 240;
 
 enum DemoMode {
     UNKNOWN,
@@ -84,7 +84,8 @@ bool run2dSurroundView(sp<ISurroundViewService> pSurroundViewService,
     // Let the SV algorithm run for 10 seconds for HIGH_QUALITY
     std::this_thread::sleep_for(std::chrono::seconds(60));
 
-    // Switch to low quality and lower resolution
+
+    LOG(INFO) << "Switch to low quality and lower resolution.";
     Sv2dConfig config;
     config.width = kLowResolutionWidth;
     config.blending = SvQuality::LOW;
