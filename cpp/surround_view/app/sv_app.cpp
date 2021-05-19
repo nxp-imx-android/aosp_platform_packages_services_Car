@@ -154,7 +154,7 @@ bool run3dSurroundView(sp<ISurroundViewService> pSurroundViewService,
     // Let the SV algorithm run for 10 seconds for HIGH_QUALITY
     std::this_thread::sleep_for(std::chrono::seconds(60));
 
-    // Switch to low quality and lower resolution
+    LOG(INFO) << "Switch to low quality and lower resolution.";
     Sv3dConfig config;
     config.width = kLowResolutionWidth;
     config.height = kLowResolutionHeight;
