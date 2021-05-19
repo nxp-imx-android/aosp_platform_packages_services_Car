@@ -687,10 +687,6 @@ bool SurroundView3dSession::handleFrames(int sequenceId) {
     }
 #else
     bool ret;
-    mImx3DSV = new Imx3DView(mImxCameraParams.mEvsRotations,
-                             mImxCameraParams.mEvsTransforms,
-                             mImxCameraParams.mKs,
-                             mImxCameraParams.mDs);
 
     ret = mImx3DSV->renderSV(mInputPoint,
                            (char *)mOutputPointer.data_pointer,
@@ -700,6 +696,7 @@ bool SurroundView3dSession::handleFrames(int sequenceId) {
     if (!ret) {
         memset(mOutputPointer.data_pointer, kGrayColor,
             mOutputHeight * mOutputWidth * kNumChannels);
+        LOG(ERROR) << "Imx core lib: renderSV execution failed";
     }
 #endif
 
@@ -768,7 +765,12 @@ bool SurroundView3dSession::initialize() {
         LOG(ERROR) << "Failed to setup EVS components for 3d session";
         return false;
     }
-
+#ifdef ENABLE_IMX_CORELIB
+    mImx3DSV = new Imx3DView(mImxCameraParams.mEvsRotations,
+                             mImxCameraParams.mEvsTransforms,
+                             mImxCameraParams.mKs,
+                             mImxCameraParams.mDs);
+#endif
     // TODO(b/150412555): ask core-lib team to add API description for "create"
     // method in the .h file.
     // The create method will never return a null pointer based the API
