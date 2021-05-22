@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <!--
   ~ Copyright (C) 2021 The Android Open Source Project
   ~
@@ -14,7 +14,8 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<resources>
-    <!-- Component name of rotary IME. Empty if none. Overlaid to use demo rotary IME. -->
-    <string name="rotary_input_method" translatable="false">com.android.car.rotaryime/.RotaryIme</string>
+
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- Format for temperature in the temperature control view (No decimal) -->
+    <string name="hvac_temperature_format" translatable="false">%.0f</string>
 </resources>
