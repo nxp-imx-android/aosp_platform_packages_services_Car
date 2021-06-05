@@ -33,14 +33,15 @@ namespace script_executor {
 // Encapsulates Lua script execution environment.
 class LuaEngine {
 public:
-    explicit LuaEngine(std::unique_ptr<ScriptExecutorListener> listener);
+    LuaEngine();
 
     virtual ~LuaEngine();
 
+    // Returns pointer to Lua state object.
+    lua_State* GetLuaState();
+
 private:
     lua_State* mLuaState;  // owned
-
-    std::unique_ptr<ScriptExecutorListener> mListener;
 };
 
 }  // namespace script_executor
