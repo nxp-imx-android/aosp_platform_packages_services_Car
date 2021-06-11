@@ -15,21 +15,14 @@
 -->
 
 <resourceOveruseConfiguration version="1.0">
-  <componentType> SYSTEM </componentType>
-
+  <componentType> THIRD_PARTY </componentType>
   <ioOveruseConfiguration>
+    <!-- Default thresholds in MiB for all third-party packages that don't have app category
+         specific thresholds. -->
     <componentLevelThresholds>
-      <state id="foreground_mode"> 300 </state>
-      <state id="background_mode"> 150 </state>
-      <state id="garage_mode"> 500 </state>
+      <state id="foreground_mode"> 3072 </state>
+      <state id="background_mode"> 2048 </state>
+      <state id="garage_mode"> 4096 </state>
     </componentLevelThresholds>
-
-    <packageSpecificThresholds>
-      <perStateThreshold id="system.package.C">
-        <state id="foreground_mode"> 400 </state>
-        <state id="background_mode"/>
-        <state id="garage_mode"> 100 </state>
-      </perStateThreshold>
-    </packageSpecificThresholds>
   </ioOveruseConfiguration>
 </resourceOveruseConfiguration>
