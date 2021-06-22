@@ -13,20 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#define ATRACE_TAG ATRACE_TAG_CAMERA
 
 #include "SurroundView2dSession.h"
 
+#include "CameraUtils.h"
+
 #include <android-base/logging.h>
+#include <android/hardware/camera/device/3.2/ICameraDevice.h>
 #include <android/hardware_buffer.h>
 #include <system/camera_metadata.h>
 #include <utils/SystemClock.h>
+#include <utils/Trace.h>
 #include <cutils/properties.h>
 
 #include <thread>
 
-#include <android/hardware/camera/device/3.2/ICameraDevice.h>
 
-#include "CameraUtils.h"
+
 
 using ::android::hardware::automotive::evs::V1_0::EvsResult;
 using ::android::hardware::camera::device::V3_2::Stream;
@@ -94,13 +98,16 @@ Return<void> SurroundView2dSession::dump_frame_to_file(char *pbuf, int size, cha
 
 Return<void> SurroundView2dSession::FramesHandler::deliverFrame_1_1(
     const hidl_vec<BufferDesc_1_1>& buffers) {
+    ATRACE_BEGIN(__PRETTY_FUNCTION__);
+
     LOG(INFO) << "Received " << buffers.size() << " frames from the camera";
     mSession->mSequenceId++;
 
     {
         scoped_lock<mutex> lock(mSession->mAccessLock);
         if (mSession->mProcessingEvsFrames) {
-            LOG(WARNING) << "EVS frames are being processed. Skip frames:" << mSession->mSequenceId;
+            LOG(WARNING) << "EVS frames are being processed. Skip frames:"
+                         << mSession->mSequenceId;
             mCamera->doneWithFrame_1_1(buffers);
             return {};
         }
@@ -148,6 +155,7 @@ Return<void> SurroundView2dSession::FramesHandler::deliverFrame_1_1(
 
         mCamera->doneWithFrame_1_1(buffers);
     }
+    ATRACE_END();
 
     return {};
 }
@@ -189,10 +197,12 @@ Return<void> SurroundView2dSession::FramesHandler::notify(const EvsEventDesc& ev
 
 bool SurroundView2dSession::copyFromBufferToPointers(
     BufferDesc_1_1 buffer, SurroundViewInputBufferPointers& pointers) {
+    ATRACE_BEGIN(__PRETTY_FUNCTION__);
 
     AHardwareBuffer_Desc* pDesc =
         reinterpret_cast<AHardwareBuffer_Desc *>(&buffer.buffer.description);
 
+    ATRACE_BEGIN("Create Graphic Buffer");
     // create a GraphicBuffer from the existing handle
     sp<GraphicBuffer> inputBuffer = new GraphicBuffer(
         buffer.buffer.nativeHandle, GraphicBuffer::CLONE_HANDLE, pDesc->width,
@@ -213,7 +223,9 @@ bool SurroundView2dSession::copyFromBufferToPointers(
                   << " format: " << pDesc->format
                   << " stride: " << pDesc->stride;
     }
+    ATRACE_END();
 
+    ATRACE_BEGIN("Lock input buffer (gpu to cpu)");
     // Lock the input GraphicBuffer and map it to a pointer.  If we failed to
     // lock, return false.
     void* inputDataPtr;
@@ -227,6 +239,7 @@ bool SurroundView2dSession::copyFromBufferToPointers(
     } else {
         LOG(INFO) << "Managed to get read access to GraphicBuffer";
     }
+    ATRACE_END();
 
     int stride = pDesc->stride;
 
@@ -259,10 +272,20 @@ bool SurroundView2dSession::copyFromBufferToPointers(
     }
 
     LOG(INFO) << "Brute force copying finished";
+
+    ATRACE_BEGIN("Unlock input buffer (cpu to gpu)");
+    inputBuffer->unlock();
+    ATRACE_END();
+
+    // Paired with ATRACE_BEGIN in the beginning of the method.
+    ATRACE_END();
+
     return true;
 }
 
 void SurroundView2dSession::processFrames() {
+    ATRACE_BEGIN(__PRETTY_FUNCTION__);
+
     while (true) {
         {
             unique_lock<mutex> lock(mAccessLock);
@@ -296,6 +319,8 @@ void SurroundView2dSession::processFrames() {
         mStream = nullptr;
         LOG(DEBUG) << "Stream marked STOPPED.";
     }
+
+    ATRACE_END();
 }
 
 SurroundView2dSession::SurroundView2dSession(sp<IEvsEnumerator> pEvs,
@@ -318,6 +343,8 @@ SurroundView2dSession::~SurroundView2dSession() {
     }
 
     mEvs->closeCamera(mCamera);
+
+    // TODO(b/175176576): properly release the mInputPointers and mOutputPointer
 }
 
 // Methods from ::android::hardware::automotive::sv::V1_0::ISurroundViewSession
@@ -488,6 +515,8 @@ Return<void> SurroundView2dSession::projectCameraPoints(const hidl_vec<Point2dIn
 bool SurroundView2dSession::handleFrames(int sequenceId) {
     LOG(INFO) << __FUNCTION__ << "Handling sequenceId " << sequenceId << ".";
 
+    ATRACE_BEGIN(__PRETTY_FUNCTION__);
+
     // TODO(b/157498592): Now only one sets of EVS input frames and one SV
     // output frame is supported. Implement buffer queue for both of them.
     {
@@ -510,16 +539,16 @@ bool SurroundView2dSession::handleFrames(int sequenceId) {
                    << mConfig.width
                    << " New height: "
                    << mHeight;
-        delete[] static_cast<char*>(mOutputPointer.data_pointer);
+        delete[] static_cast<char*>(mOutputPointer.cpu_data_pointer);
         mOutputWidth = mConfig.width;
         mOutputHeight = mHeight;
         mOutputPointer.height = mOutputHeight;
         mOutputPointer.width = mOutputWidth;
         mOutputPointer.format = Format::RGB;
-        mOutputPointer.data_pointer =
+        mOutputPointer.cpu_data_pointer =
             new char[mOutputHeight * mOutputWidth * kNumChannels];
 
-        if (!mOutputPointer.data_pointer) {
+        if (!mOutputPointer.cpu_data_pointer) {
             LOG(ERROR) << "Memory allocation failed. Exiting.";
             return false;
         }
@@ -579,15 +608,15 @@ bool SurroundView2dSession::handleFrames(int sequenceId) {
     } else {
         LOG(ERROR) << "Get2dSurroundView failed. "
                    << "Using memset to initialize to gray";
-        memset(mOutputPointer.data_pointer, kGrayColor,
+        memset(mOutputPointer.cpu_data_pointer, kGrayColor,
                mOutputHeight * mOutputWidth * kNumChannels);
     }
 #else
     bool ret;
-    ret = mImx2DSV->GetSVBuffer(mInputPoint, mOutputPointer.data_pointer, 3);
+    ret = mImx2DSV->GetSVBuffer(mInputPoint, mOutputPointer.cpu_data_pointer, 3);
 
     if (!ret) {
-        memset(mOutputPointer.data_pointer, kGrayColor,
+        memset(mOutputPointer.cpu_data_pointer, kGrayColor,
             mOutputHeight * mOutputWidth * kNumChannels);
     }
 #endif
@@ -606,7 +635,7 @@ bool SurroundView2dSession::handleFrames(int sequenceId) {
     // width is 1080, but the stride is 2048. So we'd better copy the data line
     // by line, instead of single memcpy.
     uint8_t* writePtr = static_cast<uint8_t*>(textureDataPtr);
-    uint8_t* readPtr = static_cast<uint8_t*>(mOutputPointer.data_pointer);
+    uint8_t* readPtr = static_cast<uint8_t*>(mOutputPointer.cpu_data_pointer);
     const int readStride = mOutputWidth * kNumChannels;
     const int writeStride = mSvTexture->getStride() * kNumChannels;
     if (readStride == writeStride) {
@@ -620,7 +649,9 @@ bool SurroundView2dSession::handleFrames(int sequenceId) {
     }
 
     LOG(INFO) << "memcpy finished";
+    ATRACE_BEGIN("Unlock output texture (cpu to gpu)");
     mSvTexture->unlock();
+    ATRACE_END();
 
     ANativeWindowBuffer* buffer = mSvTexture->getNativeBuffer();
     LOG(DEBUG) << "ANativeWindowBuffer->handle: "
@@ -649,11 +680,14 @@ bool SurroundView2dSession::handleFrames(int sequenceId) {
         mStream->receiveFrames(mFramesRecord.frames);
     }
 
+    ATRACE_END();
+
     return true;
 }
 
 bool SurroundView2dSession::initialize() {
     lock_guard<mutex> lock(mAccessLock, adopt_lock);
+    ATRACE_BEGIN(__PRETTY_FUNCTION__);
 
     if (!setupEvs()) {
         LOG(ERROR) << "Failed to setup EVS components for 2d session";
@@ -730,10 +764,10 @@ bool SurroundView2dSession::initialize() {
     mOutputPointer.height = mOutputHeight;
     mOutputPointer.width = mOutputWidth;
     mOutputPointer.format = mInputPointers[0].format;
-    mOutputPointer.data_pointer = new char[
+    mOutputPointer.cpu_data_pointer = new char[
         mOutputHeight * mOutputWidth * kNumChannels];
 
-    if (!mOutputPointer.data_pointer) {
+    if (!mOutputPointer.cpu_data_pointer) {
         LOG(ERROR) << "Memory allocation failed. Exiting.";
         return false;
     }
@@ -762,10 +796,15 @@ bool SurroundView2dSession::initialize() {
     }
 
     mIsInitialized = true;
+
+    ATRACE_END();
+
     return true;
 }
 
 bool SurroundView2dSession::setupEvs() {
+    ATRACE_BEGIN(__PRETTY_FUNCTION__);
+
     // Reads the camera related information from the config object
     const string evsGroupId = mIOModuleConfig->cameraConfig.evsGroupId;
 
@@ -805,6 +844,7 @@ bool SurroundView2dSession::setupEvs() {
             if (ptr->direction ==
                 ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT &&
                 ptr->format == HAL_PIXEL_FORMAT_RGB_888) {
+
                 if (ptr->width * ptr->height > maxArea) {
                     targetCfg->id = ptr->id;
                     targetCfg->width = ptr->width;
@@ -839,11 +879,17 @@ bool SurroundView2dSession::setupEvs() {
         LOG(ERROR) << "Failed to allocate EVS Camera interface for " << camId;
         return false;
     } else {
-        LOG(INFO) << "Camera " << camId << " is opened successfully";
+        LOG(INFO) << "Logical camera " << camId << " is opened successfully";
+    }
+
+    mEvsCameraIds = mIOModuleConfig->cameraConfig.evsCameraIds;
+    if (mEvsCameraIds.size() < kNumFrames) {
+        LOG(ERROR) << "Incorrect camera info is stored in the camera config";
+        return false;
     }
 
     map<string, AndroidCameraParams> cameraIdToAndroidParameters;
-    for (const auto& id : mIOModuleConfig->cameraConfig.evsCameraIds) {
+    for (const auto& id : mEvsCameraIds) {
         AndroidCameraParams params;
         if (getAndroidCameraParams(mCamera, id, params)) {
             cameraIdToAndroidParameters.emplace(id, params);
@@ -870,11 +916,13 @@ bool SurroundView2dSession::setupEvs() {
     mImxCameraParams =
          convertToImxSurroundViewCameraParams(cameraIdToAndroidParameters, mIOModuleConfig);
 #endif
-
+    ATRACE_END();
     return true;
 }
 
 bool SurroundView2dSession::startEvs() {
+    ATRACE_BEGIN(__PRETTY_FUNCTION__);
+
     mFramesHandler = new FramesHandler(mCamera, this);
     Return<EvsResult> result = mCamera->startVideoStream(mFramesHandler);
     if (result != EvsResult::OK) {
@@ -883,6 +931,8 @@ bool SurroundView2dSession::startEvs() {
     } else {
         LOG(INFO) << "Video stream was started successfully";
     }
+
+    ATRACE_END();
 
     return true;
 }

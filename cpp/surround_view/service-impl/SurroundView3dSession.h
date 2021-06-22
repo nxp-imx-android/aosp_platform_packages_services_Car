@@ -141,7 +141,7 @@ private:
     // Instance and metadata for the opened Evs Camera
     sp<IEvsCamera> mCamera;
     CameraDesc mCameraDesc;
-    vector<SurroundViewCameraParams> mCameraParams;
+    std::vector<SurroundViewCameraParams> mCameraParams;
 
 #ifdef ENABLE_IMX_CORELIB
     ImxSurroundViewCameraParams mImxCameraParams;
@@ -151,7 +151,7 @@ private:
     sp<ISurroundViewStream> mStream GUARDED_BY(mAccessLock);
     StreamStateValues mStreamState GUARDED_BY(mAccessLock);
 
-    thread mProcessThread; // The thread we'll use to process frames
+    std::thread mProcessThread; // The thread we'll use to process frames
 
     // Reference to the inner class, to handle the incoming Evs frames
     sp<FramesHandler> mFramesHandler;
@@ -175,21 +175,21 @@ private:
     FramesRecord mFramesRecord GUARDED_BY(mAccessLock);
 
     // Synchronization necessary to deconflict mCaptureThread from the main service thread
-    mutex mAccessLock;
+    std::mutex mAccessLock;
 
-    vector<View3d> mViews GUARDED_BY(mAccessLock);
+    std::vector<View3d> mViews GUARDED_BY(mAccessLock);
 
     Sv3dConfig mConfig GUARDED_BY(mAccessLock);
 
-    vector<string> mEvsCameraIds GUARDED_BY(mAccessLock);
+    std::vector<std::string> mEvsCameraIds GUARDED_BY(mAccessLock);
 
-    unique_ptr<SurroundView> mSurroundView GUARDED_BY(mAccessLock);
+    std::unique_ptr<SurroundView> mSurroundView GUARDED_BY(mAccessLock);
 
 #ifdef ENABLE_IMX_CORELIB
     Imx3DView * mImx3DSV;
 #endif
 
-    vector<SurroundViewInputBufferPointers>
+    std::vector<SurroundViewInputBufferPointers>
         mInputPointers GUARDED_BY(mAccessLock);
     SurroundViewResultPointer mOutputPointer GUARDED_BY(mAccessLock);
     int mOutputWidth, mOutputHeight GUARDED_BY(mAccessLock);
