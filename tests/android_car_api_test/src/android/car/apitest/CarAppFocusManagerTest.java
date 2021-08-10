@@ -34,10 +34,9 @@ import androidx.test.filters.FlakyTest;
 import androidx.test.filters.RequiresDevice;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
@@ -90,6 +89,7 @@ public class CarAppFocusManagerTest extends CarApiTestBase {
         mManager.removeFocusListener(listener2);  // Double-unregister is OK
     }
 
+    @Ignore("b/195835795")
     @Test
     public void testRegisterUnregisterSpecificApp() throws Exception {
         FocusChangedListener listener1 = new FocusChangedListener();

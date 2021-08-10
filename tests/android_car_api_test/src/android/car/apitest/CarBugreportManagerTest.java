@@ -33,6 +33,7 @@ import androidx.test.runner.AndroidJUnit4;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -70,6 +71,7 @@ public class CarBugreportManagerTest extends CarApiTestBase {
         }
     }
 
+    @Ignore("b/195836042")
     @Test
     public void test_requestBugreport_failsWhenNoPermission() throws Exception {
         dropPermissions();
@@ -116,6 +118,7 @@ public class CarBugreportManagerTest extends CarApiTestBase {
                 CarBugreportManagerCallback.CAR_BUGREPORT_IN_PROGRESS);
     }
 
+    @Ignore("b/195836042")
     @Test
     public void test_cancelBugreport_works() throws Exception {
         getPermissions();
