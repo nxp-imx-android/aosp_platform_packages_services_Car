@@ -10,8 +10,10 @@ package android.car.builtin {
 package android.car.builtin.app {
 
   public final class ActivityManagerHelper {
+    method @NonNull public static android.app.ActivityOptions createActivityOptions(@NonNull android.os.Bundle);
     method @NonNull public static android.car.builtin.app.ActivityManagerHelper getInstance();
     method public boolean startUserInBackground(int);
+    method public boolean startUserInForeground(int);
     method public void stopAllTasksForUser(int);
     method public int stopUserWithDelayedLocking(int, boolean);
     method public boolean unlockUser(int);
@@ -35,6 +37,7 @@ package android.car.builtin.content {
 package android.car.builtin.os {
 
   public final class BuildHelper {
+    method public static boolean isDebuggableBuild();
     method public static boolean isEngBuild();
     method public static boolean isUserBuild();
     method public static boolean isUserDebugBuild();

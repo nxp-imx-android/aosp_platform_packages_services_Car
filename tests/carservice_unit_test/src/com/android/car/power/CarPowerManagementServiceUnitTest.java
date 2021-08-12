@@ -27,12 +27,12 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertThrows;
 
 import android.app.ActivityManager;
 import android.car.Car;
+import android.car.ICarResultReceiver;
 import android.car.hardware.power.CarPowerPolicy;
 import android.car.hardware.power.CarPowerPolicyFilter;
 import android.car.hardware.power.ICarPowerPolicyListener;
@@ -50,7 +50,6 @@ import android.os.UserManager;
 import android.sysprop.CarProperties;
 import android.test.suitebuilder.annotation.SmallTest;
 import android.util.AtomicFile;
-import android.util.IndentingPrintWriter;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -70,9 +69,9 @@ import com.android.car.systeminterface.WakeLockInterface;
 import com.android.car.test.utils.TemporaryDirectory;
 import com.android.car.test.utils.TemporaryFile;
 import com.android.car.user.CarUserService;
+import com.android.car.util.IndentingPrintWriter;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.app.IVoiceInteractionManagerService;
-import com.android.internal.os.IResultReceiver;
 
 import org.junit.After;
 import org.junit.Before;
@@ -406,7 +405,7 @@ public class CarPowerManagementServiceUnitTest extends AbstractExtendedMockitoTe
 
     @Test
     public void testFactoryResetOnResume() throws Exception {
-        IResultReceiver callback = mock(IResultReceiver.class);
+        ICarResultReceiver callback = mock(ICarResultReceiver.class);
         mService.setFactoryResetCallback(callback);
 
         // TODO: shouldn't need to expose handleOn() but rather emulate the steps as it's done on

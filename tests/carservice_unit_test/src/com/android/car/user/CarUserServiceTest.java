@@ -45,7 +45,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.notNull;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -114,6 +113,7 @@ import android.os.UserHandle;
 import android.os.UserManager;
 import android.os.UserManager.RemoveResult;
 import android.sysprop.CarProperties;
+import android.util.DebugUtils;
 import android.util.Log;
 import android.util.SparseArray;
 import android.view.Display;
@@ -2395,6 +2395,23 @@ public final class CarUserServiceTest extends AbstractExtendedMockitoTestCase {
 
         assertThat(mCarUserService.getInitialUserInfoRequestType())
                 .isEqualTo(InitialUserInfoRequestType.COLD_BOOT);
+    }
+
+    @Test
+    public void testUserOpFlags() {
+        userOpFlagTesT(CarUserService.USER_OP_SUCCESS, ActivityManager.USER_OP_SUCCESS);
+        userOpFlagTesT(CarUserService.USER_OP_UNKNOWN_USER, ActivityManager.USER_OP_UNKNOWN_USER);
+        userOpFlagTesT(CarUserService.USER_OP_IS_CURRENT, ActivityManager.USER_OP_IS_CURRENT);
+        userOpFlagTesT(CarUserService.USER_OP_ERROR_IS_SYSTEM,
+                ActivityManager.USER_OP_ERROR_IS_SYSTEM);
+        userOpFlagTesT(CarUserService.USER_OP_ERROR_RELATED_USERS_CANNOT_STOP,
+                ActivityManager.USER_OP_ERROR_RELATED_USERS_CANNOT_STOP);
+    }
+
+    private void userOpFlagTesT(int carConstant, int amConstant) {
+        assertWithMessage("Constant %s",
+                DebugUtils.constantToString(CarUserService.class, "USER_OP_", carConstant))
+                        .that(carConstant).isEqualTo(amConstant);
     }
 
     private void waitForHandlerThreadToFinish() {

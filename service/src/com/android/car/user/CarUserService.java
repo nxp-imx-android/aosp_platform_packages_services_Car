@@ -91,7 +91,6 @@ import android.sysprop.CarProperties;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.EventLog;
-import android.util.IndentingPrintWriter;
 import android.util.Log;
 import android.util.SparseBooleanArray;
 import android.view.Display;
@@ -109,6 +108,7 @@ import com.android.car.internal.common.EventLogTags;
 import com.android.car.internal.common.UserHelperLite;
 import com.android.car.power.CarPowerManagementService;
 import com.android.car.user.InitialUserSetter.InitialUserInfo;
+import com.android.car.util.IndentingPrintWriter;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.infra.AndroidFuture;
@@ -162,6 +162,13 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
     public static final String VEHICLE_HAL_NOT_SUPPORTED = "Vehicle Hal not supported.";
 
     public static final String HANDLER_THREAD_NAME = "UserService";
+
+    // Constants below must match value of same constants defined by ActivityManager
+    public static final int USER_OP_SUCCESS = 0;
+    public static final int USER_OP_UNKNOWN_USER = -1;
+    public static final int USER_OP_IS_CURRENT = -2;
+    public static final int USER_OP_ERROR_IS_SYSTEM = -3;
+    public static final int USER_OP_ERROR_RELATED_USERS_CANNOT_STOP = -4;
 
     private final Context mContext;
     private final ActivityManagerHelper mAmHelper;
@@ -1988,15 +1995,15 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
     private @UserStopResult.Status int stopBackgroundUserInternal(@UserIdInt int userId) {
         int r = mAmHelper.stopUserWithDelayedLocking(userId, true);
         switch(r) {
-            case ActivityManager.USER_OP_SUCCESS:
+            case USER_OP_SUCCESS:
                 return UserStopResult.STATUS_SUCCESSFUL;
-            case ActivityManager.USER_OP_ERROR_IS_SYSTEM:
+            case USER_OP_ERROR_IS_SYSTEM:
                 Slogf.w(TAG, "Cannot stop the system user: %d", userId);
                 return UserStopResult.STATUS_FAILURE_SYSTEM_USER;
-            case ActivityManager.USER_OP_IS_CURRENT:
+            case USER_OP_IS_CURRENT:
                 Slogf.w(TAG, "Cannot stop the current user: %d", userId);
                 return UserStopResult.STATUS_FAILURE_CURRENT_USER;
-            case ActivityManager.USER_OP_UNKNOWN_USER:
+            case USER_OP_UNKNOWN_USER:
                 Slogf.w(TAG, "Cannot stop the user that does not exist: %d", userId);
                 return UserStopResult.STATUS_USER_DOES_NOT_EXIST;
             default:

@@ -27,6 +27,7 @@ import android.annotation.Nullable;
 import android.car.Car;
 import android.car.CarFeatures;
 import android.car.ICar;
+import android.car.ICarResultReceiver;
 import android.car.builtin.app.ActivityManagerHelper;
 import android.car.builtin.util.Slog;
 import android.car.builtin.util.TimingsTraceLog;
@@ -50,11 +51,12 @@ import android.os.ShellCallback;
 import android.os.Trace;
 import android.os.UserManager;
 import android.util.EventLog;
-import android.util.IndentingPrintWriter;
 
 import com.android.car.admin.CarDevicePolicyService;
 import com.android.car.am.FixedActivityService;
 import com.android.car.audio.CarAudioService;
+import com.android.car.bluetooth.BuiltinPackageDependency;
+import com.android.car.bluetooth.CarBluetoothService;
 import com.android.car.cluster.ClusterHomeService;
 import com.android.car.cluster.ClusterNavigationService;
 import com.android.car.cluster.InstrumentClusterService;
@@ -72,12 +74,12 @@ import com.android.car.systeminterface.SystemInterface;
 import com.android.car.telemetry.CarTelemetryService;
 import com.android.car.user.CarUserNoticeService;
 import com.android.car.user.CarUserService;
+import com.android.car.util.IndentingPrintWriter;
 import com.android.car.util.LimitedTimingsTraceLog;
 import com.android.car.vms.VmsBrokerService;
 import com.android.car.watchdog.CarWatchdogService;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.os.IResultReceiver;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -478,7 +480,7 @@ public class ICarImpl extends ICar.Stub {
         }
 
         try {
-            IResultReceiver resultReceiver = IResultReceiver.Stub.asInterface(receiver);
+            ICarResultReceiver resultReceiver = ICarResultReceiver.Stub.asInterface(receiver);
             resultReceiver.send(/* unused */ 0, bundle);
         } catch (RemoteException e) {
             Slog.w(TAG, "RemoteException from CarServiceHelperService", e);
@@ -853,7 +855,7 @@ public class ICarImpl extends ICar.Stub {
         }
 
         @Override
-        public void onFactoryReset(IResultReceiver callback) {
+        public void onFactoryReset(ICarResultReceiver callback) {
             assertCallingFromSystemProcess();
 
             mCarPowerManagementService.setFactoryResetCallback(callback);
@@ -862,7 +864,7 @@ public class ICarImpl extends ICar.Stub {
             CarServiceUtils.executeAMethod(mCarServiceBuiltinPackageContext.getClassLoader(),
                     BuiltinPackageDependency.FACTORY_RESET_ACTIVITY_CLASS,
                     BuiltinPackageDependency.FACTORY_RESET_ACTIVITY_SEND_NOTIFICATION, null,
-                    new Class[]{Context.class, IResultReceiver.class},
+                    new Class[]{Context.class, ICarResultReceiver.class},
                     new Object[]{mCarServiceBuiltinPackageContext, callback}, false);
         }
     }
