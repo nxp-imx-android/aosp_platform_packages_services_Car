@@ -67,7 +67,6 @@ import android.os.RemoteException;
 import android.os.UserHandle;
 import android.text.TextUtils;
 import android.util.ArraySet;
-import android.util.LocalLog;
 import android.util.Log;
 import android.util.Pair;
 import android.util.SparseArray;
@@ -81,11 +80,11 @@ import com.android.car.CarUxRestrictionsManagerService;
 import com.android.car.R;
 import com.android.car.SystemActivityMonitoringService;
 import com.android.car.SystemActivityMonitoringService.TopTaskInfoContainer;
+import com.android.car.internal.util.Sets;
 import com.android.car.util.IndentingPrintWriter;
+import com.android.car.util.LocalLog;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
-
-import com.google.android.collect.Sets;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -1555,7 +1554,7 @@ public class CarPackageManagerService extends ICarPackageManager.Stub implements
     @VisibleForTesting
     void onWindowChangeEvent() {
         Slogf.d(TAG, "onWindowChange event received");
-        mHandlerThread.getThreadHandler().post(() -> blockTopActivitiesIfNecessary());
+        mHandler.post(() -> blockTopActivitiesIfNecessary());
     }
 
     /**
