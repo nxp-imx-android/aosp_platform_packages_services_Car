@@ -52,8 +52,6 @@ import android.car.user.UserRemovalResult;
 import android.car.user.UserStartResult;
 import android.car.user.UserStopResult;
 import android.car.user.UserSwitchResult;
-import android.car.userlib.HalCallback;
-import android.car.userlib.UserHalHelper;
 import android.car.userlib.UserHelper;
 import android.car.util.concurrent.AndroidFuture;
 import android.content.ComponentName;
@@ -101,6 +99,8 @@ import com.android.car.CarServiceBase;
 import com.android.car.CarServiceUtils;
 import com.android.car.CarUxRestrictionsManagerService;
 import com.android.car.R;
+import com.android.car.hal.HalCallback;
+import com.android.car.hal.UserHalHelper;
 import com.android.car.hal.UserHalService;
 import com.android.car.internal.ExcludeFromCodeCoverageGeneratedReport;
 import com.android.car.internal.ICarServiceHelper;
@@ -1507,7 +1507,7 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
         checkManageOrCreateUsersPermission("getUserIdentificationAssociation");
 
         int uid = getCallingUid();
-        int userId = UserHandle.getUserId(uid);
+        int userId = getCallingUserHandle().getIdentifier();
         EventLog.writeEvent(EventLogTags.CAR_USER_MGR_GET_USER_AUTH_REQ, uid, userId);
 
         UserIdentificationGetRequest request = new UserIdentificationGetRequest();
@@ -1555,7 +1555,7 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
         checkManageOrCreateUsersPermission("setUserIdentificationAssociation");
 
         int uid = getCallingUid();
-        int userId = UserHandle.getUserId(uid);
+        int userId = getCallingUserHandle().getIdentifier();
         EventLog.writeEvent(EventLogTags.CAR_USER_MGR_SET_USER_AUTH_REQ, uid, userId, types.length);
 
         UserIdentificationSetRequest request = new UserIdentificationSetRequest();
