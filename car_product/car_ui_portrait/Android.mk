@@ -14,8 +14,8 @@
 #
 
 car_ui_portrait_modules := \
-    rro/alert-dialog-customizations \
     rro/car-ui-customizations \
+    rro/car-ui-toolbar-customizations \
     apps/HideApps
 
 include $(call all-named-subdir-makefiles,$(car_ui_portrait_modules))

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package android.car.userlib;
+package com.android.car.internal.user;
 
 import android.annotation.NonNull;
 import android.annotation.RequiresPermission;
@@ -33,6 +33,8 @@ import java.util.Set;
 
 /**
  * Provides utility methods for generic user-related functionalities that don't require a manager.
+ *
+ * @hide
  */
 public final class UserHelper {
 
@@ -76,7 +78,7 @@ public final class UserHelper {
         Preconditions.checkArgument(context != null, "Context cannot be null");
         Preconditions.checkArgument(user != null, "User cannot be null");
 
-        UserManager userManager = UserManager.get(context);
+        UserManager userManager = context.getSystemService(UserManager.class);
 
         if (!userManager.isAdminUser()) {
             Log.w(TAG, "Only admin users can assign admin permissions.");
@@ -102,13 +104,15 @@ public final class UserHelper {
      * @param context Current application context
      * @param user User to set restrictions on.
      * @param enable If true, restriction is ON, If false, restriction is OFF.
+     *
+     * @hide
      */
     public static void setDefaultNonAdminRestrictions(@NonNull Context context,
             @NonNull UserInfo user, boolean enable) {
         Preconditions.checkArgument(context != null, "Context cannot be null");
         Preconditions.checkArgument(user != null, "User cannot be null");
 
-        UserManager userManager = UserManager.get(context);
+        UserManager userManager = context.getSystemService(UserManager.class);
         for (String restriction : DEFAULT_NON_ADMIN_RESTRICTIONS) {
             userManager.setUserRestriction(restriction, enable, user.getUserHandle());
         }
@@ -120,6 +124,8 @@ public final class UserHelper {
      * @param context Current application context
      * @param user User whose avatar is set to default icon.
      * @return Bitmap of the user icon.
+     *
+     * @hide
      */
     @NonNull
     public static Bitmap assignDefaultIcon(@NonNull Context context, @NonNull UserInfo user) {
@@ -129,7 +135,8 @@ public final class UserHelper {
         int idForIcon = user.isGuest() ? UserHandle.USER_NULL : user.id;
         Bitmap bitmap = UserIcons.convertToBitmap(
                 UserIcons.getDefaultUserIcon(context.getResources(), idForIcon, false));
-        UserManager.get(context).setUserIcon(user.id, bitmap);
+        UserManager userManager = context.getSystemService(UserManager.class);
+        userManager.setUserIcon(user.id, bitmap);
         return bitmap;
     }
 }

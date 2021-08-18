@@ -328,7 +328,8 @@ public final class CarUserManager extends CarManagerBase {
      * @hide
      */
     public CarUserManager(@NonNull Car car, @NonNull IBinder service) {
-        this(car, ICarUserService.Stub.asInterface(service), UserManager.get(car.getContext()));
+        this(car, ICarUserService.Stub.asInterface(service),
+                car.getContext().getSystemService(UserManager.class));
     }
 
     /**
@@ -348,6 +349,7 @@ public final class CarUserManager extends CarManagerBase {
      *
      * @hide
      */
+    @TestApi
     @RequiresPermission(anyOf = {android.Manifest.permission.MANAGE_USERS,
             android.Manifest.permission.CREATE_USERS})
     public AsyncFuture<UserSwitchResult> switchUser(@UserIdInt int targetUserId) {
