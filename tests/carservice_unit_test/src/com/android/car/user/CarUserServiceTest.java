@@ -683,8 +683,7 @@ public final class CarUserServiceTest extends AbstractExtendedMockitoTestCase {
         AndroidFuture<UserCreationResult> future = mCarUserService.createDriver("testUser", true);
         waitForHandlerThreadToFinish();
 
-        assertThat(getResult(future).getUser().name).isEqualTo("testUser");
-        assertThat(getResult(future).getUser().id).isEqualTo(10);
+        assertThat(getResult(future).getUser().getIdentifier()).isEqualTo(10);
     }
 
     @Test
@@ -705,9 +704,8 @@ public final class CarUserServiceTest extends AbstractExtendedMockitoTestCase {
         AndroidFuture<UserCreationResult> future = mCarUserService.createDriver("testUser", false);
         waitForHandlerThreadToFinish();
 
-        UserInfo userInfo = getResult(future).getUser();
-        assertThat(userInfo.name).isEqualTo("testUser");
-        assertThat(userInfo.id).isEqualTo(10);
+        UserHandle userHandle = getResult(future).getUser();
+        assertThat(userHandle.getIdentifier()).isEqualTo(10);
     }
 
     @Test
@@ -722,7 +720,7 @@ public final class CarUserServiceTest extends AbstractExtendedMockitoTestCase {
                 eq(UserManager.USER_TYPE_PROFILE_MANAGED), eq(0), eq(driverId));
         UserInfo driverInfo = new UserInfo(driverId, "driver", NO_USER_INFO_FLAGS);
         doReturn(driverInfo).when(mMockedUserManager).getUserInfo(driverId);
-        assertEquals(userInfo, mCarUserService.createPassenger(userName, driverId));
+        assertEquals(userInfo.getUserHandle(), mCarUserService.createPassenger(userName, driverId));
     }
 
     @Test
@@ -862,9 +860,9 @@ public final class CarUserServiceTest extends AbstractExtendedMockitoTestCase {
         Set<Integer> expected = new HashSet<Integer>(Arrays.asList(10, 11, 13, 14));
         when(mMockedUserManager.getAliveUsers()).thenReturn(prepareUserList());
         mockIsHeadlessSystemUser(19, true);
-        for (UserInfo user : mCarUserService.getAllDrivers()) {
-            assertThat(expected).contains(user.id);
-            expected.remove(user.id);
+        for (UserHandle user : mCarUserService.getAllDrivers()) {
+            assertThat(expected).contains(user.getIdentifier());
+            expected.remove(user.getIdentifier());
         }
         assertThat(expected).isEmpty();
     }
@@ -882,11 +880,11 @@ public final class CarUserServiceTest extends AbstractExtendedMockitoTestCase {
         mockIsHeadlessSystemUser(18, true);
         for (int i = 0; i < testCases.size(); i++) {
             when(mMockedUserManager.getAliveUsers()).thenReturn(prepareUserList());
-            List<UserInfo> passengers = mCarUserService.getPassengers(testCases.keyAt(i));
+            List<UserHandle> passengers = mCarUserService.getPassengers(testCases.keyAt(i));
             HashSet<Integer> expected = testCases.valueAt(i);
-            for (UserInfo user : passengers) {
-                assertThat(expected).contains(user.id);
-                expected.remove(user.id);
+            for (UserHandle user : passengers) {
+                assertThat(expected).contains(user.getIdentifier());
+                expected.remove(user.getIdentifier());
             }
             assertThat(expected).isEmpty();
         }
@@ -1707,12 +1705,9 @@ public final class CarUserServiceTest extends AbstractExtendedMockitoTestCase {
         UserCreationResult result = getUserCreationResult();
         assertThat(result.getStatus()).isEqualTo(UserCreationResult.STATUS_SUCCESSFUL);
         assertThat(result.getErrorMessage()).isNull();
-        UserInfo newUser = result.getUser();
+        UserHandle newUser = result.getUser();
         assertThat(newUser).isNotNull();
-        assertThat(newUser.id).isEqualTo(userId);
-        assertThat(newUser.name).isEqualTo("dude");
-        assertThat(newUser.userType).isEqualTo(UserManager.USER_TYPE_FULL_SECONDARY);
-        assertThat(newUser.flags).isEqualTo(UserInfo.FLAG_EPHEMERAL);
+        assertThat(newUser.getIdentifier()).isEqualTo(userId);
 
         verify(mMockedUserManager, never()).createGuest(any(Context.class), anyString());
         verifyNoUserRemoved();
@@ -1741,12 +1736,9 @@ public final class CarUserServiceTest extends AbstractExtendedMockitoTestCase {
         UserCreationResult result = getUserCreationResult();
         assertThat(result.getStatus()).isEqualTo(UserCreationResult.STATUS_SUCCESSFUL);
         assertThat(result.getErrorMessage()).isNull();
-        UserInfo newUser = result.getUser();
+        UserHandle newUser = result.getUser();
         assertThat(newUser).isNotNull();
-        assertThat(newUser.id).isEqualTo(userId);
-        assertThat(newUser.name).isEqualTo("guest");
-        assertThat(newUser.userType).isEqualTo(UserManager.USER_TYPE_FULL_GUEST);
-        assertThat(newUser.flags).isEqualTo(0);
+        assertThat(newUser.getIdentifier()).isEqualTo(userId);
 
         verify(mMockedUserManager, never()).createUser(anyString(), anyString(), anyInt());
         verifyNoUserRemoved();
@@ -1790,12 +1782,9 @@ public final class CarUserServiceTest extends AbstractExtendedMockitoTestCase {
         assertThat(result.getStatus()).isEqualTo(UserCreationResult.STATUS_SUCCESSFUL);
         assertThat(result.getErrorMessage()).isNull();
 
-        UserInfo newUser = result.getUser();
+        UserHandle newUser = result.getUser();
         assertThat(newUser).isNotNull();
-        assertThat(newUser.id).isEqualTo(userId);
-        assertThat(newUser.name).isNull();
-        assertThat(newUser.userType).isEqualTo(UserManager.USER_TYPE_FULL_SECONDARY);
-        assertThat(newUser.flags).isEqualTo(UserInfo.FLAG_EPHEMERAL);
+        assertThat(newUser.getIdentifier()).isEqualTo(userId);
 
         verifyNoUserRemoved();
         verify(mUserHal, never()).removeUser(any());
@@ -1904,7 +1893,9 @@ public final class CarUserServiceTest extends AbstractExtendedMockitoTestCase {
                 .build();
         mCarUserService.setCarServiceHelper(mICarServiceHelper);
         when(mICarServiceHelper.createUserEvenWhenDisallowed("name",
-                UserManager.USER_TYPE_FULL_SECONDARY, UserInfo.FLAG_ADMIN)).thenReturn(user);
+                UserManager.USER_TYPE_FULL_SECONDARY, UserInfo.FLAG_ADMIN))
+                        .thenReturn(user.getUserHandle());
+        when(mMockedUserManager.getUserInfo(user.id)).thenReturn(user);
 
         UserInfo actualUser = mCarUserService.createUserEvenWhenDisallowed("name",
                 UserManager.USER_TYPE_FULL_SECONDARY, UserInfo.FLAG_ADMIN);
