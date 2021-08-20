@@ -34,7 +34,7 @@ car_service_sources = [
 ]
 
 common_lib_deps = [
-    "android.automotive.telemetry.internal-java",  // ICarTelemetryInternal
+    "android.automotive.telemetry.internal-V1-java",  // ICarTelemetryInternal
     "android.car.cluster.navigation",
     "android.car.watchdoglib",
     "android.frameworks.automotive.powerpolicy.internal-java",
@@ -136,7 +136,7 @@ android_app {
     srcs: [
         ":carservice-stub-for-hidden-api-check-docs",
         ":statslog-Car-java-gen",
-        //"src/com/android/car/CarFeatureController.java", // blocked due to Power
+        //"src/com/android/car/CarFeatureController.java", // Car not complete yet
         "src/com/android/car/CarLog.java",
         //"src/com/android/car/CarLocalServices.java",
         "src/com/android/car/CarServiceBase.java",
@@ -191,7 +191,7 @@ android_app {
     ],
 
     static_libs: [
-        "android.automotive.telemetry.internal-java",  // ICarTelemetryInternal
+        "android.automotive.telemetry.internal-V1-java",  // ICarTelemetryInternal
         "android.car.cluster.navigation",
         "android.car.watchdoglib",
         "android.frameworks.automotive.powerpolicy.internal-java",
