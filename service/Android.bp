@@ -29,6 +29,7 @@ genrule {
 }
 
 car_service_sources = [
+    ":iscriptexecutor_aidl",
     "src/**/*.java",
     ":statslog-Car-java-gen",
 ]
@@ -47,6 +48,7 @@ common_lib_deps = [
     "android.hardware.health-V2.0-java",
     "android.hardware.automotive.occupant_awareness-V1-java",
     "vehicle-hal-support-lib",
+    "car-admin-ui-lib", // TODO(b/196754888): Remove car-admin-ui-lib dependency.
     "com.android.car.procfsinspector-client",
     "cartelemetry-protos",
 ]
@@ -79,7 +81,6 @@ android_app {
 
     jni_libs: [
         "libcarservicejni",
-        "libscriptexecutorjni",
     ],
 
     required: ["allowed_privapp_com.android.car"],
@@ -312,4 +313,21 @@ android_library {
             enabled: false,
         },
     },
+}
+
+filegroup {
+    name: "iscriptexecutor_aidl",
+    srcs: [
+        "src/com/android/car/telemetry/scriptexecutorinterface/IScriptExecutor.aidl",
+        "src/com/android/car/telemetry/scriptexecutorinterface/IScriptExecutorListener.aidl",
+    ],
+    path: "src",
+}
+
+filegroup {
+    name: "iscriptexecutorconstants_aidl",
+    srcs: [
+        "src/com/android/car/telemetry/scriptexecutorinterface/IScriptExecutorConstants.aidl",
+    ],
+    path: "src",
 }
