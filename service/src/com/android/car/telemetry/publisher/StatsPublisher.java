@@ -41,13 +41,14 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 
 /**
  * Publisher for {@link TelemetryProto.StatsPublisher}.
  *
  * <p>The publisher adds subscriber configurations in StatsD and they persist between reboots and
- * CarTelemetryService restarts. Please use {@link #removeAllDataSubscribers} or
- * {@link #removeDataSubscriber} to clean-up these configs from StatsD store.
+ * CarTelemetryService restarts. Please use {@link #removeAllDataSubscribers} to clean-up these
+ * configs from StatsD store.
  */
 public class StatsPublisher extends AbstractPublisher {
     // These IDs are used in StatsdConfig and ConfigMetricsReport.
@@ -87,13 +88,20 @@ public class StatsPublisher extends AbstractPublisher {
     private final LongSparseArray<DataSubscriber> mConfigKeyToSubscribers = new LongSparseArray<>();
 
     // TODO(b/198331078): Use telemetry thread
-    StatsPublisher(StatsManagerProxy statsManager, SharedPreferences sharedPreferences) {
-        this(statsManager, sharedPreferences, new Handler(Looper.myLooper()));
+    StatsPublisher(
+            BiConsumer<AbstractPublisher, Throwable> failureConsumer,
+            StatsManagerProxy statsManager,
+            SharedPreferences sharedPreferences) {
+        this(failureConsumer, statsManager, sharedPreferences, new Handler(Looper.myLooper()));
     }
 
     @VisibleForTesting
     StatsPublisher(
-            StatsManagerProxy statsManager, SharedPreferences sharedPreferences, Handler handler) {
+            BiConsumer<AbstractPublisher, Throwable> failureConsumer,
+            StatsManagerProxy statsManager,
+            SharedPreferences sharedPreferences,
+            Handler handler) {
+        super(failureConsumer);
         mStatsManager = statsManager;
         mSharedPreferences = sharedPreferences;
         mTelemetryHandler = handler;
@@ -116,22 +124,28 @@ public class StatsPublisher extends AbstractPublisher {
         }
     }
 
+    private void processReport(long configKey, StatsLogProto.ConfigMetricsReportList report) {
+        // TODO(b/197269115): parse the report
+        Slog.i(CarLog.TAG_TELEMETRY, "Received reports: " + report.getReportsCount());
+        if (report.getReportsCount() > 0) {
+            PersistableBundle data = new PersistableBundle();
+            // TODO(b/197269115): parse the report
+            data.putInt("reportsCount", report.getReportsCount());
+            DataSubscriber subscriber = getSubscriberByConfigKey(configKey);
+            if (subscriber != null) {
+                subscriber.push(data);
+            }
+        }
+    }
+
     private void pullReportsPeriodically() {
         for (long configKey : getActiveConfigKeys()) {
             try {
-                StatsLogProto.ConfigMetricsReportList report =
-                        StatsLogProto.ConfigMetricsReportList.parseFrom(
-                                mStatsManager.getReports(configKey));
-                // TODO(b/197269115): parse the report
-                Slog.i(CarLog.TAG_TELEMETRY, "Received reports: " + report.getReportsCount());
-                if (report.getReportsCount() > 0) {
-                    PersistableBundle data = new PersistableBundle();
-                    // TODO(b/197269115): parse the report
-                    data.putInt("reportsCount", report.getReportsCount());
-                    mConfigKeyToSubscribers.get(configKey).push(data);
-                }
+                processReport(configKey, StatsLogProto.ConfigMetricsReportList.parseFrom(
+                        mStatsManager.getReports(configKey)));
             } catch (StatsUnavailableException e) {
-                // TODO(b/189143813): retry if stats is not available
+                // If the StatsD is not available, retry in the next pullReportsPeriodically call.
+                break;
             } catch (InvalidProtocolBufferException e) {
                 // This case should never happen.
                 Slog.w(CarLog.TAG_TELEMETRY,
@@ -198,9 +212,12 @@ public class StatsPublisher extends AbstractPublisher {
                     String sharedPrefVersion = buildSharedPrefConfigVersionKey(configKey);
                     editor.remove(key).remove(sharedPrefVersion);
                 } catch (StatsUnavailableException e) {
-                    Slog.w(CarLog.TAG_TELEMETRY, "Failed to remove config " + configKey, e);
-                    // TODO(b/189143813): if StatsManager is not ready, retry N times and hard fail
-                    //                    after by notifying DataBroker.
+                    Slog.w(CarLog.TAG_TELEMETRY, "Failed to remove config " + configKey
+                            + ". Ignoring the failure. Will retry removing again when"
+                            + " removeAllDataSubscribers() is called.", e);
+                    // If it cannot remove statsd config, it's less likely it can delete it even if
+                    // retry. So we will just ignore the failures. The next call of this method
+                    // will ry deleting StatsD configs again.
                 }
             });
             editor.apply();
@@ -219,6 +236,13 @@ public class StatsPublisher extends AbstractPublisher {
         long configKey = buildConfigKey(subscriber);
         synchronized (mLock) {
             return mConfigKeyToSubscribers.indexOfKey(configKey) >= 0;
+        }
+    }
+
+    /** Returns a subscriber for the given statsd config key. Returns null if not found. */
+    private DataSubscriber getSubscriberByConfigKey(long configKey) {
+        synchronized (mLock) {
+            return mConfigKeyToSubscribers.get(configKey);
         }
     }
 
@@ -246,21 +270,18 @@ public class StatsPublisher extends AbstractPublisher {
      */
     @GuardedBy("mLock")
     private long addStatsConfigLocked(DataSubscriber subscriber) {
-        String sharedPrefConfigKey = buildSharedPrefConfigKey(subscriber);
         long configKey = buildConfigKey(subscriber);
         // Store MetricsConfig (of CarTelemetryService) version per handler_function.
         String sharedPrefVersion = buildSharedPrefConfigVersionKey(configKey);
-        StatsdConfig config = buildStatsdConfig(subscriber, configKey);
         if (mSharedPreferences.contains(sharedPrefVersion)) {
             int currentVersion = mSharedPreferences.getInt(sharedPrefVersion, 0);
-            if (currentVersion < subscriber.getMetricsConfig().getVersion()) {
-                // TODO(b/189143813): remove old version from StatsD
-                Slog.d(CarLog.TAG_TELEMETRY, "Removing old config from StatsD");
-            } else {
-                // Ignore if the MetricsConfig version is current or older.
+            if (currentVersion >= subscriber.getMetricsConfig().getVersion()) {
+                // It's trying to add current or older MetricsConfig version, just ignore it.
                 return configKey;
-            }
+            }  // if the subscriber's MetricsConfig version is newer, it will replace the old one.
         }
+        String sharedPrefConfigKey = buildSharedPrefConfigKey(subscriber);
+        StatsdConfig config = buildStatsdConfig(subscriber, configKey);
         try {
             // It doesn't throw exception if the StatsdConfig is invalid. But it shouldn't happen,
             // as we generate well-tested StatsdConfig in this service.
@@ -273,6 +294,9 @@ public class StatsPublisher extends AbstractPublisher {
             Slog.w(CarLog.TAG_TELEMETRY, "Failed to add config" + configKey, e);
             // TODO(b/189143813): if StatsManager is not ready, retry N times and hard fail after
             //                    by notifying DataBroker.
+            // We will notify the failure immediately, as we're expecting StatsManager to be stable.
+            notifyFailureConsumer(
+                    new IllegalStateException("Failed to add config " + configKey, e));
         }
         return configKey;
     }
@@ -288,9 +312,12 @@ public class StatsPublisher extends AbstractPublisher {
             mStatsManager.removeConfig(configKey);
             mSharedPreferences.edit().remove(sharedPrefVersion).remove(sharedPrefConfigKey).apply();
         } catch (StatsUnavailableException e) {
-            Slog.w(CarLog.TAG_TELEMETRY, "Failed to remove config " + configKey, e);
-            // TODO(b/189143813): if StatsManager is not ready, retry N times and hard fail after
-            //                    by notifying DataBroker.
+            Slog.w(CarLog.TAG_TELEMETRY, "Failed to remove config " + configKey
+                    + ". Ignoring the failure. Will retry removing again when"
+                    + " removeAllDataSubscribers() is called.", e);
+            // If it cannot remove statsd config, it's less likely it can delete it even if we
+            // retry. So we will just ignore the failures. The next call of this method will
+            // try deleting StatsD configs again.
         }
         return configKey;
     }
