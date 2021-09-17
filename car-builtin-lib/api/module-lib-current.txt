@@ -47,8 +47,12 @@ package android.car.builtin.os {
   public final class AudioServiceHelper {
     method public static android.car.builtin.os.AudioServiceHelper.AudioPatchInfo createAudioPatch(@NonNull android.media.AudioDeviceInfo, @NonNull android.media.AudioDeviceInfo, int);
     method public static android.car.builtin.os.AudioServiceHelper.AudioGainInfo getAudioGainInfo(@NonNull android.media.AudioDeviceInfo);
+    method public static int getUsageVirtualSource();
     method public static boolean releaseAudioPatch(@NonNull android.media.AudioManager, @NonNull android.car.builtin.os.AudioServiceHelper.AudioPatchInfo);
     method public static boolean setAudioDeviceGain(@NonNull android.media.AudioManager, @NonNull String, int, boolean);
+    method public static String usageToString(int);
+    method public static String usageToXsdString(int);
+    method public static int xsdStringToUsage(String);
   }
 
   public static class AudioServiceHelper.AudioGainInfo {
@@ -100,15 +104,19 @@ package android.car.builtin.os {
   }
 
   public final class UserManagerHelper {
-    method public static android.graphics.Bitmap assignDefaultIcon(@NonNull android.content.Context, @NonNull android.os.UserHandle);
+    method public static android.graphics.Bitmap assignDefaultIconForUser(@NonNull android.content.Context, @NonNull android.os.UserHandle);
     method public static String getDefaultUserTypeForUserInfoFlags(int);
     method @Deprecated public static int getProfileGroupId(@NonNull android.os.UserManager, @NonNull android.os.UserHandle);
     method @Deprecated @NonNull public static java.util.List<android.os.UserHandle> getUserHandles(@NonNull android.os.UserManager, boolean, boolean);
+    method @NonNull public static java.util.List<android.os.UserHandle> getUserHandles(@NonNull android.os.UserManager, boolean, boolean, boolean);
     method @Deprecated public static boolean isAdminUser(@NonNull android.os.UserManager, @NonNull android.os.UserHandle);
     method @Deprecated public static boolean isEnabledUser(@NonNull android.os.UserManager, @NonNull android.os.UserHandle);
     method @Deprecated public static boolean isEphemeralUser(@NonNull android.os.UserManager, @NonNull android.os.UserHandle);
     method @Deprecated public static boolean isGuestUser(@NonNull android.os.UserManager, @NonNull android.os.UserHandle);
+    method @Deprecated public static boolean isInitializedUser(@NonNull android.os.UserManager, @NonNull android.os.UserHandle);
+    method public static boolean isPreCreatedUser(@NonNull android.os.UserManager, @NonNull android.os.UserHandle);
     method @Deprecated public static boolean isProfileUser(@NonNull android.os.UserManager, @NonNull android.os.UserHandle);
+    method @Nullable public static android.os.UserHandle preCreateUser(@NonNull android.os.UserManager, @NonNull String);
     method public static void setUserAdmin(@NonNull android.os.UserManager, @NonNull android.os.UserHandle);
     method public static void setUserRestriction(@NonNull android.os.UserManager, @NonNull String, boolean, @NonNull android.os.UserHandle);
     field public static final int FLAG_ADMIN = 2; // 0x2
@@ -197,6 +205,16 @@ package android.car.builtin.util {
   public final class ValidationHelper {
     method public static boolean isAppIdValid(int);
     method public static boolean isUserIdValid(int);
+  }
+
+}
+
+package android.car.builtin.view {
+
+  public final class DisplayHelper {
+    method public static int getPhysicalPort(android.view.Display);
+    method public static String getUniqueId(android.view.Display);
+    field public static final int INVALID_PORT = -1; // 0xffffffff
   }
 
 }
