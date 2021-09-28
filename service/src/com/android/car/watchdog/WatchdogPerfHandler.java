@@ -42,7 +42,6 @@ import static com.android.car.watchdog.WatchdogStorage.ZONE_OFFSET;
 
 import android.annotation.NonNull;
 import android.annotation.UserIdInt;
-import android.app.ActivityThread;
 import android.automotive.watchdog.ResourceType;
 import android.automotive.watchdog.internal.ApplicationCategoryType;
 import android.automotive.watchdog.internal.ComponentType;
@@ -52,6 +51,7 @@ import android.automotive.watchdog.internal.PackageMetadata;
 import android.automotive.watchdog.internal.PackageResourceOveruseAction;
 import android.automotive.watchdog.internal.PerStateIoOveruseThreshold;
 import android.automotive.watchdog.internal.ResourceSpecificConfiguration;
+import android.car.builtin.content.pm.PackageManagerHelper;
 import android.car.builtin.util.Slogf;
 import android.car.watchdog.CarWatchdogManager;
 import android.car.watchdog.IResourceOveruseListener;
@@ -66,7 +66,6 @@ import android.car.watchdog.ResourceOveruseStats;
 import android.car.watchdoglib.CarWatchdogDaemonHelper;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
-import android.content.pm.IPackageManager;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Binder;
@@ -89,7 +88,6 @@ import com.android.car.internal.util.IndentingPrintWriter;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.Preconditions;
-import com.android.internal.util.function.TriConsumer;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -674,7 +672,6 @@ public final class WatchdogPerfHandler {
     /** Handle packages that exceed resource overuse thresholds */
     private void handleIoOveruseKilling(SparseBooleanArray recurringIoOverusesByUid,
             SparseArray<String> genericPackageNamesByUid) {
-        IPackageManager packageManager = ActivityThread.getPackageManager();
         synchronized (mLock) {
             for (int i = 0; i < recurringIoOverusesByUid.size(); i++) {
                 int uid = recurringIoOverusesByUid.keyAt(i);
@@ -704,8 +701,9 @@ public final class WatchdogPerfHandler {
                     String packageName = packages.get(pkgIdx);
                     try {
                         if (!hasRecurringOveruse) {
-                            int currentEnabledState = packageManager.getApplicationEnabledSetting(
-                                    packageName, userId);
+                            int currentEnabledState =
+                                    PackageManagerHelper.getApplicationEnabledSettingForUser(
+                                            packageName, userId);
                             if (currentEnabledState == COMPONENT_ENABLED_STATE_DISABLED
                                     || currentEnabledState == COMPONENT_ENABLED_STATE_DISABLED_USER
                                     || currentEnabledState
@@ -713,7 +711,7 @@ public final class WatchdogPerfHandler {
                                 continue;
                             }
                         }
-                        packageManager.setApplicationEnabledSetting(packageName,
+                        PackageManagerHelper.setApplicationEnabledSettingForUser(packageName,
                                 COMPONENT_ENABLED_STATE_DISABLED_UNTIL_USED, /* flags= */ 0, userId,
                                 mContext.getPackageName());
                         overuseAction.resourceOveruseActionType = hasRecurringOveruse
@@ -1439,23 +1437,15 @@ public final class WatchdogPerfHandler {
 
     private static IoOveruseConfiguration toIoOveruseConfiguration(
             android.automotive.watchdog.internal.IoOveruseConfiguration internalConfig) {
-        TriConsumer<Map<String, PerStateBytes>, String, String> replaceKey =
-                (map, oldKey, newKey) -> {
-                    PerStateBytes perStateBytes = map.get(oldKey);
-                    if (perStateBytes != null) {
-                        map.put(newKey, perStateBytes);
-                        map.remove(oldKey);
-                    }
-                };
         PerStateBytes componentLevelThresholds =
                 toPerStateBytes(internalConfig.componentLevelThresholds.perStateWriteBytes);
         ArrayMap<String, PerStateBytes> packageSpecificThresholds =
                 toPerStateBytesMap(internalConfig.packageSpecificThresholds);
         ArrayMap<String, PerStateBytes> appCategorySpecificThresholds =
                 toPerStateBytesMap(internalConfig.categorySpecificThresholds);
-        replaceKey.accept(appCategorySpecificThresholds, INTERNAL_APPLICATION_CATEGORY_TYPE_MAPS,
+        replaceKey(appCategorySpecificThresholds, INTERNAL_APPLICATION_CATEGORY_TYPE_MAPS,
                 ResourceOveruseConfiguration.APPLICATION_CATEGORY_TYPE_MAPS);
-        replaceKey.accept(appCategorySpecificThresholds, INTERNAL_APPLICATION_CATEGORY_TYPE_MEDIA,
+        replaceKey(appCategorySpecificThresholds, INTERNAL_APPLICATION_CATEGORY_TYPE_MEDIA,
                 ResourceOveruseConfiguration.APPLICATION_CATEGORY_TYPE_MEDIA);
         List<IoOveruseAlertThreshold> systemWideThresholds =
                 toIoOveruseAlertThresholds(internalConfig.systemWideThresholds);
