@@ -26,13 +26,13 @@ import android.app.ActivityTaskManager;
 import android.app.ActivityTaskManager.RootTaskInfo;
 import android.app.IActivityManager;
 import android.app.IProcessObserver;
-import android.app.TaskInfo;
 import android.app.TaskStackListener;
-import android.car.builtin.util.Slog;
 import android.car.builtin.util.Slogf;
 import android.content.ComponentName;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.RemoteException;
+import android.util.Pair;
 import android.util.SparseArray;
 
 import com.android.internal.annotations.GuardedBy;
@@ -134,7 +134,7 @@ public final class ActivityManagerHelper {
                     if (info.childTaskUserIds[i] == userId) {
                         int taskId = info.childTaskIds[i];
                         if (!mAm.removeTask(taskId)) {
-                            Slog.w(TAG, "could not remove task " + taskId);
+                            Slogf.w(TAG, "could not remove task " + taskId);
                         }
                     }
                 }
@@ -164,7 +164,7 @@ public final class ActivityManagerHelper {
 
     private RuntimeException logAndReThrow(Exception e, String format, Object...args) {
         String msg = String.format(format, args);
-        Slog.e(TAG, msg, e);
+        Slogf.e(TAG, msg, e);
         return new IllegalStateException(msg, e);
     }
 
@@ -328,16 +328,17 @@ public final class ActivityManagerHelper {
 
     /**
      * Finds the root task of the given taskId.
-     * @return a {@link TaskInfo} if the root task exists, or {@code null}.
+     * @return a {@link Pair} of {@link Intent} and {@code userId} if the root task exists, or
+     * {@code null}.
      */
     @Deprecated  // Will be replaced with TaskOrganizer based implementation
-    public TaskInfo findRootTask(int taskId) {
+    public Pair<Intent, Integer> findRootTask(int taskId) {
         List<ActivityTaskManager.RootTaskInfo> infos = getAllRootTaskInfos();
         for (int i = 0, size = infos.size(); i < size; ++i) {
             ActivityTaskManager.RootTaskInfo info = infos.get(i);
             for (int j = 0; j < info.childTaskIds.length; ++j) {
                 if (info.childTaskIds[j] == taskId) {
-                    return info;
+                    return new Pair<>(info.baseIntent, info.userId);
                 }
             }
         }

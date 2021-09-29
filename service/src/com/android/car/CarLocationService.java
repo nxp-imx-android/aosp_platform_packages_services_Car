@@ -19,7 +19,7 @@ package com.android.car;
 import android.app.ActivityManager;
 import android.car.ILocationManagerProxy;
 import android.car.IPerUserCarService;
-import android.car.builtin.util.Slog;
+import android.car.builtin.util.Slogf;
 import android.car.drivingstate.CarDrivingStateEvent;
 import android.car.drivingstate.ICarDrivingStateChangeListener;
 import android.car.hardware.power.CarPowerManager;
@@ -115,14 +115,14 @@ public class CarLocationService extends BroadcastReceiver implements CarServiceB
                         try {
                             mILocationManagerProxy = perUserCarService.getLocationManagerProxy();
                         } catch (RemoteException e) {
-                            Slog.e(TAG, "RemoteException from IPerUserCarService", e);
+                            Slogf.e(TAG, "RemoteException from IPerUserCarService", e);
                             return;
                         }
                     }
                     int currentUser = ActivityManager.getCurrentUser();
                     logd("Current user: %s", currentUser);
                     if (UserManager.isHeadlessSystemUserMode()
-                            && currentUser > UserHandle.USER_SYSTEM) {
+                            && currentUser > UserHandle.SYSTEM.getIdentifier()) {
                         asyncOperation(() -> loadLocation());
                     }
                 }
@@ -279,7 +279,7 @@ public class CarLocationService extends BroadcastReceiver implements CarServiceB
                     logd("Unexpected intent.");
                 }
             } catch (RemoteException e) {
-                Slog.e(TAG, "RemoteException from ILocationManagerProxy", e);
+                Slogf.e(TAG, "RemoteException from ILocationManagerProxy", e);
             }
         }
     }
@@ -288,7 +288,7 @@ public class CarLocationService extends BroadcastReceiver implements CarServiceB
     private boolean isCurrentUserHeadlessSystemUser() {
         int currentUserId = ActivityManager.getCurrentUser();
         return UserManager.isHeadlessSystemUserMode()
-                && currentUserId == UserHandle.USER_SYSTEM;
+                && currentUserId == UserHandle.SYSTEM.getIdentifier();
     }
 
     /**
@@ -305,7 +305,7 @@ public class CarLocationService extends BroadcastReceiver implements CarServiceB
                 location = mILocationManagerProxy.getLastKnownLocation(
                         LocationManager.GPS_PROVIDER);
             } catch (RemoteException e) {
-                Slog.e(TAG, "RemoteException from ILocationManagerProxy", e);
+                Slogf.e(TAG, "RemoteException from ILocationManagerProxy", e);
             }
         }
         if (location == null) {
@@ -356,7 +356,7 @@ public class CarLocationService extends BroadcastReceiver implements CarServiceB
                 }
                 atomicFile.finishWrite(fos);
             } catch (IOException e) {
-                Slog.e(TAG, "Unable to write to disk", e);
+                Slogf.e(TAG, "Unable to write to disk", e);
                 atomicFile.failWrite(fos);
             }
         }
@@ -429,7 +429,7 @@ public class CarLocationService extends BroadcastReceiver implements CarServiceB
                         location.setTime(reader.nextLong());
                         break;
                     default:
-                        Slog.w(TAG, "Unrecognized key: " + name);
+                        Slogf.w(TAG, "Unrecognized key: " + name);
                         reader.skipValue();
                 }
             }
@@ -437,9 +437,9 @@ public class CarLocationService extends BroadcastReceiver implements CarServiceB
         } catch (FileNotFoundException e) {
             logd("Location cache file not found: %s", file);
         } catch (IOException e) {
-            Slog.e(TAG, "Unable to read from disk", e);
+            Slogf.e(TAG, "Unable to read from disk", e);
         } catch (NumberFormatException | IllegalStateException e) {
-            Slog.e(TAG, "Unexpected format", e);
+            Slogf.e(TAG, "Unexpected format", e);
         }
         return location;
     }
@@ -467,7 +467,7 @@ public class CarLocationService extends BroadcastReceiver implements CarServiceB
                 try {
                     success = mILocationManagerProxy.injectLocation(location);
                 } catch (RemoteException e) {
-                    Slog.e(TAG, "RemoteException from ILocationManagerProxy", e);
+                    Slogf.e(TAG, "RemoteException from ILocationManagerProxy", e);
                 }
             }
         }
@@ -500,6 +500,6 @@ public class CarLocationService extends BroadcastReceiver implements CarServiceB
 
     private static void logd(String msg, Object... vals) {
         // Disable logs here if they become too spammy.
-        Slog.d(TAG, String.format(msg, vals));
+        Slogf.d(TAG, msg, vals);
     }
 }

@@ -11,7 +11,7 @@ package android.car.builtin.app {
 
   public final class ActivityManagerHelper {
     method @NonNull public static android.app.ActivityOptions createActivityOptions(@NonNull android.os.Bundle);
-    method @Deprecated public android.app.TaskInfo findRootTask(int);
+    method @Deprecated public android.util.Pair<android.content.Intent,java.lang.Integer> findRootTask(int);
     method @NonNull public static android.car.builtin.app.ActivityManagerHelper getInstance();
     method @Deprecated @Nullable public android.util.SparseArray<android.car.builtin.app.ActivityManagerHelper.TopTaskInfoContainer> getTopTasks();
     method public void registerProcessObserverCallback(android.car.builtin.app.ActivityManagerHelper.ProcessObserverCallback);
@@ -249,21 +249,6 @@ package android.car.builtin.util {
 
   public final class AtomicFileHelper {
     method public static boolean exists(android.util.AtomicFile);
-  }
-
-  public final class Slog {
-    method public static int d(@NonNull String, @NonNull String);
-    method public static int d(@NonNull String, @NonNull String, @NonNull Throwable);
-    method public static int e(@NonNull String, @NonNull String);
-    method public static int e(@NonNull String, @NonNull String, @NonNull Throwable);
-    method public static int i(@NonNull String, @NonNull String);
-    method public static int i(@NonNull String, @NonNull String, @NonNull Throwable);
-    method public static int v(@NonNull String, @NonNull String);
-    method public static int v(@NonNull String, @NonNull String, @NonNull Throwable);
-    method public static int w(@NonNull String, @NonNull String);
-    method public static int w(@NonNull String, @NonNull String, @NonNull Throwable);
-    method public static int wtf(@NonNull String, @NonNull String);
-    method public static int wtf(@NonNull String, @NonNull String, @NonNull Throwable);
   }
 
   public final class Slogf {
