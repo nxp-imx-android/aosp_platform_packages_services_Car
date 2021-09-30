@@ -1539,7 +1539,7 @@ final class CarShellCommand extends BasicShellCommandHandler {
             // TODO(b/196179969): in the following CLs createGuest and createUser would be
             // replaced by the call which would return UserHandle. For now, it is possible
             // that current call return null.
-            Slogf.w(TAG,  "NullPointerException while creating User: ", e);
+            Slogf.w(TAG, "NullPointerException while creating User: ", e);
             newUser = null;
         }
 
@@ -1658,7 +1658,7 @@ final class CarShellCommand extends BasicShellCommandHandler {
         }
 
         boolean halOnly = false;
-        int userId = UserHandle.USER_CURRENT;
+        int userId = UserHandle.CURRENT.getIdentifier();
 
         UserIdentificationGetRequest request = new UserIdentificationGetRequest();
         for (int i = 1; i < args.length; i++) {
@@ -1686,7 +1686,7 @@ final class CarShellCommand extends BasicShellCommandHandler {
             }
 
         }
-        if (userId == UserHandle.USER_CURRENT) {
+        if (userId == UserHandle.CURRENT.getIdentifier()) {
             userId = ActivityManager.getCurrentUser();
         }
         int requestSize = request.associationTypes.size();
@@ -1787,7 +1787,7 @@ final class CarShellCommand extends BasicShellCommandHandler {
 
         boolean halOnly = false;
         int timeout = DEFAULT_HAL_TIMEOUT_MS;
-        int userId = UserHandle.USER_CURRENT;
+        int userId = UserHandle.CURRENT.getIdentifier();
 
         UserIdentificationSetRequest request = new UserIdentificationSetRequest();
         for (int i = 1; i < args.length; i++) {
@@ -1826,7 +1826,7 @@ final class CarShellCommand extends BasicShellCommandHandler {
             }
 
         }
-        if (userId == UserHandle.USER_CURRENT) {
+        if (userId == UserHandle.CURRENT.getIdentifier()) {
             userId = ActivityManager.getCurrentUser();
         }
         int requestSize = request.associations.size();
