@@ -18,7 +18,6 @@ package com.android.car.bluetooth;
 import android.app.ActivityManager;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothProfile;
-import android.car.ICarBluetooth;
 import android.car.ICarBluetoothUserService;
 import android.car.IPerUserCarService;
 import android.car.builtin.os.UserManagerHelper;
@@ -57,7 +56,7 @@ import java.util.List;
  *
  * Provides an interface for other programs to request auto connections.
  */
-public class CarBluetoothService extends ICarBluetooth.Stub implements CarServiceBase {
+public class CarBluetoothService implements CarServiceBase {
     private static final String TAG = CarLog.tagFor(CarBluetoothService.class);
     private static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
     static final String THREAD_NAME = "CarBluetoothService";
@@ -76,6 +75,9 @@ public class CarBluetoothService extends ICarBluetooth.Stub implements CarServic
     // all our internal objects to use them. When it disconnects we're to assume our proxies are
     // invalid. This lock protects all our internal objects.
     private final Object mPerUserLock = new Object();
+
+    @GuardedBy("mPerUserLock")
+    private BluetoothPowerPolicy mBluetoothPowerPolicy = null;
 
     // Set of Bluetooth Profile Device Managers, own the priority connection lists, updated on user
     // switch
@@ -206,6 +208,7 @@ public class CarBluetoothService extends ICarBluetooth.Stub implements CarServic
         createBluetoothUserServiceLocked();
         createBluetoothProfileDeviceManagersLocked();
         createBluetoothProfileInhibitManagerLocked();
+        createBluetoothPowerPolicyLocked();
 
         // Determine if we need to begin the default policy
         mBluetoothDeviceConnectionPolicy = null;
@@ -227,6 +230,7 @@ public class CarBluetoothService extends ICarBluetooth.Stub implements CarServic
             Slogf.d(TAG, "Destroying user %d", mUserId);
         }
         destroyBluetoothDeviceConnectionPolicyLocked();
+        destroyBluetoothPowerPolicyLocked();
         destroyBluetoothProfileInhibitManagerLocked();
         destroyBluetoothProfileDeviceManagersLocked();
         destroyBluetoothUserServiceLocked();
@@ -405,6 +409,45 @@ public class CarBluetoothService extends ICarBluetooth.Stub implements CarServic
         }
     }
 
+    /**
+     * Creates an instance of a BluetoothDeviceConnectionPolicy under the current user
+     */
+    @GuardedBy("mPerUserLock")
+    private void createBluetoothPowerPolicyLocked() {
+        if (DBG) {
+            Slogf.d(TAG, "Creating power policy");
+        }
+        if (mUserId == UserManagerHelper.USER_NULL) {
+
+            if (DBG) {
+                Slogf.d(TAG, "No foreground user, cannot create power policy");
+            }
+            return;
+        }
+        mBluetoothPowerPolicy = BluetoothPowerPolicy.create(mContext, mUserId);
+        if (mBluetoothPowerPolicy == null) {
+            if (DBG) {
+                Slogf.d(TAG, "Failed to create Bluetooth power policy.");
+            }
+            return;
+        }
+        mBluetoothPowerPolicy.init();
+    }
+
+    /**
+     * Destroys the current instance of a BluetoothDeviceConnectionPolicy, if one exists
+     */
+    @GuardedBy("mPerUserLock")
+    private void destroyBluetoothPowerPolicyLocked() {
+        if (DBG) {
+            Slogf.d(TAG, "Destroying power policy");
+        }
+        if (mBluetoothPowerPolicy != null) {
+            mBluetoothPowerPolicy.release();
+            mBluetoothPowerPolicy = null;
+        }
+    }
+
      /**
      * Determine if we are using the default device connection policy or not
      *
@@ -420,7 +463,6 @@ public class CarBluetoothService extends ICarBluetooth.Stub implements CarServic
      * Initiate automatated connecting of devices based on the prioritized device lists for each
      * profile.
      */
-    @Override
     public void connectDevices() {
         enforceBluetoothAdminPermission();
         if (DBG) {
