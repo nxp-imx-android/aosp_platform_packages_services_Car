@@ -26,6 +26,7 @@ import android.app.ActivityManager;
 import android.car.builtin.app.ActivityManagerHelper;
 import android.car.builtin.os.TraceHelper;
 import android.car.builtin.os.UserManagerHelper;
+import android.car.builtin.provider.SettingsHelper;
 import android.car.builtin.util.Slogf;
 import android.car.builtin.util.TimingsTraceLog;
 import android.car.builtin.widget.LockPatternHelper;
@@ -42,6 +43,7 @@ import com.android.car.hal.UserHalHelper;
 import com.android.car.internal.ExcludeFromCodeCoverageGeneratedReport;
 import com.android.car.internal.common.UserHelperLite;
 import com.android.car.internal.os.CarSystemProperties;
+import com.android.car.util.Utils;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.Preconditions;
 
@@ -608,8 +610,9 @@ final class InitialUserSetter {
                 Slogf.d(TAG, "setting locale for user " + user.getIdentifier() + " to "
                         + info.userLocales);
             }
-            Settings.System.putStringForUser(mContext.getContentResolver(),
-                    Settings.System.SYSTEM_LOCALES, info.userLocales, user.getIdentifier());
+            Settings.System.putString(
+                    Utils.getContentResolverForUser(mContext, user.getIdentifier()),
+                    SettingsHelper.SYSTEM_LOCALES, info.userLocales);
         }
 
         return new Pair<>(user, null);

@@ -13,6 +13,7 @@ package android.car.builtin.app {
     method public static int checkComponentPermission(@NonNull String, int, int, boolean);
     method @Deprecated public android.util.Pair<android.content.Intent,java.lang.Integer> findRootTask(int);
     method @NonNull public static android.car.builtin.app.ActivityManagerHelper getInstance();
+    method @Deprecated @Nullable public static android.content.Intent getIntent(@NonNull android.app.PendingIntent);
     method @Deprecated @Nullable public android.util.SparseArray<android.car.builtin.app.ActivityManagerHelper.TopTaskInfoContainer> getTopTasks();
     method public void registerProcessObserverCallback(android.car.builtin.app.ActivityManagerHelper.ProcessObserverCallback);
     method @Deprecated public void registerTaskStackChangeListener(android.car.builtin.app.ActivityManagerHelper.OnTaskStackChangeListener);
@@ -67,6 +68,7 @@ package android.car.builtin.content {
 
   public final class ContextHelper {
     method public static int getDisplayId(@NonNull android.content.Context);
+    method @Deprecated @RequiresPermission(android.Manifest.permission.INTERACT_ACROSS_USERS) public static void startActivityAsUser(@NonNull android.content.Context, @NonNull android.content.Intent, @Nullable android.os.Bundle, @NonNull android.os.UserHandle);
   }
 
 }
@@ -252,12 +254,18 @@ package android.car.builtin.power {
 
 }
 
+package android.car.builtin.provider {
+
+  public final class SettingsHelper {
+    field @Deprecated public static final String SYSTEM_LOCALES = "system_locales";
+  }
+
+}
+
 package android.car.builtin.util {
 
   public final class AssistUtilsHelper {
-    ctor public AssistUtilsHelper(android.content.Context);
-    method public boolean hasAssistantComponentForUser(android.os.UserHandle);
-    method public void showPushToTalkSessionForActiveService(android.car.builtin.util.AssistUtilsHelper.VoiceInteractionSessionShowCallbackHelper);
+    method public static boolean showPushToTalkSessionForActiveService(@NonNull android.content.Context, @NonNull android.car.builtin.util.AssistUtilsHelper.VoiceInteractionSessionShowCallbackHelper);
   }
 
   public static interface AssistUtilsHelper.VoiceInteractionSessionShowCallbackHelper {

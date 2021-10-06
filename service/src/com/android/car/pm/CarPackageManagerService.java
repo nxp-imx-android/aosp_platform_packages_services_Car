@@ -475,7 +475,7 @@ public class CarPackageManagerService extends ICarPackageManager.Stub implements
     @Override
     public boolean isPendingIntentDistractionOptimized(PendingIntent pendingIntent) {
         ResolveInfo info = mPackageManager.resolveActivity(
-                pendingIntent.getIntent(), PackageManager.MATCH_DEFAULT_ONLY);
+                ActivityManagerHelper.getIntent(pendingIntent), PackageManager.MATCH_DEFAULT_ONLY);
         if (info == null) return false;
         ActivityInfo activityInfo = info.activityInfo;
         return isActivityDistractionOptimized(activityInfo.packageName, activityInfo.name);
@@ -1265,7 +1265,8 @@ public class CarPackageManagerService extends ICarPackageManager.Stub implements
 
     private void blockTopActivityIfNecessary(TopTaskInfoContainer topTask) {
         synchronized (mLock) {
-            if (mTopActivityWithDialogPerDisplay.contains(topTask.displayId)
+            if (!topTask.topActivity.equals(mActivityBlockingActivity)
+                    && mTopActivityWithDialogPerDisplay.contains(topTask.displayId)
                     && !topTask.topActivity.equals(
                             mTopActivityWithDialogPerDisplay.get(topTask.displayId))) {
                 // Clear top activity-with-dialog if the activity has changed on this display.
