@@ -522,6 +522,11 @@ public class MockedCarTestBase {
         }
 
         @Override
+        public boolean enterHibernation() {
+            return true;
+        }
+
+        @Override
         public void scheduleActionForBootCompleted(Runnable action, Duration delay) {}
     }
 
@@ -554,7 +559,7 @@ public class MockedCarTestBase {
         }
 
         @Override
-        public void notifyPowerPolicyChange(String policyId) {
+        public void notifyPowerPolicyChange(String policyId, boolean force) {
             // do nothing
         }
 
