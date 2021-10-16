@@ -281,6 +281,10 @@ public class MockedCarTestBase {
         initMockedHal();
     }
 
+    protected IBinder getCarService(String service) {
+        return mCarImpl.getCarService(service);
+    }
+
     private synchronized void initMockedHal() throws Exception {
         for (Map.Entry<VehiclePropConfigBuilder, VehicleHalPropertyHandler> entry
                 : mHalConfig.entrySet()) {
@@ -383,13 +387,17 @@ public class MockedCarTestBase {
     static final class MockDisplayInterface implements DisplayInterface {
 
         @Override
+        public void init(CarPowerManagementService carPowerManagementService,
+                CarUserService carUserService) {}
+
+        @Override
         public void setDisplayBrightness(int brightness) {}
 
         @Override
         public void setDisplayState(boolean on) {}
 
         @Override
-        public void startDisplayStateMonitoring(CarPowerManagementService service) {}
+        public void startDisplayStateMonitoring() {}
 
         @Override
         public void stopDisplayStateMonitoring() {}

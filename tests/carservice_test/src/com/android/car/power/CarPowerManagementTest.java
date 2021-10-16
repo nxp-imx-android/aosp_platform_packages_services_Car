@@ -18,6 +18,7 @@ package com.android.car.power;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import android.car.Car;
 import android.car.hardware.property.VehicleHalStatusCode;
 import android.hardware.automotive.vehicle.V2_0.VehicleApPowerStateConfigFlag;
 import android.hardware.automotive.vehicle.V2_0.VehicleApPowerStateReport;
@@ -39,6 +40,7 @@ import com.android.car.MockedCarTestBase;
 import com.android.car.hal.PowerHalService;
 import com.android.car.systeminterface.DisplayInterface;
 import com.android.car.systeminterface.SystemInterface;
+import com.android.car.user.CarUserService;
 import com.android.car.vehiclehal.VehiclePropValueBuilder;
 import com.android.car.vehiclehal.test.MockedVehicleHal.VehicleHalPropertyHandler;
 
@@ -56,6 +58,8 @@ import java.util.concurrent.TimeUnit;
 @RunWith(AndroidJUnit4.class)
 @MediumTest
 public class CarPowerManagementTest extends MockedCarTestBase {
+
+    public static final int STATE_HANDLING_TIMEOUT = 5_000;
 
     private static final int STATE_POLLING_INTERVAL_MS = 1; // Milliseconds
     private static final int STATE_TRANSITION_MAX_WAIT_MS = 5 * STATE_POLLING_INTERVAL_MS;
@@ -102,6 +106,9 @@ public class CarPowerManagementTest extends MockedCarTestBase {
     public void testImmediateShutdownFromWaitForVhal_ErrorCodeFromVhal() throws Exception {
         // The exceptions from VHAL should be handled in PowerHalService and not propagated.
 
+        CarPowerManagementService carPowerManagementService =
+                (CarPowerManagementService) getCarService(Car.POWER_SERVICE);
+
         assertWaitForVhal();
 
         mPowerStateHandler.setStatus(VehicleHalStatusCode.STATUS_TRY_AGAIN);
@@ -130,6 +137,9 @@ public class CarPowerManagementTest extends MockedCarTestBase {
 
         // Clear status code.
         mPowerStateHandler.setStatus(VehicleHalStatusCode.STATUS_OK);
+
+        // Wait for CPMS to finish event processing
+        carPowerManagementService.getHandler().runWithScissors(() -> {}, STATE_HANDLING_TIMEOUT);
     }
 
     @Test
@@ -384,6 +394,13 @@ public class CarPowerManagementTest extends MockedCarTestBase {
     private final class MockDisplayInterface implements DisplayInterface {
         private boolean mDisplayOn = true;
         private final Semaphore mDisplayStateWait = new Semaphore(0);
+        private CarPowerManagementService mCarPowerManagementService;
+
+        @Override
+        public void init(CarPowerManagementService carPowerManagementService,
+                CarUserService carUserService) {
+            mCarPowerManagementService = carPowerManagementService;
+        }
 
         @Override
         public void setDisplayBrightness(int brightness) {}
@@ -404,10 +421,10 @@ public class CarPowerManagementTest extends MockedCarTestBase {
         }
 
         @Override
-        public void startDisplayStateMonitoring(CarPowerManagementService service) {
+        public void startDisplayStateMonitoring() {
             // To reduce test duration, decrease the polling interval and the
             // time to wait for a shutdown
-            service.setShutdownTimersForTest(STATE_POLLING_INTERVAL_MS,
+            mCarPowerManagementService.setShutdownTimersForTest(STATE_POLLING_INTERVAL_MS,
                     TEST_SHUTDOWN_TIMEOUT_MS);
         }
 
