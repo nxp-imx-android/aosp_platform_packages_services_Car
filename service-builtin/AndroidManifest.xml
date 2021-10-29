@@ -474,6 +474,14 @@
          android:label="@string/car_permission_car_cluster_control"
          android:description="@string/car_permission_desc_car_cluster_control"/>
 
+    <!-- Allows an application to listen for navigation state changes in instrument cluster.
+     <p>Protection level: signature|privileged
+    -->
+    <permission android:name="android.car.permission.CAR_MONITOR_CLUSTER_NAVIGATION_STATE"
+        android:protectionLevel="signature|privileged"
+        android:label="@string/car_permission_car_monitor_cluster_navigation_state"
+        android:description="@string/car_permission_desc_car_monitor_cluster_navigation_state"/>
+
     <!-- Allows an application to communicate with a device in AOAP mode.
          <p>Protection level: signature|privileged
     -->
@@ -900,6 +908,11 @@
         android:protectionLevel="signature|privileged"
         android:label="@string/car_permission_label_control_car_app_launch"
         android:description="@string/car_permission_desc_control_car_app_launch"/>
+
+    <!-- NOTE: when you're adding a new permission, you should edit
+         cts/tests/tests/permission2/res/raw/automotive_android_manifest.xml accordingly and run
+         the test with 'atest android.permission2.cts.PermissionPolicyTest' to verify it.
+    -->
 
     <uses-permission android:name="android.permission.CALL_PHONE"/>
     <uses-permission android:name="android.permission.DEVICE_POWER"/>

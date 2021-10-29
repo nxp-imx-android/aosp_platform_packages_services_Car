@@ -32,6 +32,13 @@ import static android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
 import static android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER;
 import static android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED;
 
+import static com.android.car.CarStatsLog.CAR_WATCHDOG_IO_OVERUSE_STATS_REPORTED;
+import static com.android.car.CarStatsLog.CAR_WATCHDOG_KILL_STATS_REPORTED;
+import static com.android.car.CarStatsLog.CAR_WATCHDOG_KILL_STATS_REPORTED__KILL_REASON__KILLED_ON_IO_OVERUSE;
+import static com.android.car.CarStatsLog.CAR_WATCHDOG_KILL_STATS_REPORTED__SYSTEM_STATE__GARAGE_MODE;
+import static com.android.car.CarStatsLog.CAR_WATCHDOG_KILL_STATS_REPORTED__SYSTEM_STATE__USER_INTERACTION_MODE;
+import static com.android.car.CarStatsLog.CAR_WATCHDOG_KILL_STATS_REPORTED__SYSTEM_STATE__USER_NO_INTERACTION_MODE;
+import static com.android.car.CarStatsLog.CAR_WATCHDOG_KILL_STATS_REPORTED__UID_STATE__UNKNOWN_UID_STATE;
 import static com.android.car.watchdog.CarWatchdogService.DEBUG;
 import static com.android.car.watchdog.CarWatchdogService.SYSTEM_INSTANCE;
 import static com.android.car.watchdog.CarWatchdogService.TAG;
@@ -45,6 +52,7 @@ import android.annotation.UserIdInt;
 import android.automotive.watchdog.ResourceType;
 import android.automotive.watchdog.internal.ApplicationCategoryType;
 import android.automotive.watchdog.internal.ComponentType;
+import android.automotive.watchdog.internal.GarageMode;
 import android.automotive.watchdog.internal.IoUsageStats;
 import android.automotive.watchdog.internal.PackageIdentifier;
 import android.automotive.watchdog.internal.PackageIoOveruseStats;
@@ -88,6 +96,7 @@ import android.view.Display;
 
 import com.android.car.CarLocalServices;
 import com.android.car.CarServiceUtils;
+import com.android.car.CarStatsLog;
 import com.android.car.CarUxRestrictionsManagerService;
 import com.android.car.internal.util.IndentingPrintWriter;
 import com.android.internal.annotations.GuardedBy;
@@ -151,6 +160,7 @@ public final class WatchdogPerfHandler {
     private final Handler mMainHandler;
     private final Handler mServiceHandler;
     private final WatchdogStorage mWatchdogStorage;
+    private final OveruseConfigurationCache mOveruseConfigurationCache;
     private final Object mLock = new Object();
     @GuardedBy("mLock")
     private final ArrayMap<String, PackageResourceUsage> mUsageByUserPackage = new ArrayMap<>();
@@ -163,10 +173,6 @@ public final class WatchdogPerfHandler {
     @GuardedBy("mLock")
     private final SparseArray<ArrayList<ResourceOveruseListenerInfo>>
             mOveruseSystemListenerInfosByUid = new SparseArray<>();
-    @GuardedBy("mLock")
-    private final ArraySet<String> mSafeToKillSystemPackages = new ArraySet<>();
-    @GuardedBy("mLock")
-    private final ArraySet<String> mSafeToKillVendorPackages = new ArraySet<>();
     /** Default killable state for packages. Updated only for {@link UserHandle.ALL} user handle. */
     @GuardedBy("mLock")
     private final ArraySet<String> mDefaultNotKillableGenericPackages = new ArraySet<>();
@@ -191,6 +197,8 @@ public final class WatchdogPerfHandler {
     private @UxStateType int mCurrentUxState;
     @GuardedBy("mLock")
     private CarUxRestrictions mCurrentUxRestrictions;
+    @GuardedBy("mLock")
+    private @GarageMode int mCurrentGarageMode;
     @GuardedBy("mLock")
     private TimeSourceInterface mTimeSource;
     @GuardedBy("mLock")
@@ -218,9 +226,11 @@ public final class WatchdogPerfHandler {
         mServiceHandler = new Handler(CarServiceUtils.getHandlerThread(
                 CarWatchdogService.class.getSimpleName()).getLooper());
         mWatchdogStorage = watchdogStorage;
+        mOveruseConfigurationCache = new OveruseConfigurationCache();
         mTimeSource = SYSTEM_INSTANCE;
         mOveruseHandlingDelayMills = OVERUSE_HANDLING_DELAY_MILLS;
         mCurrentUxState = UX_STATE_NO_DISTRACTION;
+        mCurrentGarageMode = GarageMode.GARAGE_MODE_OFF;
         mRecurringOveruseThreshold = RECURRING_OVERUSE_THRESHOLD;
     }
 
@@ -254,6 +264,7 @@ public final class WatchdogPerfHandler {
         /*
          * TODO(b/183436216): Implement this method.
          */
+        mOveruseConfigurationCache.dump(writer);
     }
 
     /** Retries any pending requests on re-connecting to the daemon */
@@ -294,6 +305,15 @@ public final class WatchdogPerfHandler {
                 mCurrentUxState = UX_STATE_NO_INTERACTION;
                 performOveruseHandlingLocked();
             }
+        }
+    }
+
+    /** Handles garage mode change. */
+    public void onGarageModeChange(@GarageMode int garageMode) {
+        synchronized (mLock) {
+            mCurrentGarageMode = garageMode;
+            mCurrentUxState = UX_STATE_NO_INTERACTION;
+            performOveruseHandlingLocked();
         }
     }
 
@@ -557,7 +577,8 @@ public final class WatchdogPerfHandler {
                             packageInfo.applicationInfo);
                     int killableState = getPackageKillableStateForUserPackageLocked(
                             userId, genericPackageName, componentType,
-                            isSafeToKillLocked(genericPackageName, componentType, null));
+                            mOveruseConfigurationCache.isSafeToKill(
+                                    genericPackageName, componentType, /* sharedPackages= */null));
                     states.add(new PackageKillableState(packageInfo.packageName, userId,
                             killableState));
                     continue;
@@ -582,7 +603,8 @@ public final class WatchdogPerfHandler {
                 }
                 int killableState = getPackageKillableStateForUserPackageLocked(
                         userId, genericPackageName, componentType,
-                        isSafeToKillLocked(genericPackageName, componentType, packageNames));
+                        mOveruseConfigurationCache.isSafeToKill(
+                                genericPackageName, componentType, packageNames));
                 for (int i = 0; i < applicationInfos.size(); ++i) {
                     states.add(new PackageKillableState(
                             applicationInfos.get(i).packageName, userId, killableState));
@@ -664,6 +686,7 @@ public final class WatchdogPerfHandler {
             uids[i] = packageIoOveruseStats.get(i).uid;
         }
         SparseArray<String> genericPackageNamesByUid = mPackageInfoHandler.getNamesForUids(uids);
+        ArraySet<String> overusingUserPackageKeys = new ArraySet<>();
         synchronized (mLock) {
             checkAndHandleDateChangeLocked();
             for (int i = 0; i < packageIoOveruseStats.size(); ++i) {
@@ -688,6 +711,7 @@ public final class WatchdogPerfHandler {
                 if (!usage.ioUsage.exceedsThreshold()) {
                     continue;
                 }
+                overusingUserPackageKeys.add(usage.getUniqueId());
                 PackageResourceOveruseAction overuseAction = new PackageResourceOveruseAction();
                 overuseAction.packageIdentifier = new PackageIdentifier();
                 overuseAction.packageIdentifier.name = genericPackageName;
@@ -715,6 +739,9 @@ public final class WatchdogPerfHandler {
                         performOveruseHandlingLocked();
                     }}, mOveruseHandlingDelayMills);
             }
+        }
+        if (!overusingUserPackageKeys.isEmpty()) {
+            pushIoOveruseMetrics(overusingUserPackageKeys);
         }
         if (DEBUG) {
             Slogf.d(TAG, "Processed latest I/O overuse stats");
@@ -826,25 +853,9 @@ public final class WatchdogPerfHandler {
             Slogf.e(TAG, "Fetched resource overuse configurations are empty");
             return;
         }
-        synchronized (mLock) {
-            mSafeToKillSystemPackages.clear();
-            mSafeToKillVendorPackages.clear();
-            for (int i = 0; i < internalConfigs.size(); i++) {
-                switch (internalConfigs.get(i).componentType) {
-                    case ComponentType.SYSTEM:
-                        mSafeToKillSystemPackages.addAll(internalConfigs.get(i).safeToKillPackages);
-                        break;
-                    case ComponentType.VENDOR:
-                        mSafeToKillVendorPackages.addAll(internalConfigs.get(i).safeToKillPackages);
-                        mPackageInfoHandler.setVendorPackagePrefixes(
-                                internalConfigs.get(i).vendorPackagePrefixes);
-                        break;
-                    default:
-                        // All third-party apps are killable.
-                        break;
-                }
-            }
-        }
+        mOveruseConfigurationCache.set(internalConfigs);
+        mPackageInfoHandler.setVendorPackagePrefixes(
+                mOveruseConfigurationCache.getVendorPackagePrefixes());
         if (DEBUG) {
             Slogf.d(TAG, "Fetched and synced resource overuse configs.");
         }
@@ -1262,45 +1273,6 @@ public final class WatchdogPerfHandler {
         }
     }
 
-    @GuardedBy("mLock")
-    private boolean isSafeToKillLocked(String genericPackageName, int componentType,
-            List<String> sharedPackages) {
-        BiFunction<List<String>, Set<String>, Boolean> isSafeToKillAnyPackage =
-                (packages, safeToKillPackages) -> {
-                    if (packages == null) {
-                        return false;
-                    }
-                    for (int i = 0; i < packages.size(); i++) {
-                        if (safeToKillPackages.contains(packages.get(i))) {
-                            return true;
-                        }
-                    }
-                    return false;
-                };
-
-        switch (componentType) {
-            case ComponentType.SYSTEM:
-                if (mSafeToKillSystemPackages.contains(genericPackageName)) {
-                    return true;
-                }
-                return isSafeToKillAnyPackage.apply(sharedPackages, mSafeToKillSystemPackages);
-            case ComponentType.VENDOR:
-                if (mSafeToKillVendorPackages.contains(genericPackageName)) {
-                    return true;
-                }
-                /*
-                 * Packages under the vendor shared UID may contain system packages because when
-                 * CarWatchdogService derives the shared component type it attributes system
-                 * packages as vendor packages when there is at least one vendor package.
-                 */
-                return isSafeToKillAnyPackage.apply(sharedPackages, mSafeToKillSystemPackages)
-                        || isSafeToKillAnyPackage.apply(sharedPackages, mSafeToKillVendorPackages);
-            default:
-                // Third-party apps are always killable
-                return true;
-        }
-    }
-
     private int[] getAliveUserIds() {
         UserManager userManager = mContext.getSystemService(UserManager.class);
         List<UserHandle> aliveUsers = userManager.getUserHandles(/* excludeDying= */ true);
@@ -1323,6 +1295,7 @@ public final class WatchdogPerfHandler {
         if (mActionableUserPackages.isEmpty() || mCurrentUxState != UX_STATE_NO_INTERACTION) {
             return;
         }
+        ArraySet<String> killedUserPackageKeys = new ArraySet<>();
         for (int i = 0; i < mActionableUserPackages.size(); ++i) {
             PackageResourceUsage usage =
                     mUsageByUserPackage.get(mActionableUserPackages.valueAt(i));
@@ -1336,6 +1309,7 @@ public final class WatchdogPerfHandler {
             if (killableState != KILLABLE_STATE_YES) {
                 continue;
             }
+            killedUserPackageKeys.add(usage.getUniqueId());
             PackageResourceOveruseAction overuseAction = new PackageResourceOveruseAction();
             overuseAction.packageIdentifier = new PackageIdentifier();
             overuseAction.packageIdentifier.name = usage.genericPackageName;
@@ -1380,6 +1354,7 @@ public final class WatchdogPerfHandler {
                 mOveruseActionsByUserPackage.add(overuseAction);
             }
         }
+        pushIoOveruseKillMetrics(killedUserPackageKeys);
         if (!mOveruseActionsByUserPackage.isEmpty()) {
             mMainHandler.post(this::notifyActionsTakenOnOveruse);
         }
@@ -1401,6 +1376,78 @@ public final class WatchdogPerfHandler {
         //  4. If a package's killable state is KILLABLE_STATE_NO or KILLABLE_STATE_NEVER,
         //  skip posting the notification.
         mUserNotifiablePackages.clear();
+    }
+
+    private void pushIoOveruseMetrics(ArraySet<String> userPackageKeys) {
+        SparseArray<AtomsProto.CarWatchdogIoOveruseStats> statsByUid = new SparseArray<>();
+        synchronized (mLock) {
+            for (int i = 0; i < userPackageKeys.size(); ++i) {
+                String key = userPackageKeys.valueAt(i);
+                PackageResourceUsage usage = mUsageByUserPackage.get(key);
+                if (usage == null) {
+                    Slogf.w(TAG, "Missing usage stats for user package key %s", key);
+                    continue;
+                }
+                statsByUid.put(usage.getUid(), constructCarWatchdogIoOveruseStatsLocked(usage));
+            }
+        }
+        for (int i = 0; i < statsByUid.size(); ++i) {
+            CarStatsLog.write(CAR_WATCHDOG_IO_OVERUSE_STATS_REPORTED, statsByUid.keyAt(i),
+                    statsByUid.valueAt(i).toByteArray());
+        }
+    }
+
+    private void pushIoOveruseKillMetrics(ArraySet<String> userPackageKeys) {
+        int systemState;
+        SparseArray<AtomsProto.CarWatchdogIoOveruseStats> statsByUid = new SparseArray<>();
+        synchronized (mLock) {
+            systemState = inferSystemStateLocked();
+            for (int i = 0; i < userPackageKeys.size(); ++i) {
+                String key = userPackageKeys.valueAt(i);
+                PackageResourceUsage usage = mUsageByUserPackage.get(key);
+                if (usage == null) {
+                    Slogf.w(TAG, "Missing usage stats for user package key %s", key);
+                    continue;
+                }
+                statsByUid.put(usage.getUid(), constructCarWatchdogIoOveruseStatsLocked(usage));
+            }
+        }
+        for (int i = 0; i < statsByUid.size(); ++i) {
+            // TODO(b/200598815): After watchdog can classify foreground vs background apps,
+            //  report the correct uid state.
+            CarStatsLog.write(CAR_WATCHDOG_KILL_STATS_REPORTED, statsByUid.keyAt(i),
+                    CAR_WATCHDOG_KILL_STATS_REPORTED__UID_STATE__UNKNOWN_UID_STATE,
+                    systemState,
+                    CAR_WATCHDOG_KILL_STATS_REPORTED__KILL_REASON__KILLED_ON_IO_OVERUSE,
+                    /* arg5= */ null, statsByUid.valueAt(i).toByteArray());
+        }
+    }
+
+    @GuardedBy("mLock")
+    private int inferSystemStateLocked() {
+        if (mCurrentGarageMode == GarageMode.GARAGE_MODE_ON) {
+            return CAR_WATCHDOG_KILL_STATS_REPORTED__SYSTEM_STATE__GARAGE_MODE;
+        }
+        return mCurrentUxState == UX_STATE_NO_INTERACTION
+                ? CAR_WATCHDOG_KILL_STATS_REPORTED__SYSTEM_STATE__USER_NO_INTERACTION_MODE
+                : CAR_WATCHDOG_KILL_STATS_REPORTED__SYSTEM_STATE__USER_INTERACTION_MODE;
+    }
+
+    @GuardedBy("mLock")
+    private AtomsProto.CarWatchdogIoOveruseStats constructCarWatchdogIoOveruseStatsLocked(
+            PackageResourceUsage usage) {
+        @ComponentType int componentType = mPackageInfoHandler.getComponentType(
+                usage.getUid(), usage.genericPackageName);
+        android.automotive.watchdog.PerStateBytes threshold =
+                mOveruseConfigurationCache.fetchThreshold(usage.genericPackageName, componentType);
+        android.automotive.watchdog.PerStateBytes writtenBytes =
+                usage.ioUsage.getInternalIoOveruseStats().writtenBytes;
+        return constructCarWatchdogIoOveruseStats(
+                AtomsProto.CarWatchdogIoOveruseStats.Period.DAILY,
+                constructCarWatchdogPerStateBytes(threshold.foregroundBytes,
+                        threshold.backgroundBytes, threshold.garageModeBytes),
+                constructCarWatchdogPerStateBytes(writtenBytes.foregroundBytes,
+                        writtenBytes.backgroundBytes, writtenBytes.garageModeBytes));
     }
 
     /** Notify daemon about the actions take on resource overuse */
@@ -1765,6 +1812,27 @@ public final class WatchdogPerfHandler {
                 throw new IllegalArgumentException(
                         "Invalid max stats period provided: " + maxStatsPeriod);
         }
+    }
+
+    @VisibleForTesting
+    static AtomsProto.CarWatchdogIoOveruseStats constructCarWatchdogIoOveruseStats(
+            AtomsProto.CarWatchdogIoOveruseStats.Period period,
+            AtomsProto.CarWatchdogPerStateBytes threshold,
+            AtomsProto.CarWatchdogPerStateBytes writtenBytes) {
+        // TODO(b/184310189): Report uptime once daemon pushes it to CarService.
+        return AtomsProto.CarWatchdogIoOveruseStats.newBuilder()
+                .setPeriod(period)
+                .setThreshold(threshold)
+                .setWrittenBytes(writtenBytes).build();
+    }
+
+    @VisibleForTesting
+    static AtomsProto.CarWatchdogPerStateBytes constructCarWatchdogPerStateBytes(
+            long foregroundBytes, long backgroundBytes, long garageModeBytes) {
+        return AtomsProto.CarWatchdogPerStateBytes.newBuilder()
+                .setForegroundBytes(foregroundBytes)
+                .setBackgroundBytes(backgroundBytes)
+                .setGarageModeBytes(garageModeBytes).build();
     }
 
     private final class PackageResourceUsage {
