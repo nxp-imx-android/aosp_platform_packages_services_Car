@@ -514,10 +514,14 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
      * Sets the initial foreground user after car service is crashed and reconnected.
      */
     public void setInitialUserFromSystemServer(@Nullable UserHandle user) {
-        if (user != null || user.getIdentifier() != UserManagerHelper.USER_NULL) {
+        if (user == null || user.getIdentifier() == UserManagerHelper.USER_NULL) {
             Slogf.e(TAG,
                     "setInitialUserFromSystemServer: Not setting initial user as user is NULL ");
             return;
+        }
+
+        if (Log.isLoggable(TAG, Log.DEBUG)) {
+            Slogf.d(TAG, "setInitialUserFromSystemServer: initial User: %s", user);
         }
 
         synchronized (mLockUser) {
@@ -602,8 +606,6 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
     private void initBootUser(int requestType) {
         boolean replaceGuest =
                 requestType == InitialUserInfoRequestType.RESUME && !mSwitchGuestUserBeforeSleep;
-        EventLog.writeEvent(EventLogTags.CAR_USER_SVC_INITIAL_USER_INFO_REQ, requestType,
-                mHalTimeoutMs);
         checkManageUsersPermission("startInitialUser");
 
         if (!isUserHalSupported()) {
@@ -614,6 +616,10 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
         }
 
         UsersInfo usersInfo = UserHalHelper.newUsersInfo(mUserManager, mUserHandleHelper);
+        EventLog.writeEvent(EventLogTags.CAR_USER_SVC_INITIAL_USER_INFO_REQ, requestType,
+                mHalTimeoutMs, usersInfo.currentUser.userId, usersInfo.currentUser.flags,
+                usersInfo.numberUsers);
+
         mHal.getInitialUserInfo(requestType, mHalTimeoutMs, usersInfo, (status, resp) -> {
             if (resp != null) {
                 EventLog.writeEvent(EventLogTags.CAR_USER_SVC_INITIAL_USER_INFO_RESP,
