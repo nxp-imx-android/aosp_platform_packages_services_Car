@@ -31,6 +31,7 @@ import android.automotive.watchdog.PerStateBytes;
 import android.car.builtin.util.Slogf;
 import android.car.watchdog.IoOveruseStats;
 import android.content.Context;
+import android.util.SparseArray;
 
 import androidx.test.InstrumentationRegistry;
 import androidx.test.filters.SmallTest;
@@ -167,7 +168,8 @@ public final class WatchdogStorageUnitTest {
                         CarWatchdogServiceUnitTest.constructPerStateBytes(1000, 2000, 3000),
                         /* forgivenWriteBytes= */
                         CarWatchdogServiceUnitTest.constructPerStateBytes(100, 100, 100),
-                        /* totalOveruses= */ 2, /* totalTimesKilled= */ 1));
+                        /* totalOveruses= */ 2, /* forgivenOveruses= */ 0,
+                        /* totalTimesKilled= */ 1));
 
         assertWithMessage("Saved I/O usage stats successfully")
                 .that(mService.saveIoUsageStats(statsBeforeOverwrite)).isTrue();
@@ -185,7 +187,8 @@ public final class WatchdogStorageUnitTest {
                         CarWatchdogServiceUnitTest.constructPerStateBytes(2000, 3000, 4000),
                         /* forgivenWriteBytes= */
                         CarWatchdogServiceUnitTest.constructPerStateBytes(1200, 2300, 3400),
-                        /* totalOveruses= */ 4, /* totalTimesKilled= */ 2));
+                        /* totalOveruses= */ 4, /* forgivenOveruses= */ 2,
+                        /* totalTimesKilled= */ 2));
 
         assertWithMessage("Saved I/O usage stats successfully")
                 .that(mService.saveIoUsageStats(statsAfterOverwrite)).isTrue();
@@ -343,13 +346,15 @@ public final class WatchdogStorageUnitTest {
 
         List<WatchdogStorage.UserPackageDailySummaries> actual =
                 mService.getTopUsersDailyIoUsageSummaries(/* numTopUsers= */ 3,
-                        /* minTotalWrittenBytes= */ 600_000,
+                        /* minSystemTotalWrittenBytes= */ 600_000,
                         /* includingStartEpochSeconds= */ currentDate.minusDays(15).toEpochSecond(),
                         /* excludingEndEpochSeconds= */ currentDate.minusDays(7).toEpochSecond());
 
         List<AtomsProto.CarWatchdogDailyIoUsageSummary> user101VendorPkgSummaries =
                 new ArrayList<>();
         List<AtomsProto.CarWatchdogDailyIoUsageSummary> user100VendorPkgSummaries =
+                new ArrayList<>();
+        List<AtomsProto.CarWatchdogDailyIoUsageSummary> user101SystemPkgSummaries =
                 new ArrayList<>();
         for (int i = 15; i > 7; --i) {
             user101VendorPkgSummaries.add(CarWatchdogServiceUnitTest
@@ -360,14 +365,44 @@ public final class WatchdogStorageUnitTest {
                     .constructCarWatchdogDailyIoUsageSummary(/* fgWrBytes= */ 4100L * i,
                             /* bgWrBytes= */ 5100L * i, /* gmWrBytes= */ 6100L * i,
                             /* overuseCount= */ 1));
+            user101SystemPkgSummaries.add(CarWatchdogServiceUnitTest
+                    .constructCarWatchdogDailyIoUsageSummary(/* fgWrBytes= */ 1101L * i,
+                            /* bgWrBytes= */ 2101L * i, /* gmWrBytes= */ 3101L * i,
+                            /* overuseCount= */ 2));
         }
         List<WatchdogStorage.UserPackageDailySummaries> expected = Arrays.asList(
                 new WatchdogStorage.UserPackageDailySummaries(/* userId= */ 101,
                         /* packageName= */ "vendor_package.critical.C", user101VendorPkgSummaries),
                 new WatchdogStorage.UserPackageDailySummaries(/* userId= */ 100,
-                        /* packageName= */ "vendor_package.critical.C", user100VendorPkgSummaries));
+                        /* packageName= */ "vendor_package.critical.C", user100VendorPkgSummaries),
+                new WatchdogStorage.UserPackageDailySummaries(/* userId= */ 101,
+                        /* packageName= */ "system_package.non_critical.A",
+                        user101SystemPkgSummaries));
 
         assertWithMessage("Top users daily I/O usage summaries").that(actual).isEqualTo(expected);
+    }
+
+    @Test
+    public void testGetTopUsersDailyIoUsageSummariesWithLowSystemTotalWrittenBytes()
+            throws Exception {
+        injectSampleUserPackageSettings();
+        List<WatchdogStorage.IoUsageStatsEntry> entries = new ArrayList<>();
+        for (int i = 1; i <= 30; ++i) {
+            entries.addAll(sampleStatsBetweenDates(/* includingStartDaysAgo= */ i,
+                    /* excludingEndDaysAgo= */ i + 1, /* writtenBytesMultiplier= */ i));
+        }
+
+        assertWithMessage("Save I/O usage stats").that(mService.saveIoUsageStats(entries)).isTrue();
+
+        ZonedDateTime currentDate = mTimeSource.getCurrentDate();
+
+        List<WatchdogStorage.UserPackageDailySummaries> actual =
+                mService.getTopUsersDailyIoUsageSummaries(/* numTopUsers= */ 3,
+                        /* minSystemTotalWrittenBytes= */ 4_000_000,
+                        /* includingStartEpochSeconds= */ currentDate.minusDays(15).toEpochSecond(),
+                        /* excludingEndEpochSeconds= */ currentDate.minusDays(7).toEpochSecond());
+
+        assertWithMessage("Top users daily I/O usage summaries").that(actual).isNull();
     }
 
     @Test
@@ -385,7 +420,7 @@ public final class WatchdogStorageUnitTest {
 
         List<WatchdogStorage.UserPackageDailySummaries> actual =
                 mService.getTopUsersDailyIoUsageSummaries(/* numTopUsers= */ 3,
-                        /* minTotalWrittenBytes= */ 600_000,
+                        /* minSystemTotalWrittenBytes= */ 600_000,
                         /* includingStartEpochSeconds= */ currentDate.minusDays(15).toEpochSecond(),
                         /* excludingEndEpochSeconds= */ currentDate.minusDays(7).toEpochSecond());
 
@@ -572,6 +607,42 @@ public final class WatchdogStorageUnitTest {
                 expected.toString(), actual.toString()).that(actual).isEqualTo(expected);
     }
 
+    @Test
+    public void testForgiveHistoricalOveruses() throws Exception {
+        injectSampleUserPackageSettings();
+
+        assertThat(mService.saveIoUsageStats(sampleStatsBetweenDates(/* includingStartDaysAgo= */ 1,
+                /* excludingEndDaysAgo= */ 3))).isTrue();
+
+        List<WatchdogStorage.NotForgivenOverusesEntry> expectedOveruses = Arrays.asList(
+                new WatchdogStorage.NotForgivenOverusesEntry(100, "system_package.non_critical.A",
+                        2),
+                new WatchdogStorage.NotForgivenOverusesEntry(101, "system_package.non_critical.A",
+                        2),
+                new WatchdogStorage.NotForgivenOverusesEntry(100, "vendor_package.critical.C", 2),
+                new WatchdogStorage.NotForgivenOverusesEntry(101, "vendor_package.critical.C", 2));
+
+        assertWithMessage("Not forgiven historical overuses before forgiving")
+                .that(mService.getNotForgivenHistoricalIoOveruses(/* numDaysAgo= */ 7))
+                .containsExactlyElementsIn(expectedOveruses);
+
+        SparseArray<List<String>> packagesToForgiveByUserId = new SparseArray<>();
+        packagesToForgiveByUserId.put(100,
+                Collections.singletonList("system_package.non_critical.A"));
+        packagesToForgiveByUserId.put(101, Collections.singletonList("vendor_package.critical.C"));
+
+        mService.forgiveHistoricalOveruses(packagesToForgiveByUserId, /* numDaysAgo= */ 7);
+
+        expectedOveruses = Arrays.asList(
+                new WatchdogStorage.NotForgivenOverusesEntry(101, "system_package.non_critical.A",
+                        2),
+                new WatchdogStorage.NotForgivenOverusesEntry(100, "vendor_package.critical.C", 2));
+
+        assertWithMessage("Not forgiven historical overuses after forgiving")
+                .that(mService.getNotForgivenHistoricalIoOveruses(/* numDaysAgo= */ 7))
+                .containsExactlyElementsIn(expectedOveruses);
+    }
+
     private void injectSampleUserPackageSettings() throws Exception {
         List<WatchdogStorage.UserPackageSettingsEntry> expected = sampleSettings();
 
@@ -638,7 +709,7 @@ public final class WatchdogStorageUnitTest {
                             (3000L + i) * writtenBytesMultiplier),
                     /* forgivenWriteBytes= */
                     CarWatchdogServiceUnitTest.constructPerStateBytes(100L, 100L, 100L),
-                    /* totalOveruses= */ 2, /* totalTimesKilled= */ 1));
+                    /* totalOveruses= */ 2, /* forgivenOveruses= */ 1, /* totalTimesKilled= */ 1));
             entries.add(constructIoUsageStatsEntry(
                     /* userId= */ i, "vendor_package.critical.C", statsDateEpoch, duration,
                     /* remainingWriteBytes= */
@@ -650,7 +721,7 @@ public final class WatchdogStorageUnitTest {
                             (6000L + i) * writtenBytesMultiplier),
                     /* forgivenWriteBytes= */
                     CarWatchdogServiceUnitTest.constructPerStateBytes(200L, 200L, 200L),
-                    /* totalOveruses= */ 1, /* totalTimesKilled= */ 0));
+                    /* totalOveruses= */ 1, /* forgivenOveruses= */ 0, /* totalTimesKilled= */ 0));
         }
         return entries;
     }
@@ -658,10 +729,12 @@ public final class WatchdogStorageUnitTest {
     static WatchdogStorage.IoUsageStatsEntry constructIoUsageStatsEntry(
             int userId, String packageName, long startTime, long duration,
             PerStateBytes remainingWriteBytes, PerStateBytes writtenBytes,
-            PerStateBytes forgivenWriteBytes, int totalOveruses, int totalTimesKilled) {
+            PerStateBytes forgivenWriteBytes, int totalOveruses, int forgivenOveruses,
+            int totalTimesKilled) {
         WatchdogPerfHandler.PackageIoUsage ioUsage = new WatchdogPerfHandler.PackageIoUsage(
                 constructInternalIoOveruseStats(startTime, duration, remainingWriteBytes,
-                        writtenBytes, totalOveruses), forgivenWriteBytes, totalTimesKilled);
+                        writtenBytes, totalOveruses), forgivenWriteBytes, forgivenOveruses,
+                totalTimesKilled);
         return new WatchdogStorage.IoUsageStatsEntry(userId, packageName, ioUsage);
     }
 

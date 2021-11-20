@@ -172,6 +172,14 @@
          to signal the potential for flash wear. -->
     <integer name="maxExcessiveIoSamplesInWindow">11</integer>
 
+    <!-- The number of days past until the current day considered by car watchdog to
+         attribute recurring overuse to a package.  -->
+    <integer name="recurringResourceOverusePeriodInDays">14</integer>
+
+    <!-- The number of overuses a package has to exceed for car watchdog to attribute
+         recurring overuse.  -->
+    <integer name="recurringResourceOveruseTimes">2</integer>
+
     <!-- The name of an intent to be notified by CarService whenever it detects too many
          samples with excessive I/O activity. Value must either be an empty string, which
          means that no notification will take place, or be in the format of a flattened
@@ -255,6 +263,13 @@
          If this value is true then tethering is enabled. Otherwise, local-only hotspot will be
          created. -->
     <bool name="config_projectionAccessPointTethering" translatable="false">false</bool>
+
+    <!-- If projection Access Point is configured to not provide Internet access (not tethered,
+         see config_projectionAccessPointTethering) then this flag will be used to control
+         whether Wi-Fi configuration will persist reboots. By default new Wi-Fi credentials are
+         created for every local-only hotspot (LOHS) instantiation, changing this flag to true
+         will make LOHS credentials persistent. -->
+    <bool name="config_stableLocalOnlyHotspotConfig" translatable="false">false</bool>
 
     <!-- The package name of a service to be launched by CarService to bind to an active media
          service on the current  user.

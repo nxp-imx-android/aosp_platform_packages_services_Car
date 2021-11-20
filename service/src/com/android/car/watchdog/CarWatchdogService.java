@@ -18,6 +18,7 @@ package com.android.car.watchdog;
 
 import static android.car.user.CarUserManager.USER_LIFECYCLE_EVENT_TYPE_STARTING;
 import static android.car.user.CarUserManager.USER_LIFECYCLE_EVENT_TYPE_STOPPED;
+import static android.content.Intent.ACTION_USER_REMOVED;
 
 import static com.android.car.CarLog.TAG_WATCHDOG;
 import static com.android.car.internal.ExcludeFromCodeCoverageGeneratedReport.DUMP_INFO;
@@ -84,6 +85,10 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
             "com.android.server.jobscheduler.GARAGE_MODE_ON";
     static final String ACTION_GARAGE_MODE_OFF =
             "com.android.server.jobscheduler.GARAGE_MODE_OFF";
+    static final String ACTION_RESOURCE_OVERUSE_DISABLE_APP =
+            "com.android.car.watchdog.ACTION_RESOURCE_OVERUSE_DISABLE_APP";
+
+    @VisibleForTesting
     static final int MISSING_ARG_VALUE = -1;
 
     private static final String FALLBACK_DATA_SYSTEM_CAR_DIR_PATH = "/data/system/car";
@@ -117,8 +122,14 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
     private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            final String action = intent.getAction();
+            String action = intent.getAction();
+            UserHandle userHandle;
             switch (action) {
+                case ACTION_RESOURCE_OVERUSE_DISABLE_APP:
+                    String packageName = intent.getStringExtra(Intent.EXTRA_PACKAGE_NAME);
+                    userHandle = intent.getParcelableExtra(Intent.EXTRA_USER);
+                    mWatchdogPerfHandler.disablePackageForUser(packageName, userHandle);
+                    break;
                 case ACTION_GARAGE_MODE_ON:
                 case ACTION_GARAGE_MODE_OFF:
                     int garageMode;
@@ -132,9 +143,21 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
                     }
                     notifyGarageModeChange(garageMode);
                     return;
-                case Intent.ACTION_USER_REMOVED:
-                    UserHandle user = intent.getParcelableExtra(Intent.EXTRA_USER);
-                    mWatchdogPerfHandler.deleteUser(user.getIdentifier());
+                case ACTION_USER_REMOVED:
+                    userHandle = intent.getParcelableExtra(Intent.EXTRA_USER);
+                    int userId = userHandle.getIdentifier();
+                    try {
+                        mCarWatchdogDaemonHelper.notifySystemStateChange(StateType.USER_STATE,
+                                userId, UserState.USER_STATE_REMOVED);
+                        if (DEBUG) {
+                            Slogf.d(TAG, "Notified car watchdog daemon of removed user %d",
+                                    userId);
+                        }
+                    } catch (RemoteException e) {
+                        Slogf.w(TAG, e, "Failed to notify car watchdog daemon of removed user %d",
+                                userId);
+                    }
+                    mWatchdogPerfHandler.deleteUser(userId);
                     return;
             }
         }
@@ -202,12 +225,14 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
     @GuardedBy("mLock")
     private boolean mIsDisplayEnabled;
 
-    public CarWatchdogService(Context context) {
-        this(context, new WatchdogStorage(context, SYSTEM_INSTANCE), SYSTEM_INSTANCE);
+    public CarWatchdogService(Context context, Context carServiceBuiltinPackageContext) {
+        this(context, carServiceBuiltinPackageContext,
+                new WatchdogStorage(context, SYSTEM_INSTANCE), SYSTEM_INSTANCE);
     }
 
     @VisibleForTesting
-    CarWatchdogService(Context context, WatchdogStorage watchdogStorage, TimeSource timeSource) {
+    CarWatchdogService(Context context, Context carServiceBuiltinPackageContext,
+            WatchdogStorage watchdogStorage, TimeSource timeSource) {
         mContext = context;
         mWatchdogStorage = watchdogStorage;
         mPackageInfoHandler = new PackageInfoHandler(mContext.getPackageManager());
@@ -215,8 +240,8 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
         mWatchdogServiceForSystem = new ICarWatchdogServiceForSystemImpl(this);
         mWatchdogProcessHandler = new WatchdogProcessHandler(mWatchdogServiceForSystem,
                 mCarWatchdogDaemonHelper);
-        mWatchdogPerfHandler = new WatchdogPerfHandler(mContext, mCarWatchdogDaemonHelper,
-                mPackageInfoHandler, mWatchdogStorage, timeSource);
+        mWatchdogPerfHandler = new WatchdogPerfHandler(mContext, carServiceBuiltinPackageContext,
+                mCarWatchdogDaemonHelper, mPackageInfoHandler, mWatchdogStorage, timeSource);
         mConnectionListener = (isConnected) -> {
             mWatchdogPerfHandler.onDaemonConnectionChange(isConnected);
             synchronized (mLock) {
@@ -439,11 +464,6 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
     }
 
     @VisibleForTesting
-    void setRecurringOveruseThreshold(int threshold) {
-        mWatchdogPerfHandler.setRecurringOveruseThreshold(threshold);
-    }
-
-    @VisibleForTesting
     void setUidIoUsageSummaryTopCount(int uidIoUsageSummaryTopCount) {
         mWatchdogPerfHandler.setUidIoUsageSummaryTopCount(uidIoUsageSummaryTopCount);
     }
@@ -474,7 +494,9 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
                 Slogf.d(TAG, "Notified car watchdog daemon of user states");
             }
         } catch (RemoteException | RuntimeException e) {
-            Slogf.w(TAG, "Notifying latest user states failed: %s", e);
+            // When car watchdog daemon is not connected, the {@link mCarWatchdogDaemonHelper}
+            // throws IllegalStateException. Catch the exception to avoid crashing the process.
+            Slogf.w(TAG, e, "Notifying latest user states failed");
         }
     }
 
@@ -490,6 +512,8 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
                 Slogf.d(TAG, "Notified car watchdog daemon of power cycle(%d)", powerCycle);
             }
         } catch (RemoteException | RuntimeException e) {
+            // When car watchdog daemon is not connected, the {@link mCarWatchdogDaemonHelper}
+            // throws IllegalStateException. Catch the exception to avoid crashing the process.
             Slogf.w(TAG, e, "Notifying power cycle change to %d failed", powerCycle);
         }
     }
@@ -502,6 +526,8 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
                 Slogf.d(TAG, "Notified car watchdog daemon of garage mode(%d)", garageMode);
             }
         } catch (RemoteException | RuntimeException e) {
+            // When car watchdog daemon is not connected, the {@link mCarWatchdogDaemonHelper}
+            // throws IllegalStateException. Catch the exception to avoid crashing the process.
             Slogf.w(TAG, e, "Notifying garage mode change to %d failed", garageMode);
         }
     }
@@ -527,7 +553,9 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
                 Slogf.d(TAG, "CarWatchdogService registers to car watchdog daemon");
             }
         } catch (RemoteException | RuntimeException e) {
-            Slogf.w(TAG, "Cannot register to car watchdog daemon: %s", e);
+            // When car watchdog daemon is not connected, the {@link mCarWatchdogDaemonHelper}
+            // throws IllegalStateException. Catch the exception to avoid crashing the process.
+            Slogf.w(TAG, e, "Cannot register to car watchdog daemon");
         }
         notifyAllUserStates();
         CarPowerManagementService powerService =
@@ -559,7 +587,9 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
                 Slogf.d(TAG, "CarWatchdogService unregisters from car watchdog daemon");
             }
         } catch (RemoteException | RuntimeException e) {
-            Slogf.w(TAG, "Cannot unregister from car watchdog daemon: %s", e);
+            // When car watchdog daemon is not connected, the {@link mCarWatchdogDaemonHelper}
+            // throws IllegalStateException. Catch the exception to avoid crashing the process.
+            Slogf.w(TAG, e, "Cannot unregister from car watchdog daemon");
         }
     }
 
@@ -619,19 +649,22 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
                             userId, userStateDesc);
                 }
             } catch (RemoteException | RuntimeException e) {
-                Slogf.w(TAG, "Notifying user state change failed: %s", e);
+                // When car watchdog daemon is not connected, the {@link mCarWatchdogDaemonHelper}
+                // throws IllegalStateException. Catch the exception to avoid crashing the process.
+                Slogf.w(TAG, e, "Notifying user state change failed");
             }
         });
     }
 
     private void subscribeBroadcastReceiver() {
         IntentFilter filter = new IntentFilter();
+        filter.addAction(ACTION_RESOURCE_OVERUSE_DISABLE_APP);
         filter.addAction(ACTION_GARAGE_MODE_ON);
         filter.addAction(ACTION_GARAGE_MODE_OFF);
-        filter.addAction(Intent.ACTION_USER_REMOVED);
+        filter.addAction(ACTION_USER_REMOVED);
 
         mContext.registerReceiverForAllUsers(mBroadcastReceiver, filter,
-                /* broadcastPermission= */ null, /* scheduler= */ null,
+                Car.PERMISSION_CONTROL_CAR_WATCHDOG_CONFIG, /* scheduler= */ null,
                 Context.RECEIVER_NOT_EXPORTED);
     }
 
