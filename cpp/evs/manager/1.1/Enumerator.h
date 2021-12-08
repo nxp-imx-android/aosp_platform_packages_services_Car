@@ -18,6 +18,7 @@
 #define CPP_EVS_MANAGER_1_1_ENUMERATOR_H_
 
 #include "HalCamera.h"
+#include "ServiceFactory.h"
 #include "VirtualCamera.h"
 #include "emul/EvsEmulatedCamera.h"
 #include "stats/StatsCollector.h"
@@ -28,61 +29,80 @@
 #include <system/camera_metadata.h>
 
 #include <list>
+#include <memory>
 #include <unordered_map>
 #include <unordered_set>
 
 namespace android::automotive::evs::V1_1::implementation {
 
+// Passthrough to remove static cling and allow for mocking.
+class ProdServiceFactory : public ServiceFactory {
+public:
+    explicit ProdServiceFactory(const char* hardwareServiceName) :
+          mHardwareServiceName(hardwareServiceName) {}
+    virtual ~ProdServiceFactory() = default;
+
+    sp<::android::hardware::automotive::evs::V1_1::IEvsEnumerator> getService() override {
+        return IEvsEnumerator::getService(mHardwareServiceName.data());
+    }
+
+    const std::string mHardwareServiceName;
+};
+
 class Enumerator : public IEvsEnumerator {
 public:
-    // Methods from ::android::hardware::automotive::evs::V1_0::IEvsEnumerator follow.
-    ::android::hardware::Return<void> getCameraList(getCameraList_cb _hidl_cb) override;
-    ::android::hardware::Return<sp<::android::hardware::automotive::evs::V1_0::IEvsCamera>>
-    openCamera(const ::android::hardware::hidl_string& cameraId) override;
-    ::android::hardware::Return<void> closeCamera(
-            const ::android::sp<IEvsCamera_1_0>& virtualCamera) override;
-    ::android::hardware::Return<sp<::android::hardware::automotive::evs::V1_0::IEvsDisplay>>
-    openDisplay() override;
-    ::android::hardware::Return<void> closeDisplay(
-            const ::android::sp<::android::hardware::automotive::evs::V1_0::IEvsDisplay>& display)
-            override;
-    ::android::hardware::Return<::android::hardware::automotive::evs::V1_0::DisplayState>
-    getDisplayState() override;
+    explicit Enumerator(const char* hardwareServiceName) :
+          mServiceFactory(new ProdServiceFactory(hardwareServiceName)) {}
 
-    // Methods from ::android::hardware::automotive::evs::V1_1::IEvsEnumerator follow.
-    ::android::hardware::Return<void> getCameraList_1_1(getCameraList_1_1_cb _hidl_cb) override;
-    ::android::hardware::Return<sp<::android::hardware::automotive::evs::V1_1::IEvsCamera>>
-    openCamera_1_1(const ::android::hardware::hidl_string& cameraId,
-                   const ::android::hardware::camera::device::V3_2::Stream& streamCfg) override;
-    ::android::hardware::Return<bool> isHardware() override { return false; }
-    ::android::hardware::Return<void> getDisplayIdList(getDisplayIdList_cb _list_cb) override;
-    ::android::hardware::Return<sp<::android::hardware::automotive::evs::V1_1::IEvsDisplay>>
-    openDisplay_1_1(uint8_t id) override;
-    ::android::hardware::Return<void> getUltrasonicsArrayList(
-            getUltrasonicsArrayList_cb _hidl_cb) override;
-    ::android::hardware::Return<sp<IEvsUltrasonicsArray>> openUltrasonicsArray(
-            const ::android::hardware::hidl_string& ultrasonicsArrayId) override;
-    ::android::hardware::Return<void> closeUltrasonicsArray(
+    explicit Enumerator(std::unique_ptr<ServiceFactory> serviceFactory) :
+          mServiceFactory(std::move(serviceFactory)) {}
+
+    static std::unique_ptr<Enumerator> build(const char* hardwareServiceName);
+
+    virtual ~Enumerator();
+
+    // Methods from hardware::automotive::evs::V1_0::IEvsEnumerator follow.
+    hardware::Return<void> getCameraList(getCameraList_cb _hidl_cb) override;
+    hardware::Return<sp<hardware::automotive::evs::V1_0::IEvsCamera>> openCamera(
+            const hardware::hidl_string& cameraId) override;
+    hardware::Return<void> closeCamera(
+            const ::android::sp<hardware::automotive::evs::V1_0::IEvsCamera>& virtualCamera)
+            override;
+    hardware::Return<sp<hardware::automotive::evs::V1_0::IEvsDisplay>> openDisplay() override;
+    hardware::Return<void> closeDisplay(
+            const ::android::sp<hardware::automotive::evs::V1_0::IEvsDisplay>& display) override;
+    hardware::Return<hardware::automotive::evs::V1_0::DisplayState> getDisplayState() override;
+
+    // Methods from hardware::automotive::evs::V1_1::IEvsEnumerator follow.
+    hardware::Return<void> getCameraList_1_1(getCameraList_1_1_cb _hidl_cb) override;
+    hardware::Return<sp<hardware::automotive::evs::V1_1::IEvsCamera>> openCamera_1_1(
+            const hardware::hidl_string& cameraId,
+            const hardware::camera::device::V3_2::Stream& streamCfg) override;
+    hardware::Return<bool> isHardware() override { return false; }
+    hardware::Return<void> getDisplayIdList(getDisplayIdList_cb _list_cb) override;
+    hardware::Return<sp<hardware::automotive::evs::V1_1::IEvsDisplay>> openDisplay_1_1(
+            uint8_t id) override;
+    hardware::Return<void> getUltrasonicsArrayList(getUltrasonicsArrayList_cb _hidl_cb) override;
+    hardware::Return<sp<IEvsUltrasonicsArray>> openUltrasonicsArray(
+            const hardware::hidl_string& ultrasonicsArrayId) override;
+    hardware::Return<void> closeUltrasonicsArray(
             const ::android::sp<IEvsUltrasonicsArray>& evsUltrasonicsArray) override;
 
     // Methods from ::android.hidl.base::V1_0::IBase follow.
-    ::android::hardware::Return<void> debug(
-            const hidl_handle& fd,
-            const hidl_vec<::android::hardware::hidl_string>& options) override;
+    hardware::Return<void> debug(const hardware::hidl_handle& fd,
+                                 const hidl_vec<hardware::hidl_string>& options) override;
 
-    // Implementation details
     bool init(const char* hardwareServiceName);
-
-    // Destructor
-    virtual ~Enumerator();
 
 private:
     bool inline checkPermission();
     bool isLogicalCamera(const camera_metadata_t* metadata);
     std::unordered_set<std::string> getPhysicalCameraIds(const std::string& id);
 
-    sp<::android::hardware::automotive::evs::V1_1::IEvsEnumerator> mHwEnumerator;
-    wp<::android::hardware::automotive::evs::V1_0::IEvsDisplay> mActiveDisplay;
+    const std::unique_ptr<ServiceFactory> mServiceFactory;
+
+    sp<hardware::automotive::evs::V1_1::IEvsEnumerator> mHwEnumerator;
+    wp<hardware::automotive::evs::V1_0::IEvsDisplay> mActiveDisplay;
 
     // List of active camera proxy objects that wrap hw cameras
     std::unordered_map<std::string, sp<HalCamera>> mActiveCameras;
@@ -106,17 +126,16 @@ private:
     bool mDisplayOwnedExclusively;
 
     // LSHAL dump
-    void cmdDump(int fd, const hidl_vec<::android::hardware::hidl_string>& options);
+    void cmdDump(int fd, const hidl_vec<hardware::hidl_string>& options);
     void cmdHelp(int fd);
-    void cmdList(int fd, const hidl_vec<::android::hardware::hidl_string>& options);
-    void cmdDumpDevice(int fd, const hidl_vec<::android::hardware::hidl_string>& options);
+    void cmdList(int fd, const hidl_vec<hardware::hidl_string>& options);
+    void cmdDumpDevice(int fd, const hidl_vec<hardware::hidl_string>& options);
 
     // List of emulated camera devices
     std::unordered_map<std::string, EmulatedCameraDesc> mEmulatedCameraDevices;
 
     // LSHAL command to use emulated camera device
-    void cmdConfigureEmulatedCamera(int fd,
-                                    const hidl_vec<::android::hardware::hidl_string>& options);
+    void cmdConfigureEmulatedCamera(int fd, const hidl_vec<hardware::hidl_string>& options);
 };
 
 }  // namespace android::automotive::evs::V1_1::implementation

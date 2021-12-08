@@ -32,6 +32,19 @@
 
 namespace {
 
+using ::android::base::EqualsIgnoreCase;
+using ::android::base::Error;
+using ::android::base::StringAppendF;
+using ::android::base::StringPrintf;
+using ::android::base::WriteStringToFd;
+using ::android::hardware::hidl_handle;
+using ::android::hardware::Void;
+using ::android::hardware::automotive::evs::V1_0::DisplayState;
+using IEvsCamera_1_0 = ::android::hardware::automotive::evs::V1_0::IEvsCamera;
+using CameraDesc_1_0 = ::android::hardware::automotive::evs::V1_0::CameraDesc;
+using CameraDesc_1_1 = ::android::hardware::automotive::evs::V1_1::CameraDesc;
+using ::android::hardware::camera::device::V3_2::Stream;
+
 const char* kSingleIndent = "\t";
 const char* kDumpOptionAll = "all";
 const char* kDumpDeviceCamera = "camera";
@@ -53,19 +66,19 @@ const std::regex kEmulatedCameraNamePattern("emulated/[0-9]+", std::regex_consta
 
 // Display ID 255 is reserved for the special purpose.
 constexpr int kExclusiveMainDisplayId = 255;
+
 }  // namespace
 
 namespace android::automotive::evs::V1_1::implementation {
 
-using ::android::base::EqualsIgnoreCase;
-using ::android::base::Error;
-using ::android::base::StringAppendF;
-using ::android::base::StringPrintf;
-using ::android::base::WriteStringToFd;
-using ::android::hardware::Void;
-using ::android::hardware::automotive::evs::V1_0::DisplayState;
-using CameraDesc_1_0 = ::android::hardware::automotive::evs::V1_0::CameraDesc;
-using CameraDesc_1_1 = ::android::hardware::automotive::evs::V1_1::CameraDesc;
+std::unique_ptr<Enumerator> Enumerator::build(const char* hardwareServiceName) {
+    // TODO(b/206829268): Fully deprecate init and move construction logic here.
+    if (!hardwareServiceName) {
+        return nullptr;
+    } else {
+        return std::make_unique<Enumerator>(hardwareServiceName);
+    }
+}
 
 Enumerator::~Enumerator() {
     if (mClientsMonitor != nullptr) {
@@ -73,11 +86,13 @@ Enumerator::~Enumerator() {
     }
 }
 
-bool Enumerator::init(const char* hardwareServiceName) {
+bool Enumerator::init(const char*) {
     LOG(DEBUG) << "init";
 
-    // Connect with the underlying hardware enumerator
-    mHwEnumerator = IEvsEnumerator::getService(hardwareServiceName);
+    // Connect with the underlying hardware enumerator.
+    // TODO(b/206829268): Refactor init into constructor as init is always
+    // called immediately following construction.
+    mHwEnumerator = mServiceFactory->getService();
     bool result = (mHwEnumerator != nullptr);
     if (result) {
         // Get an internal display identifier.
