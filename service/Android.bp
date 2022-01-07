@@ -87,10 +87,6 @@ android_app {
 
     static_libs: common_lib_deps,
 
-    jni_libs: [
-        "libcarservicejni",
-    ],
-
     aidl: {
         include_dirs: [
             // TODO(b/198195711): Remove once we compile against SDK.
@@ -146,8 +142,6 @@ droidstubs {
 // TODO(b/194941497): SHIPSTOP - remove CarServiceModule & android.car.module
 android_app {
     name: "CarServiceModule",
-
-    manifest: "AndroidManifestForModuleBuildTest.xml",
 
     srcs: [
         // add full source for all codes under p/s/Car to reduce unnecessary library allow listing.
