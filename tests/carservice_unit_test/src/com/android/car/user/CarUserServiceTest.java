@@ -85,6 +85,10 @@ public final class CarUserServiceTest extends BaseCarUserServiceTestCase {
 
     private static final String TAG = CarUserServiceTest.class.getSimpleName();
 
+    public CarUserServiceTest() {
+        super(CarUserService.TAG);
+    }
+
     @Test
     public void testInitAndRelease() {
         // init()
@@ -493,7 +497,7 @@ public final class CarUserServiceTest extends BaseCarUserServiceTestCase {
         UserHandle currentUser = mRegularUser;
         mockExistingUsersAndCurrentUser(mExistingUsers, currentUser);
         UserHandle removeUser = mRegularUser;
-        mockRemoveUserNoCallback(removeUser, UserManager.REMOVE_RESULT_SET_EPHEMERAL);
+        mockRemoveUserNoCallback(removeUser, UserManager.REMOVE_RESULT_DEFERRED);
 
         removeUser(removeUser.getIdentifier(), mUserRemovalFuture);
 
@@ -521,7 +525,7 @@ public final class CarUserServiceTest extends BaseCarUserServiceTestCase {
         List<UserHandle> existingUsers = Arrays.asList(mAdminUser, mRegularUser);
         mockExistingUsersAndCurrentUser(existingUsers, currentUser);
         UserHandle removeUser = mAdminUser;
-        mockRemoveUserNoCallback(removeUser, UserManager.REMOVE_RESULT_SET_EPHEMERAL);
+        mockRemoveUserNoCallback(removeUser, UserManager.REMOVE_RESULT_DEFERRED);
 
         removeUser(mAdminUser.getIdentifier(), NO_CALLER_RESTRICTIONS, mUserRemovalFuture);
 
@@ -641,7 +645,7 @@ public final class CarUserServiceTest extends BaseCarUserServiceTestCase {
         mockGetCallingUserHandle(currentUser.getIdentifier());
         mockExistingUsersAndCurrentUser(mExistingUsers, currentUser);
         mockRemoveUserNoCallback(removeUser, /* evenWhenDisallowed= */ true,
-                UserManager.REMOVE_RESULT_SET_EPHEMERAL);
+                UserManager.REMOVE_RESULT_DEFERRED);
 
         removeUser(removeUser.getIdentifier(), HAS_CALLER_RESTRICTIONS, mUserRemovalFuture);
 
@@ -685,7 +689,7 @@ public final class CarUserServiceTest extends BaseCarUserServiceTestCase {
         mockGetCallingUserHandle(currentUser.getIdentifier());
         mockExistingUsersAndCurrentUser(mExistingUsers, currentUser);
         mockRemoveUserNoCallback(removeUser, /* evenWhenDisallowed= */ true,
-                UserManager.REMOVE_RESULT_SET_EPHEMERAL);
+                UserManager.REMOVE_RESULT_DEFERRED);
 
         removeUser(removeUser.getIdentifier(),
                 HAS_CALLER_RESTRICTIONS, mUserRemovalFuture);

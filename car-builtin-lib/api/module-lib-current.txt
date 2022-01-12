@@ -13,7 +13,7 @@ package android.car.builtin.app {
     method public static int checkComponentPermission(@NonNull String, int, int, boolean);
     method @Deprecated public android.util.Pair<android.content.Intent,java.lang.Integer> findRootTask(int);
     method @NonNull public static android.car.builtin.app.ActivityManagerHelper getInstance();
-    method @Deprecated @Nullable public android.util.SparseArray<android.car.builtin.app.ActivityManagerHelper.TopTaskInfoContainer> getTopTasks();
+    method @Deprecated @Nullable public android.util.SparseArray<android.app.TaskInfo> getTopTasks();
     method public void registerProcessObserverCallback(android.car.builtin.app.ActivityManagerHelper.ProcessObserverCallback);
     method @Deprecated public void registerTaskStackChangeListener(android.car.builtin.app.ActivityManagerHelper.OnTaskStackChangeListener);
     method public boolean removeTask(int);
@@ -37,23 +37,16 @@ package android.car.builtin.app {
     method public default void onProcessDied(int, int);
   }
 
-  @Deprecated public static class ActivityManagerHelper.TopTaskInfoContainer {
-    ctor @Deprecated public ActivityManagerHelper.TopTaskInfoContainer(android.content.ComponentName, int, int, int, int, int, int, android.content.ComponentName, int[], String[]);
-    method @Deprecated public boolean isMatching(android.car.builtin.app.ActivityManagerHelper.TopTaskInfoContainer);
-    field @Deprecated @Nullable public final android.content.ComponentName baseActivity;
-    field @Deprecated public final int[] childTaskIds;
-    field @Deprecated public final String[] childTaskNames;
-    field @Deprecated public final int displayId;
-    field @Deprecated public final int position;
-    field @Deprecated public final int rootTaskId;
-    field @Deprecated public final int rootTaskUserId;
-    field @Deprecated public final int taskId;
-    field @Deprecated @Nullable public final android.content.ComponentName topActivity;
-    field @Deprecated public final int userId;
-  }
-
   public final class KeyguardManagerHelper {
     method public static boolean isKeyguardLocked();
+  }
+
+  public class TaskInfoHelper {
+    ctor public TaskInfoHelper();
+    method public static int getDisplayId(@NonNull android.app.TaskInfo);
+    method public static int getUserId(@NonNull android.app.TaskInfo);
+    method public static boolean isVisible(@NonNull android.app.TaskInfo);
+    method public static String toString(@Nullable android.app.TaskInfo);
   }
 
   public final class VoiceInteractionHelper {
@@ -251,7 +244,6 @@ package android.car.builtin.os {
     method @Deprecated public static boolean isEphemeralUser(@NonNull android.os.UserManager, @NonNull android.os.UserHandle);
     method @Deprecated public static boolean isInitializedUser(@NonNull android.os.UserManager, @NonNull android.os.UserHandle);
     method public static boolean isPreCreatedUser(@NonNull android.os.UserManager, @NonNull android.os.UserHandle);
-    method @Deprecated public static boolean isProfileUser(@NonNull android.os.UserManager, @NonNull android.os.UserHandle);
     method public static boolean markGuestForDeletion(@NonNull android.os.UserManager, @NonNull android.os.UserHandle);
     method @Nullable public static android.os.UserHandle preCreateUser(@NonNull android.os.UserManager, @NonNull String);
     method @Deprecated public static int removeUserOrSetEphemeral(@NonNull android.os.UserManager, int, boolean);
@@ -271,9 +263,9 @@ package android.car.builtin.os {
     field public static final int FLAG_RESTRICTED = 8; // 0x8
     field public static final int FLAG_SYSTEM = 2048; // 0x800
     field @Deprecated public static final int REMOVE_RESULT_ALREADY_BEING_REMOVED = 2; // 0x2
+    field @Deprecated public static final int REMOVE_RESULT_DEFERRED = 1; // 0x1
     field @Deprecated public static final int REMOVE_RESULT_ERROR = 3; // 0x3
     field @Deprecated public static final int REMOVE_RESULT_REMOVED = 0; // 0x0
-    field @Deprecated public static final int REMOVE_RESULT_SET_EPHEMERAL = 1; // 0x1
     field public static final int USER_NULL = -10000; // 0xffffd8f0
     field public static final int USER_SYSTEM = 0; // 0x0
   }

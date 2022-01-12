@@ -122,7 +122,8 @@ import java.util.concurrent.TimeUnit;
  */
 public final class CarUserService extends ICarUserService.Stub implements CarServiceBase {
 
-    private static final String TAG = CarLog.tagFor(CarUserService.class);
+    @VisibleForTesting
+    static final String TAG = CarLog.tagFor(CarUserService.class);
 
     /** {@code int} extra used to represent a user id in a {@link ICarResultReceiver} response. */
     public static final String BUNDLE_USER_ID = "user.id";
@@ -1006,7 +1007,7 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
                         isLastAdmin ? UserRemovalResult.STATUS_SUCCESSFUL_LAST_ADMIN_REMOVED
                                 : UserRemovalResult.STATUS_SUCCESSFUL, receiver);
                 break;
-            case UserManagerHelper.REMOVE_RESULT_SET_EPHEMERAL:
+            case UserManagerHelper.REMOVE_RESULT_DEFERRED:
                 sendUserRemovalResult(userId,
                         isLastAdmin ? UserRemovalResult.STATUS_SUCCESSFUL_LAST_ADMIN_SET_EPHEMERAL
                                 : UserRemovalResult.STATUS_SUCCESSFUL_SET_EPHEMERAL, receiver);

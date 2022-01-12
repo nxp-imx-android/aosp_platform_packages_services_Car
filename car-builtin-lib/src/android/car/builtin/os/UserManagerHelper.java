@@ -90,7 +90,7 @@ public final class UserManagerHelper {
      * @deprecated Would be after converting to system API
      */
     @Deprecated
-    public static final int REMOVE_RESULT_SET_EPHEMERAL = UserManager.REMOVE_RESULT_SET_EPHEMERAL;
+    public static final int REMOVE_RESULT_DEFERRED = UserManager.REMOVE_RESULT_DEFERRED;
 
     /** Assign default Icon for a given user. */
     public static Bitmap assignDefaultIconForUser(@NonNull Context context,
@@ -186,17 +186,6 @@ public final class UserManagerHelper {
     public static boolean isInitializedUser(@NonNull UserManager userManager,
             @NonNull UserHandle user) {
         return userManager.getUserInfo(user.getIdentifier()).isInitialized();
-    }
-
-    /**
-     * Would be removed after more research in existing API.
-     *
-     * @deprecated Would be removed
-     */
-    @Deprecated
-    public static boolean isProfileUser(@NonNull UserManager userManager,
-            @NonNull UserHandle user) {
-        return userManager.getUserInfo(user.getIdentifier()).isProfile();
     }
 
     /**
