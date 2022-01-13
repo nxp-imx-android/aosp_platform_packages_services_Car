@@ -250,7 +250,6 @@ cc_test{
         "mock-evs/MockSurroundViewCallback.cpp",
     ],
     include_dirs: [
-        "packages/services/Car/evs/sampleDriver",
         "vendor/nxp-opensource/imx/sv/corelib/include/",
         "frameworks/native/opengl/include",
     ],
