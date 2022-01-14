@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * Helper class to get User properties using UserHandle
  */
-//TODO(b/196179969) : Add unit test
+//TODO(b/214340360) : Add unit test
 public final class UserHandleHelper {
 
     private final Context mContext;
@@ -126,14 +126,6 @@ public final class UserHandleHelper {
      */
     public boolean isPreCreatedUser(UserHandle user) {
         return UserManagerHelper.isPreCreatedUser(mUserManager, user);
-    }
-
-    /**
-     * Get profile group Id for the user
-     */
-    @UserIdInt
-    public int getProfileGroupId(UserHandle user) {
-        return UserManagerHelper.getProfileGroupId(mUserManager, user);
     }
 
     private UserManager getUserContextAwareUserManager(@UserIdInt int userId) {

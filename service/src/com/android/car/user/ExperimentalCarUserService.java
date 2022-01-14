@@ -307,7 +307,7 @@ public final class ExperimentalCarUserService extends IExperimentalCarUserServic
             return !UserHelperLite.isHeadlessSystemUser(user.getIdentifier())
                     && mUserHandleHelper.isEnabledUser(user)
                     && mUserHandleHelper.isManagedProfile(user)
-                    && mUserHandleHelper.getProfileGroupId(user) == driverId;
+                    && mUserManager.isSameProfileGroup(user, UserHandle.of(driverId));
         });
     }
 
@@ -376,7 +376,7 @@ public final class ExperimentalCarUserService extends IExperimentalCarUserServic
             }
             if (checkCurrentDriver) {
                 int currentUserId = ActivityManager.getCurrentUser();
-                if (mUserHandleHelper.getProfileGroupId(passenger) != currentUserId) {
+                if (!mUserManager.isSameProfileGroup(passenger, UserHandle.of(currentUserId))) {
                     Slogf.w(TAG, "passenger %d is not a profile of the current user %d",
                             passengerId, currentUserId);
                     return false;
@@ -419,7 +419,8 @@ public final class ExperimentalCarUserService extends IExperimentalCarUserServic
     /** Returns all users who are matched by the given filter. */
     private List<UserHandle> getUsersHandle(UserFilter filter) {
         List<UserHandle> users = UserManagerHelper.getUserHandles(mUserManager,
-                /* excludePartial= */ false, /* excludeDying= */ false);
+                /* excludePartial= */ false, /* excludeDying= */ false,
+                /* excludePreCreated */ true);
         List<UserHandle> usersFiltered = new ArrayList<UserHandle>();
 
         for (Iterator<UserHandle> iterator = users.iterator(); iterator.hasNext(); ) {
@@ -440,12 +441,13 @@ public final class ExperimentalCarUserService extends IExperimentalCarUserServic
 
     private int getNumberOfManagedProfiles(@UserIdInt int userId) {
         List<UserHandle> users = UserManagerHelper.getUserHandles(mUserManager,
-                /* excludePartial= */ false, /* excludeDying= */ false);
+                /* excludePartial= */ false, /* excludeDying= */ false,
+                /* excludePreCreated */ true);
         // Count all users that are managed profiles of the given user.
         int managedProfilesCount = 0;
         for (UserHandle user : users) {
             if (mUserHandleHelper.isManagedProfile(user)
-                    && mUserHandleHelper.getProfileGroupId(user) == userId) {
+                    && mUserManager.isSameProfileGroup(user, UserHandle.of(userId))) {
                 managedProfilesCount++;
             }
         }
