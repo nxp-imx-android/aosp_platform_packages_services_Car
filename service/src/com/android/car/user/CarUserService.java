@@ -347,7 +347,8 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
         writer.println("SwitchGuestUserBeforeSleep: " + mSwitchGuestUserBeforeSleep);
 
         writer.println("MaxRunningUsers: " + mMaxRunningUsers);
-        writer.printf("User HAL timeout: %dms\n",  mHalTimeoutMs);
+        writer.printf("User HAL: supported=%b, timeout=%dms\n", isUserHalSupported(),
+                mHalTimeoutMs);
         writer.printf("Initial user: %s\n", mInitialUser);
 
         writer.println("Relevant overlayable properties");
@@ -611,7 +612,8 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
         checkManageUsersPermission("startInitialUser");
 
         if (!isUserHalSupported()) {
-            fallbackToDefaultInitialUserBehavior(/* userLocales= */ null, replaceGuest);
+            fallbackToDefaultInitialUserBehavior(/* userLocales= */ null, replaceGuest,
+                    /* supportsOverrideUserIdProperty= */ true);
             EventLogHelper.writeCarUserServiceInitialUserInfoReqComplete(requestType);
             return;
         }
@@ -633,8 +635,9 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
                     case InitialUserInfoResponseAction.SWITCH:
                         int userId = resp.userToSwitchOrCreate.userId;
                         if (userId <= 0) {
-                            Slogf.w(TAG, "invalid (or missing) user id sent by HAL: " + userId);
-                            fallbackToDefaultInitialUserBehavior(userLocales, replaceGuest);
+                            Slogf.w(TAG, "invalid (or missing) user id sent by HAL: %d", userId);
+                            fallbackToDefaultInitialUserBehavior(userLocales, replaceGuest,
+                                    /* supportsOverrideUserIdProperty= */ false);
                             break;
                         }
                         info = new InitialUserSetter.Builder(InitialUserSetter.TYPE_SWITCH)
@@ -657,11 +660,13 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
                         break;
 
                     case InitialUserInfoResponseAction.DEFAULT:
-                        fallbackToDefaultInitialUserBehavior(userLocales, replaceGuest);
+                        fallbackToDefaultInitialUserBehavior(userLocales, replaceGuest,
+                                /* supportsOverrideUserIdProperty= */ false);
                         break;
                     default:
-                        Slogf.w(TAG, "invalid response action on " + resp);
-                        fallbackToDefaultInitialUserBehavior(/* user locale */ null, replaceGuest);
+                        Slogf.w(TAG, "invalid response action on %s", resp);
+                        fallbackToDefaultInitialUserBehavior(/* userLocales= */ null, replaceGuest,
+                                /* supportsOverrideUserIdProperty= */ false);
                         break;
 
                 }
@@ -669,17 +674,20 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
                 EventLogHelper.writeCarUserServiceInitialUserInfoResp(status, /* action= */ 0,
                         /* userId= */ 0, /* flags= */ 0,
                         /* safeName= */ "", /* userLocales= */ "");
-                fallbackToDefaultInitialUserBehavior(/* user locale */ null, replaceGuest);
+                fallbackToDefaultInitialUserBehavior(/* user locale */ null, replaceGuest,
+                        /* supportsOverrideUserIdProperty= */ false);
             }
             EventLogHelper.writeCarUserServiceInitialUserInfoReqComplete(requestType);
         });
     }
 
-    private void fallbackToDefaultInitialUserBehavior(String userLocales, boolean replaceGuest) {
+    private void fallbackToDefaultInitialUserBehavior(String userLocales, boolean replaceGuest,
+            boolean supportsOverrideUserIdProperty) {
         InitialUserInfo info = new InitialUserSetter.Builder(
                 InitialUserSetter.TYPE_DEFAULT_BEHAVIOR)
                 .setUserLocales(userLocales)
                 .setReplaceGuest(replaceGuest)
+                .setSupportsOverrideUserIdProperty(supportsOverrideUserIdProperty)
                 .build();
         mInitialUserSetter.set(info);
     }
@@ -1132,13 +1140,22 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
         checkManageOrCreateUsersPermission(flags);
         EventLogHelper.writeCarUserServiceCreateUserReq(UserHelperLite.safeName(name), userType,
                 flags, timeoutMs, hasCallerRestrictions ? 1 : 0);
+
+        UserHandle callingUser = Binder.getCallingUserHandle();
+        if (mUserManager.hasUserRestrictionForUser(UserManager.DISALLOW_ADD_USER, callingUser)) {
+            Slogf.w(TAG, "Cannot create user because calling user %s has the '%s' restriction",
+                    callingUser, UserManager.DISALLOW_ADD_USER);
+            sendUserCreationResultFailure(receiver, UserCreationResult.STATUS_ANDROID_FAILURE);
+            return;
+        }
+
         mHandler.post(() -> handleCreateUser(name, userType, flags, timeoutMs, receiver,
-                hasCallerRestrictions));
+                callingUser, hasCallerRestrictions));
     }
 
     private void handleCreateUser(@Nullable String name, @NonNull String userType,
             int flags, int timeoutMs, @NonNull AndroidFuture<UserCreationResult> receiver,
-            boolean hasCallerRestrictions) {
+            @NonNull UserHandle callingUser, boolean hasCallerRestrictions) {
         if (userType.equals(UserManager.USER_TYPE_FULL_GUEST) && flags != 0) {
             // Non-zero flags are not allowed when creating a guest user.
             Slogf.e(TAG, "Invalid flags %d specified when creating a guest user %s", flags, name);
@@ -1173,13 +1190,10 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
 
             }
 
-            int callingUserId = Binder.getCallingUserHandle().getIdentifier();
-            UserHandle callingUser = mUserHandleHelper.getExistingUserHandle(callingUserId);
             if (!mUserHandleHelper.isAdminUser(callingUser)
                     && (flags & UserManagerHelper.FLAG_ADMIN) == UserManagerHelper.FLAG_ADMIN) {
                 if (Log.isLoggable(TAG, Log.DEBUG)) {
-                    Slogf.d(TAG, "Non-admin user " + callingUserId
-                            + " can only create non-admin users");
+                    Slogf.d(TAG, "Non-admin user %s can only create non-admin users", callingUser);
                 }
                 sendUserCreationResultFailure(receiver, UserCreationResult.STATUS_INVALID_REQUEST);
                 return;

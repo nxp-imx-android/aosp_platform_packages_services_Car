@@ -32,7 +32,6 @@ PRODUCT_PACKAGES += \
 
 
 PRODUCT_PACKAGES += \
-    clatd \
     pppd \
     screenrecord
 
@@ -85,6 +84,12 @@ PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
 PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
     android.car.number_pre_created_users?=1 \
     android.car.number_pre_created_guests?=1
+
+# Enable User HAL integration
+# NOTE: when set to true, VHAL must also implement the user-related properties,
+# otherwise CarService will ignore it
+PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
+    android.car.user_hal_enabled?=true
 
 ### end of multi-user properties ###
 
