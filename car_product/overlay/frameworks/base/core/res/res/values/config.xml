@@ -139,7 +139,7 @@
     </string-array>
     <!-- Enables the GnssTimeUpdate service. This is a switch for enabling Gnss time based
          suggestions to TimeDetector service. -->
-    <bool name="config_enableGnssTimeUpdateService">true</bool>
+    <bool name="config_enableGnssTimeUpdateService">false</bool>
 
     <!-- Use a car-specific activity resolver that supports rotary. -->
     <string name="config_customResolverActivity" translatable="false"
