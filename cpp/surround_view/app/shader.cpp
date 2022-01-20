@@ -20,6 +20,18 @@
 #include <memory>
 #include <stdio.h>
 
+// Delete shaders and program
+void deleteShaderProgram(programInfo program)
+{
+    if (program.programHandle) {
+        glDeleteShader(program.vertexShader);
+        glDeleteShader(program.pixelShader);
+        glDeleteProgram(program.programHandle);
+        glUseProgram(0);
+        program.programHandle = 0;
+    }
+}
+
 // Given shader source, load and compile it
 static GLuint loadShader(GLenum type, const char *shaderSrc, const char *name) {
     // Create the shader object
@@ -45,7 +57,7 @@ static GLuint loadShader(GLenum type, const char *shaderSrc, const char *name) {
         glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &size);
         if (size > 0) {
             // Get and report the error message
-            std::unique_ptr<char> infoLog(new char[size]);
+            std::unique_ptr<char[]> infoLog(new char[size]);
             glGetShaderInfoLog(shader, size, NULL, infoLog.get());
             LOG(ERROR) << "  msg:\n"
                        << infoLog.get();
@@ -60,50 +72,54 @@ static GLuint loadShader(GLenum type, const char *shaderSrc, const char *name) {
 
 
 // Create a program object given vertex and pixels shader source
-GLuint buildShaderProgram(const char* vtxSrc, const char* pxlSrc, const char* name) {
-    GLuint program = glCreateProgram();
-    if (program == 0) {
+programInfo buildShaderProgram(const char* vtxSrc, const char* pxlSrc, const char* name) {
+    programInfo program = {0,0,0};
+    program.programHandle = glCreateProgram();
+    if (program.programHandle == 0) {
         LOG(ERROR) << "Failed to allocate program object";
-        return 0;
+        return program;
     }
 
     // Compile the shaders and bind them to this program
-    GLuint vertexShader = loadShader(GL_VERTEX_SHADER, vtxSrc, name);
-    if (vertexShader == 0) {
+    program.vertexShader = loadShader(GL_VERTEX_SHADER, vtxSrc, name);
+    if (program.vertexShader == 0) {
         LOG(ERROR) << "Failed to load vertex shader";
-        glDeleteProgram(program);
-        return 0;
+        glDeleteProgram(program.programHandle);
+        program.programHandle = 0;
+        return program;
     }
-    GLuint pixelShader = loadShader(GL_FRAGMENT_SHADER, pxlSrc, name);
-    if (pixelShader == 0) {
+    program.pixelShader = loadShader(GL_FRAGMENT_SHADER, pxlSrc, name);
+    if (program.pixelShader == 0) {
         LOG(ERROR) << "Failed to load pixel shader";
-        glDeleteProgram(program);
-        glDeleteShader(vertexShader);
-        return 0;
+        glDeleteProgram(program.programHandle);
+        glDeleteShader(program.vertexShader);
+        program.programHandle = 0;
+        return program;
     }
-    glAttachShader(program, vertexShader);
-    glAttachShader(program, pixelShader);
+    glAttachShader(program.programHandle, program.vertexShader);
+    glAttachShader(program.programHandle, program.pixelShader);
 
     // Link the program
-    glLinkProgram(program);
+    glLinkProgram(program.programHandle);
     GLint linked = 0;
-    glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    glGetProgramiv(program.programHandle, GL_LINK_STATUS, &linked);
     if (!linked) {
         LOG(ERROR) << "Error linking program.";
         GLint size = 0;
-        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &size);
+        glGetProgramiv(program.programHandle, GL_INFO_LOG_LENGTH, &size);
         if (size > 0) {
             // Get and report the error message
-            std::unique_ptr<char> infoLog(new char[size]);
-            glGetProgramInfoLog(program, size, NULL, infoLog.get());
+            std::unique_ptr<char[]> infoLog(new char[size]);
+            glGetProgramInfoLog(program.programHandle, size, NULL, infoLog.get());
             LOG(ERROR) << "  msg:  "
                        << infoLog.get();
         }
 
-        glDeleteProgram(program);
-        glDeleteShader(vertexShader);
-        glDeleteShader(pixelShader);
-        return 0;
+        glDeleteProgram(program.programHandle);
+        glDeleteShader(program.vertexShader);
+        glDeleteShader(program.pixelShader);
+        program.programHandle = 0;
+        return program;
     }
 
     return program;

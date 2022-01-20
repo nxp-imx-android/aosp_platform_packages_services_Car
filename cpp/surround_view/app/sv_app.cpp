@@ -101,6 +101,7 @@ bool run2dSurroundView(sp<ISurroundViewService> pSurroundViewService,
     // Stop the 2d stream and session
     surroundView2dSession->stopStream();
 
+    sv2dCallback->waitStreamStopped();
     pSurroundViewService->stop2dSession(surroundView2dSession);
     surroundView2dSession = nullptr;
 
@@ -134,8 +135,6 @@ bool run3dSurroundView(sp<ISurroundViewService> pSurroundViewService,
     // TODO(b/150412555): now we have the dummy view here since the views are
     // set in service. This should be fixed.
     std::vector<View3d> singleView(1);
-    surroundView3dSession->setViews(singleView);
-
     if (surroundView3dSession->setViews(singleView) != SvResult::OK) {
         LOG(ERROR) << "Failed to setViews";
 
@@ -171,6 +170,7 @@ bool run3dSurroundView(sp<ISurroundViewService> pSurroundViewService,
     // Stop the 3d stream and session
     surroundView3dSession->stopStream();
 
+    sv3dCallback->waitStreamStopped();
     pSurroundViewService->stop3dSession(surroundView3dSession);
     surroundView3dSession = nullptr;
 

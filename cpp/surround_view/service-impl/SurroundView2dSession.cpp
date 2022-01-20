@@ -117,6 +117,7 @@ Return<void> SurroundView2dSession::FramesHandler::deliverFrame_1_1(
         LOG(ERROR) << "The number of incoming frames is " << buffers.size()
                    << ", which is different from the number " << kNumFrames
                    << ", specified in config file";
+        mCamera->doneWithFrame_1_1(buffers);
         return {};
     }
 
@@ -170,6 +171,7 @@ Return<void> SurroundView2dSession::FramesHandler::notify(const EvsEventDesc& ev
             // implementation that causes STREAM_STOPPED event to be delivered
             // properly. When the bug is fixed, we should deal with this event
             // properly in case the EVS stream is stopped unexpectly.
+            mSession->mFramesSignal.notify_all();
             break;
         }
 
@@ -293,8 +295,11 @@ void SurroundView2dSession::processFrames() {
             if (mStreamState != RUNNING) {
                 break;
             }
+            mFramesSignal.wait(lock, [this]() { return (mProcessingEvsFrames || mStreamState != RUNNING); });
+            if (mStreamState != RUNNING) {
+                break;
+            }
 
-            mFramesSignal.wait(lock, [this]() { return mProcessingEvsFrames; });
         }
 
         handleFrames(mSequenceId);
@@ -345,6 +350,10 @@ SurroundView2dSession::~SurroundView2dSession() {
     mEvs->closeCamera(mCamera);
 
     // TODO(b/175176576): properly release the mInputPointers and mOutputPointer
+#ifdef ENABLE_IMX_CORELIB
+    mImx2DSV->stopSV();
+    delete mImx2DSV;
+#endif
 }
 
 // Methods from ::android::hardware::automotive::sv::V1_0::ISurroundViewSession
@@ -394,12 +403,19 @@ Return<SvResult> SurroundView2dSession::startStream(
 
 Return<void> SurroundView2dSession::stopStream() {
     LOG(DEBUG) << __FUNCTION__;
-    unique_lock<mutex> lock(mAccessLock);
+    StreamStateValues tmpStreamState;
 
-    if (mStreamState == RUNNING) {
-        // Tell the processFrames loop to stop processing frames
-        mStreamState = STOPPING;
+    {
+        unique_lock<mutex> lock(mAccessLock);
+        tmpStreamState = mStreamState;
+        if (tmpStreamState == RUNNING) {
+            // Tell the processFrames loop to stop processing frames
+            mStreamState = STOPPING;
+        }
+    }
 
+
+    if (tmpStreamState == RUNNING) {
         // Stop the EVS stream asynchronizely
         mCamera->stopVideoStream();
         mFramesHandler = nullptr;
@@ -496,6 +512,14 @@ Return<void> SurroundView2dSession::projectCameraPoints(const hidl_vec<Point2dIn
         }
 
         // Project points using mSurroundView function.
+#ifdef ENABLE_IMX_CORELIB
+        uint32_t projPoint2d_x = 0;
+        uint32_t projPoint2d_y = 0;
+        outPoint.isValid = mImx2DSV->GetCameraPoint(cameraPoint.x, cameraPoint.y, cameraIndex,
+                                                    &projPoint2d_x, &projPoint2d_y);
+        outPoint.x = projPoint2d_x;
+        outPoint.y = projPoint2d_y;
+#else
         const Coordinate2dInteger camPoint(cameraPoint.x, cameraPoint.y);
         Coordinate2dFloat projPoint2d(0.0, 0.0);
 
@@ -505,6 +529,7 @@ Return<void> SurroundView2dSession::projectCameraPoints(const hidl_vec<Point2dIn
                                                                                &projPoint2d);
         outPoint.x = projPoint2d.x;
         outPoint.y = projPoint2d.y;
+#endif
         outPoints.push_back(outPoint);
     }
 
@@ -693,14 +718,13 @@ bool SurroundView2dSession::initialize() {
         LOG(ERROR) << "Failed to setup EVS components for 2d session";
         return false;
     }
-
+#ifndef ENABLE_IMX_CORELIB
     // TODO(b/150412555): ask core-lib team to add API description for "create"
     // method in the .h file.
     // The create method will never return a null pointer based the API
     // description.
     mSurroundView = unique_ptr<SurroundView>(Create());
 
-#ifndef ENABLE_IMX_CORELIB
     SurroundViewStaticDataParams params =
             SurroundViewStaticDataParams(
                     // currently it can only get the logic cameta metadata, it can't set the physical camera
@@ -722,6 +746,7 @@ bool SurroundView2dSession::initialize() {
         return false;
     }
 #else
+    mSurroundView = nullptr;
     mImx2DSV = new Imx2DSV();
     ImxSV2DParams sv2DParams = ImxSV2DParams(imx::Size2dInteger(mCameraParams[0].size.width,
                  mCameraParams[0].size.height),
@@ -736,6 +761,9 @@ bool SurroundView2dSession::initialize() {
 
 #endif
     mInputPointers.resize(kNumFrames);
+    LOG(INFO) << "mInputPointers size:" << mInputPointers.size()
+              << " empty:" << mInputPointers.empty()
+              << " capacity:" << mInputPointers.capacity();
     for (int i = 0; i < kNumFrames; i++) {
         mInputPointers[i].width = mCameraParams[i].size.width;
         mInputPointers[i].height = mCameraParams[i].size.height;
@@ -744,11 +772,15 @@ bool SurroundView2dSession::initialize() {
                 (void*)new uint8_t[mInputPointers[i].width *
                                    mInputPointers[i].height *
                                    kNumChannels];
+        if (!mInputPointers[i].cpu_data_pointer) {
+            LOG(ERROR) << "Memory allocation failed. Exiting.";
+            return false;
+        }
 #ifdef ENABLE_IMX_CORELIB
         // NOTE: do not make mInputPoint as local variable, because it will release cpu_data_pointer
         // once this function is done.
         // it cause sv camera do not work from the second frame.
-        shared_ptr<char> p((char *)mInputPointers[i].cpu_data_pointer);
+        shared_ptr<char> p((char *)mInputPointers[i].cpu_data_pointer, std::default_delete<char[]>());
         mInputPoint.push_back(p);
 #endif
     }
@@ -787,6 +819,8 @@ bool SurroundView2dSession::initialize() {
     mInfo.center.isValid = true;
     mInfo.center.x = mIOModuleConfig->sv2dConfig.sv2dParams.physical_center.x * 1000.0;
     mInfo.center.y = mIOModuleConfig->sv2dConfig.sv2dParams.physical_center.y * 1000.0;
+    LOG(DEBUG) << "Physical: width=" << mInfo.width << " height=" << mInfo.height
+               << " center.x=" << mInfo.center.x << " center.y=" << mInfo.center.y;
 
     if (mSvTexture->initCheck() == OK) {
         LOG(INFO) << "Successfully allocated Graphic Buffer";

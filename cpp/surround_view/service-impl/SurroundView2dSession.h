@@ -157,7 +157,7 @@ private:
 
     int mSequenceId;
 #ifdef ENABLE_IMX_CORELIB
-    vector<shared_ptr<char>> mInputPoint;;
+    vector<shared_ptr<char>> mInputPoint;
 #endif
 
     struct FramesRecord {

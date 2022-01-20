@@ -22,7 +22,6 @@
 #include <utils/Log.h>
 
 #include "shader_simpleTex.h"
-#include "shader.h"
 
 using android::GraphicBuffer;
 using android::hardware::automotive::evs::V1_0::DisplayState;
@@ -31,12 +30,6 @@ using android::hardware::Return;
 using android::sp;
 using std::string;
 
-EGLDisplay   SurroundViewServiceCallback::sGLDisplay;
-GLuint       SurroundViewServiceCallback::sFrameBuffer;
-GLuint       SurroundViewServiceCallback::sColorBuffer;
-GLuint       SurroundViewServiceCallback::sDepthBuffer;
-GLuint       SurroundViewServiceCallback::sTextureId;
-EGLImageKHR  SurroundViewServiceCallback::sKHRimage;
 
 const char* SurroundViewServiceCallback::getEGLError(void) {
     switch (eglGetError()) {
@@ -104,6 +97,7 @@ bool SurroundViewServiceCallback::prepareGL() {
     const EGLint config_attribs[] = {
         // Tag                  Value
         EGL_RENDERABLE_TYPE,    EGL_OPENGL_ES2_BIT,
+        EGL_SURFACE_TYPE,       EGL_PBUFFER_BIT,
         EGL_RED_SIZE,           8,
         EGL_GREEN_SIZE,         8,
         EGL_BLUE_SIZE,          8,
@@ -147,7 +141,7 @@ bool SurroundViewServiceCallback::prepareGL() {
     // Create a placeholder pbuffer so we have a surface to bind -- we never intend
     // to draw to this because attachRenderTarget will be called first.
     EGLint surface_attribs[] = { EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE };
-    EGLSurface sPlaceholderSurface = eglCreatePbufferSurface(display, egl_config, surface_attribs);
+    sPlaceholderSurface = eglCreatePbufferSurface(display, egl_config, surface_attribs);
     if (sPlaceholderSurface == EGL_NO_SURFACE) {
         LOG(ERROR) << "Failed to create OpenGL ES Placeholder surface: " << getEGLError();
         return false;
@@ -158,16 +152,16 @@ bool SurroundViewServiceCallback::prepareGL() {
     //
     // Create the EGL context
     //
-    EGLContext context = eglCreateContext(display, egl_config,
+    sContext = eglCreateContext(display, egl_config,
                                           EGL_NO_CONTEXT, context_attribs);
-    if (context == EGL_NO_CONTEXT) {
+    if (sContext == EGL_NO_CONTEXT) {
         LOG(ERROR) << "Failed to create OpenGL ES Context: "
                    << getEGLError();
         return false;
     }
 
     // Activate our render target for drawing
-    if (!eglMakeCurrent(display, sPlaceholderSurface, sPlaceholderSurface, context)) {
+    if (!eglMakeCurrent(display, sPlaceholderSurface, sPlaceholderSurface, sContext)) {
         LOG(ERROR) << "Failed to make the OpenGL ES Context current: "
                    << getEGLError();
         return false;
@@ -191,30 +185,26 @@ bool SurroundViewServiceCallback::prepareGL() {
     LOG(INFO) << "FrameBuffer is bound to "
               << sFrameBuffer;
 
-    // New (from TextWrapper)
-    glGenTextures(1, &sTextureId);
-
     // Now that we're assured success, store object handles we constructed
     sGLDisplay = display;
 
-    GLuint mShaderProgram = 0;
     // Load our shader program if we don't have it already
-    if (!mShaderProgram) {
+    if (!mShaderProgram.programHandle) {
         mShaderProgram = buildShaderProgram(kVtxShaderSimpleTexture,
                                             kPixShaderSimpleTexture,
                                             "simpleTexture");
-        if (!mShaderProgram) {
+        if (!mShaderProgram.programHandle) {
             LOG(ERROR) << "Error building shader program";
             return false;
         }
     }
 
     // Select our screen space simple texture shader
-    glUseProgram(mShaderProgram);
+    glUseProgram(mShaderProgram.programHandle);
 
     // Set up the model to clip space transform (identity matrix if we're
     // modeling in screen space)
-    GLint loc = glGetUniformLocation(mShaderProgram, "cameraMat");
+    GLint loc = glGetUniformLocation(mShaderProgram.programHandle, "cameraMat");
     if (loc < 0) {
         LOG(ERROR) << "Couldn't set shader parameter 'cameraMat'";
     } else {
@@ -222,7 +212,7 @@ bool SurroundViewServiceCallback::prepareGL() {
         glUniformMatrix4fv(loc, 1, false, identityMatrix.asArray());
     }
 
-    GLint sampler = glGetUniformLocation(mShaderProgram, "tex");
+    GLint sampler = glGetUniformLocation(mShaderProgram.programHandle, "tex");
     if (sampler < 0) {
         LOG(ERROR) << "Couldn't set shader parameter 'tex'";
     } else {
@@ -345,6 +335,9 @@ bool SurroundViewServiceCallback::attachRenderTarget(
 }
 
 void SurroundViewServiceCallback::detachRenderTarget() {
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                              GL_RENDERBUFFER, 0);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
     glDeleteRenderbuffers(1, &sColorBuffer);
     // Drop our external render target
     if (sKHRimage != EGL_NO_IMAGE_KHR) {
@@ -358,14 +351,36 @@ SurroundViewServiceCallback::SurroundViewServiceCallback(
     sp<ISurroundViewSession> pSession) :
     mDisplay(pDisplay),
     mSession(pSession) {
-    // Nothing but member initialization
+    mShaderProgram.programHandle = 0;
 }
+
+SurroundViewServiceCallback::~SurroundViewServiceCallback() {
+    deleteShaderProgram(mShaderProgram);
+    glDeleteFramebuffers(1, &sFrameBuffer);
+    glDeleteRenderbuffers(1, &sDepthBuffer);
+    if (!eglMakeCurrent(sGLDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)) {
+        LOG(ERROR) << "Failed to release OpenGL ES context";
+    }
+    if (!eglDestroyContext(sGLDisplay, sContext)) {
+        LOG(ERROR) << "Failed to desctroy EGL context";
+    }
+    if(!eglDestroySurface(sGLDisplay, sPlaceholderSurface)) {
+        LOG(ERROR) << "Failed to destroy EGL surface";
+    }
+    if(!eglTerminate(sGLDisplay)) {
+        LOG(ERROR) << "Failed to terminate EGL";
+    }
+}
+
 
 Return<void> SurroundViewServiceCallback::notify(SvEvent svEvent) {
     // Waiting for STREAM_STARTED event.
     if (svEvent == SvEvent::STREAM_STARTED) {
         LOG(INFO) << "Received STREAM_STARTED event";
-
+        {
+            std::unique_lock<std::mutex> lock(mLock);
+            mRunning = true;
+        }
         // Set the display state to VISIBLE_ON_NEXT_FRAME
         if (mDisplay != nullptr) {
             Return<EvsResult> result =
@@ -387,6 +402,11 @@ Return<void> SurroundViewServiceCallback::notify(SvEvent svEvent) {
         LOG(INFO) << "Received CONFIG_UPDATED event";
     } else if (svEvent == SvEvent::STREAM_STOPPED) {
         LOG(INFO) << "Received STREAM_STOPPED event";
+        {
+            std::unique_lock<std::mutex> lock(mLock);
+            mRunning = false;
+        }
+        mSignal.notify_all();
     } else if (svEvent == SvEvent::FRAME_DROPPED) {
         LOG(INFO) << "Received FRAME_DROPPED event";
     } else if (svEvent == SvEvent::TIMEOUT) {
@@ -415,11 +435,11 @@ Return<void> SurroundViewServiceCallback::receiveFrames(
 
     LOG(INFO) << "App received frames";
     LOG(INFO) << "descData: "
-              << pDesc->width
-              << pDesc->height
-              << pDesc->layers
-              << pDesc->format
-              << pDesc->usage
+              << pDesc->width << ","
+              << pDesc->height << ","
+              << pDesc->layers << ","
+              << pDesc->format << ","
+              << pDesc->usage << ","
               << pDesc->stride;
     LOG(INFO) << "nativeHandle: "
               << handle;
@@ -435,10 +455,6 @@ Return<void> SurroundViewServiceCallback::receiveFrames(
             tgtBuffer = buff;
         });
 
-        // release resourse to avoid leak
-        if (tgtBuffer.memHandle.getNativeHandle() != nullptr) {
-           detachRenderTarget();
-        }
 
         if (!attachRenderTarget(convertBufferDesc(tgtBuffer))) {
             LOG(ERROR) << "Failed to attach render target";
@@ -447,16 +463,10 @@ Return<void> SurroundViewServiceCallback::receiveFrames(
             LOG(INFO) << "Successfully attached render target";
         }
 
-        // Call HIDL API "doneWithFrames" to return the ownership
-        // back to SV service
-        if (mSession == nullptr) {
-            LOG(ERROR) << "SurroundViewSession in callback is invalid";
-            return {};
-        } else {
-            mSession->doneWithFrames(svFramesDesc);
-        }
-
         // Render frame to EVS display
+
+        glGenTextures(1, &sTextureId);
+
         LOG(INFO) << "Rendering to display buffer";
         sp<GraphicBuffer> graphicBuffer =
             new GraphicBuffer(handle,
@@ -539,11 +549,14 @@ Return<void> SurroundViewServiceCallback::receiveFrames(
 
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+        // Wait for the rendering to finish
+        glFinish();
+
         glDisableVertexAttribArray(0);
         glDisableVertexAttribArray(1);
 
-        // Wait for the rendering to finish
-        glFinish();
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glDeleteTextures(1, &sTextureId);
         detachRenderTarget();
 
         // Drop our external render target
@@ -566,4 +579,9 @@ Return<void> SurroundViewServiceCallback::receiveFrames(
         mDisplay->returnTargetBufferForDisplay(tgtBuffer);
     }
     return {};
+}
+
+void SurroundViewServiceCallback::waitStreamStopped(void) {
+        std::unique_lock<std::mutex> lock(mLock);
+        mSignal.wait(lock, [this]() { return !mRunning; });
 }
