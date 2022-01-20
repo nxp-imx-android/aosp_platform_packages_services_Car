@@ -73,8 +73,8 @@ private:
     static std::mutex sLock;
     static sp<SurroundViewService> sService GUARDED_BY(sLock);
 
-    static sp<SurroundView2dSession> sSurroundView2dSession GUARDED_BY(sLock);
-    static sp<SurroundView3dSession> sSurroundView3dSession GUARDED_BY(sLock);
+    sp<SurroundView2dSession> sSurroundView2dSession GUARDED_BY(sLock);
+    sp<SurroundView3dSession> sSurroundView3dSession GUARDED_BY(sLock);
 };
 
 }  // namespace implementation

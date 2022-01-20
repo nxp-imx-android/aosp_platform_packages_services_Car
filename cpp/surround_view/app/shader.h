@@ -19,7 +19,16 @@
 
 #include <GLES2/gl2.h>
 
+struct programInfo
+{
+    GLuint vertexShader;
+    GLuint pixelShader;
+    GLuint programHandle;
+};
+
+// Delete shaders and program
+void deleteShaderProgram(programInfo program);
 // Create a program object given vertex and pixels shader source
-GLuint buildShaderProgram(const char* vtxSrc, const char* pxlSrc, const char* name);
+programInfo buildShaderProgram(const char* vtxSrc, const char* pxlSrc, const char* name);
 
 #endif // SHADER_H

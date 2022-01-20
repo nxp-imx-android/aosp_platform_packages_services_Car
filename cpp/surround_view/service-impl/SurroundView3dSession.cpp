@@ -96,6 +96,7 @@ Return<void> SurroundView3dSession::FramesHandler::deliverFrame_1_1(
         LOG(ERROR) << "The number of incoming frames is " << buffers.size()
                    << ", which is different from the number " << kNumFrames
                    << ", specified in config file";
+        mCamera->doneWithFrame_1_1(buffers);
         return {};
     }
 
@@ -142,6 +143,7 @@ Return<void> SurroundView3dSession::FramesHandler::notify(const EvsEventDesc& ev
             // implementation that causes STREAM_STOPPED event to be delivered
             // properly. When the bug is fixed, we should deal with this event
             // properly in case the EVS stream is stopped unexpectly.
+            mSession->mFramesSignal.notify_all();
             break;
 
         case EvsEventType::PARAMETER_CHANGED:
@@ -167,12 +169,12 @@ Return<void> SurroundView3dSession::FramesHandler::notify(const EvsEventDesc& ev
 }
 
 bool SurroundView3dSession::copyFromBufferToPointers(
-    BufferDesc_1_1 buffer, SurroundViewInputBufferPointers &pointers) {
+    const BufferDesc_1_1& buffer, SurroundViewInputBufferPointers &pointers) {
 
     ATRACE_BEGIN(__PRETTY_FUNCTION__);
 
-    AHardwareBuffer_Desc* pDesc =
-        reinterpret_cast<AHardwareBuffer_Desc *>(&buffer.buffer.description);
+    const AHardwareBuffer_Desc* pDesc =
+        reinterpret_cast<const AHardwareBuffer_Desc *>(&buffer.buffer.description);
 
     ATRACE_BEGIN("Create Graphic Buffer");
     // create a GraphicBuffer from the existing handle
@@ -271,11 +273,10 @@ void SurroundView3dSession::processFrames() {
         {
             unique_lock<mutex> lock(mAccessLock);
 
+            mFramesSignal.wait(lock, [this]() { return (mProcessingEvsFrames || mStreamState != RUNNING); });
             if (mStreamState != RUNNING) {
                 break;
             }
-
-            mFramesSignal.wait(lock, [this]() { return mProcessingEvsFrames; });
         }
 
         handleFrames(mSequenceId);
@@ -329,6 +330,10 @@ SurroundView3dSession::~SurroundView3dSession() {
     }
 
     mEvs->closeCamera(mCamera);
+
+#ifdef ENABLE_IMX_CORELIB
+    delete mImx3DSV;
+#endif
 }
 
 // Methods from ::android::hardware::automotive::sv::V1_0::ISurroundViewSession.
@@ -392,7 +397,7 @@ Return<SvResult> SurroundView3dSession::startStream(
 
 Return<void> SurroundView3dSession::stopStream() {
     LOG(DEBUG) << __FUNCTION__;
-    unique_lock <mutex> lock(mAccessLock);
+    StreamStateValues tmpStreamState;
 
     if (mVhalHandler != nullptr) {
         mVhalHandler->stopPropertiesUpdate();
@@ -400,12 +405,19 @@ Return<void> SurroundView3dSession::stopStream() {
         LOG(WARNING) << "VhalHandler is null. Ignored";
     }
 
-    if (mStreamState == RUNNING) {
-        // Tell the processFrames loop to stop processing frames
-        mStreamState = STOPPING;
+    {
+        unique_lock<mutex> lock(mAccessLock);
+        tmpStreamState = mStreamState;
+        if (tmpStreamState == RUNNING) {
+            // Tell the processFrames loop to stop processing frames
+            mStreamState = STOPPING;
+        }
+    }
 
+    if (tmpStreamState == RUNNING) {
         // Stop the EVS stream asynchronizely
         mCamera->stopVideoStream();
+        mFramesHandler = nullptr;
     }
 
     return {};
@@ -589,6 +601,11 @@ Return<void> SurroundView3dSession::projectCameraPointsTo3dSurface(
             continue;
         }
 
+#ifdef ENABLE_IMX_CORELIB
+/* projectCameraPoints needs to be supported in nxp corelib
+   conversion of the pixel location from camera image into output scene.
+*/
+#else
         // Project points using mSurroundView function.
         const Coordinate2dInteger camCoord(cameraPoint.x, cameraPoint.y);
         Coordinate3dFloat projPoint3d(0.0, 0.0, 0.0);
@@ -600,6 +617,7 @@ Return<void> SurroundView3dSession::projectCameraPointsTo3dSurface(
         point3d.x = projPoint3d.x * 1000.0;
         point3d.y = projPoint3d.y * 1000.0;
         point3d.z = projPoint3d.z * 1000.0;
+#endif
         points3d.push_back(point3d);
     }
     _hidl_cb(points3d);
@@ -653,6 +671,13 @@ bool SurroundView3dSession::handleFrames(int sequenceId) {
         android_auto::surround_view::Size2dInteger size =
                    android_auto::surround_view::Size2dInteger(mOutputWidth, mOutputHeight);
         mSurroundView->Update3dOutputResolution(size);
+#else
+        //new resolution - re-create Imx3DView object, so everything gets initialized again.
+        delete mImx3DSV;
+        mImx3DSV = new Imx3DView(mImxCameraParams.mEvsRotations,
+                             mImxCameraParams.mEvsTransforms,
+                             mImxCameraParams.mKs,
+                             mImxCameraParams.mDs);
 #endif
 
         mSvTexture = new GraphicBuffer(mOutputWidth,
@@ -724,7 +749,7 @@ bool SurroundView3dSession::handleFrames(int sequenceId) {
     }
     ATRACE_END();
 #else
-    bool ret;
+    bool ret = 0;
 
     ret = mImx3DSV->renderSV(mInputPoint,
                            (char *)mOutputPointer.cpu_data_pointer,
@@ -820,14 +845,14 @@ bool SurroundView3dSession::initialize() {
                              mImxCameraParams.mEvsTransforms,
                              mImxCameraParams.mKs,
                              mImxCameraParams.mDs);
-#endif
+    mSurroundView = nullptr;
+#else
     // TODO(b/150412555): ask core-lib team to add API description for "create"
     // method in the .h file.
     // The create method will never return a null pointer based the API
     // description.
     mSurroundView = unique_ptr<SurroundView>(Create());
 
-#ifndef ENABLE_IMX_CORELIB
     SurroundViewStaticDataParams params =
             SurroundViewStaticDataParams(
                     // currently it can only get the logic cameta metadata, it can't set the physical camera
@@ -855,12 +880,16 @@ bool SurroundView3dSession::initialize() {
         mInputPointers[i].cpu_data_pointer =
                 static_cast<void*>(new uint8_t[mInputPointers[i].width * mInputPointers[i].height *
                                                kNumChannels]);
+        if (!mInputPointers[i].cpu_data_pointer) {
+            LOG(ERROR) << "Memory allocation failed. Exiting.";
+            return false;
+        }
 
 #ifdef ENABLE_IMX_CORELIB
         // NOTE: do not make mInputPoint as local variable, because it will release cpu_data_pointer
         // once this function is done.
         // it cause sv camera do not work from the second frame.
-        shared_ptr<unsigned char> p((unsigned char *)mInputPointers[i].cpu_data_pointer);
+        shared_ptr<unsigned char> p((unsigned char *)mInputPointers[i].cpu_data_pointer, std::default_delete<unsigned char[]>());
         mInputPoint.push_back(p);
 #endif
     }

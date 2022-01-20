@@ -28,6 +28,7 @@
 #include <GLES2/gl2ext.h>
 #include <GLES3/gl3.h>
 #include <GLES3/gl3ext.h>
+#include "shader.h"
 
 using namespace android::hardware::automotive::sv::V1_0;
 using namespace android::hardware::automotive::evs::V1_1;
@@ -38,6 +39,9 @@ class SurroundViewServiceCallback : public ISurroundViewStream {
 public:
     SurroundViewServiceCallback(android::sp<IEvsDisplay> pDisplay,
                                 android::sp<ISurroundViewSession> pSession);
+
+    ~SurroundViewServiceCallback();
+    void waitStreamStopped(void);
 
     // Methods from ::android::hardware::automotive::sv::V1_0::ISurroundViewStream.
     android::hardware::Return<void> notify(SvEvent svEvent) override;
@@ -52,13 +56,20 @@ private:
     bool attachRenderTarget(const BufferDesc& tgtBuffer);
     void detachRenderTarget();
 
-    static EGLDisplay   sGLDisplay;
-    static GLuint       sFrameBuffer;
-    static GLuint       sColorBuffer;
-    static GLuint       sDepthBuffer;
-    static GLuint       sTextureId;
-    static EGLImageKHR  sKHRimage;
+    EGLDisplay   sGLDisplay;
+    EGLSurface   sPlaceholderSurface;
+    EGLContext   sContext;
+    GLuint       sFrameBuffer;
+    GLuint       sColorBuffer;
+    GLuint       sDepthBuffer;
+    GLuint       sTextureId;
+    EGLImageKHR  sKHRimage;
 
     android::sp<IEvsDisplay> mDisplay;
     android::sp<ISurroundViewSession> mSession;
+
+    std::mutex                  mLock;
+    std::condition_variable     mSignal;
+    bool                        mRunning = false;
+    programInfo mShaderProgram;
 };

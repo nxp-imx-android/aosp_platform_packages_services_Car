@@ -30,8 +30,6 @@ namespace implementation {
 
 std::mutex SurroundViewService::sLock;
 sp<SurroundViewService> SurroundViewService::sService;
-sp<SurroundView2dSession> SurroundViewService::sSurroundView2dSession;
-sp<SurroundView3dSession> SurroundViewService::sSurroundView3dSession;
 
 const std::string kCameraIds[] = {"0", "1", "2", "3"};
 static const int kVhalUpdateRate = 10;
@@ -148,8 +146,13 @@ bool SurroundViewService::initialize() {
 }
 
 Return<void> SurroundViewService::getCameraIds(getCameraIds_cb _hidl_cb) {
-    hidl_vec<hidl_string> cameraIds = {kCameraIds[0], kCameraIds[1],
-        kCameraIds[2], kCameraIds[3]};
+    hidl_vec<hidl_string> cameraIds;
+    int size = mConfig.cameraConfig.evsCameraIds.size();
+
+    cameraIds.resize(size);
+    for (int i = 0; i < size; i++) {
+        cameraIds[i] = mConfig.cameraConfig.evsCameraIds[i];
+    }
     _hidl_cb(cameraIds);
     return {};
 }
