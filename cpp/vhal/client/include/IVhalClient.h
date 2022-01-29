@@ -42,7 +42,7 @@ public:
     /**
      * Called when new property events happen.
      */
-    virtual void onPropertyEvent(const std::vector<IHalPropValue>& values) = 0;
+    virtual void onPropertyEvent(const std::vector<std::unique_ptr<IHalPropValue>>& values) = 0;
 
     /**
      * Called when property set errors happen.
@@ -52,13 +52,13 @@ public:
 
 // ISubscriptionCallback is a client that could be used to subscribe/unsubscribe.
 class ISubscriptionClient {
+public:
     virtual ~ISubscriptionClient() = default;
-    virtual ::aidl::android::hardware::automotive::vehicle::StatusCode subscribe(
+    virtual ::android::base::Result<void> subscribe(
             const std::vector<::aidl::android::hardware::automotive::vehicle::SubscribeOptions>&
                     options) = 0;
 
-    virtual ::aidl::android::hardware::automotive::vehicle::StatusCode unsubscribe(
-            const std::vector<int>& propIds) = 0;
+    virtual ::android::base::Result<void> unsubscribe(const std::vector<int32_t>& propIds) = 0;
 };
 
 // IVhalClient is a thread-safe client for AIDL or HIDL VHAL backend.
@@ -80,14 +80,17 @@ public:
     virtual void setValue(const IHalPropValue& value,
                           std::shared_ptr<SetValueCallbackFunc> callback) = 0;
 
-    virtual ::aidl::android::hardware::automotive::vehicle::StatusCode linkToDeath(
+    virtual ::android::base::Result<void> addOnBinderDiedCallback(
             std::shared_ptr<OnBinderDiedCallbackFunc> callback) = 0;
 
-    virtual ::aidl::android::hardware::automotive::vehicle::StatusCode unlinkToDeath(
+    virtual ::android::base::Result<void> removeOnBinderDiedCallback(
             std::shared_ptr<OnBinderDiedCallbackFunc> callback) = 0;
 
     virtual ::android::base::Result<std::vector<std::unique_ptr<IHalPropConfig>>>
     getAllPropConfigs() = 0;
+
+    virtual ::android::base::Result<std::vector<std::unique_ptr<IHalPropConfig>>> getPropConfigs(
+            std::vector<int32_t> propIds) = 0;
 
     virtual std::unique_ptr<ISubscriptionClient> getSubscriptionClient(
             std::shared_ptr<ISubscriptionCallback> callback) = 0;
