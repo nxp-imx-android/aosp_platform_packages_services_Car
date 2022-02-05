@@ -110,7 +110,8 @@ public class CarPowerManagementService extends ICarPower.Stub implements
 
     public static final long INVALID_TIMEOUT = -1L;
 
-    private static final String TAG = CarLog.tagFor(CarPowerManagementService.class);
+    static final String TAG = CarLog.tagFor(CarPowerManagementService.class);
+
     private static final String WIFI_STATE_FILENAME = "wifi_state";
     private static final String WIFI_STATE_MODIFIED = "forcibly_disabled";
     private static final String WIFI_STATE_ORIGINAL = "original";
@@ -2359,6 +2360,13 @@ public class CarPowerManagementService extends ICarPower.Stub implements
      */
     public static String powerStateToString(int state) {
         return DebugUtils.valueToString(CarPowerManager.class, "STATE_", state);
+    }
+
+    /**
+     * Returns whether suspend (deep sleep or hibernation) is available on the device.
+     */
+    public boolean isSuspendAvailable(boolean isHibernation) {
+        return isHibernation ? isHibernationAvailable() : isDeepSleepAvailable();
     }
 
     private boolean isDeepSleepAvailable() {
