@@ -427,6 +427,10 @@ public final class Car {
     /** Permission necessary to access car's energy information. */
     public static final String PERMISSION_ENERGY = "android.car.permission.CAR_ENERGY";
 
+    /** Permission necessary to control car's EV charge settings. */
+    public static final String PERMISSION_CONTROL_CAR_ENERGY =
+            "android.car.permission.CONTROL_CAR_ENERGY";
+
     /**
      * Permission necessary to change value of car's range remaining.
      * @hide
@@ -548,6 +552,10 @@ public final class Car {
 
     /** Permission necessary to use {@link CarInfoManager}. */
     public static final String PERMISSION_CAR_INFO = "android.car.permission.CAR_INFO";
+
+    /** Permission necessary to access privileged car info. */
+    public static final String PERMISSION_PRIVILEGED_CAR_INFO =
+            "android.car.permission.PRIVILEGED_CAR_INFO";
 
     /**
      * Permission necessary to read information of vendor properties' permissions.

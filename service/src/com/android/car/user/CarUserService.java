@@ -1056,8 +1056,7 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
             sendUserRemovalResult(userId, UserRemovalResult.STATUS_USER_DOES_NOT_EXIST, receiver);
             return;
         }
-        android.hardware.automotive.vehicle.V2_0.UserInfo halUser =
-                new android.hardware.automotive.vehicle.V2_0.UserInfo();
+        UserInfo halUser = new UserInfo();
         halUser.userId = user.getIdentifier();
         halUser.flags = UserHalHelper.convertFlags(mUserHandleHelper, user);
         UsersInfo usersInfo = UserHalHelper.newUsersInfo(mUserManager, mUserHandleHelper);
@@ -2039,6 +2038,10 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
         for (int i = 0; i < listenersSize; i++) {
             AppLifecycleListener listener = mAppLifecycleListeners.valueAt(i);
             if (!listener.applyFilters(event)) {
+                if (DBG) {
+                    Slogf.d(TAG, "Skipping app listener %s for event %s due to the filters"
+                            + " evaluated to false.", listener, event);
+                }
                 continue;
             }
             Bundle data = new Bundle();
@@ -2048,7 +2051,7 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
             if (fromUserId != USER_NULL) {
                 data.putInt(CarUserManager.BUNDLE_PARAM_PREVIOUS_USER_ID, fromUserId);
             }
-            Slogf.d(TAG, "Notifying listener %s", listener);
+            Slogf.d(TAG, "Notifying app listener %s", listener);
             EventLogHelper.writeCarUserServiceNotifyAppLifecycleListener(listener.uid,
                     listener.packageName, eventType, fromUserId, userId);
             try {
@@ -2066,11 +2069,9 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
     private void handleNotifyServiceUserLifecycleListeners(UserLifecycleEvent event) {
         TimingsTraceLog t = new TimingsTraceLog(TAG, TraceHelper.TRACE_TAG_CAR_SERVICE);
         if (mUserLifecycleListeners.isEmpty()) {
-            Slogf.w(TAG, "Not notifying internal UserLifecycleListeners");
-            return;
-        } else if (DBG) {
-            Slogf.d(TAG, "Notifying %d service listeners of %s", mUserLifecycleListeners.size(),
+            Slogf.w(TAG, "No internal UserLifecycleListeners registered to notify event %s",
                     event);
+            return;
         }
 
         int userId = event.getUserId();
@@ -2080,9 +2081,15 @@ public final class CarUserService extends ICarUserService.Stub implements CarSer
             String listenerName = FunctionalUtils.getLambdaName(listener);
             UserLifecycleEventFilter filter = listener.filter;
             if (filter != null && !filter.apply(event)) {
-                Slogf.d(TAG, "Skipping listener % since the event %s does pass the filter %s",
-                        listenerName, event, filter);
+                if (DBG) {
+                    Slogf.d(TAG, "Skipping service listener % for event %s due to the filter %s"
+                                    + " evaluated to false", listenerName, event, filter);
+                }
                 continue;
+            }
+            if (DBG) {
+                Slogf.d(TAG, "Notifying %d service listeners of %s",
+                        mUserLifecycleListeners.size(), event);
             }
             EventLogHelper.writeCarUserServiceNotifyInternalLifecycleListener(listenerName,
                     eventType, event.getPreviousUserId(), userId);

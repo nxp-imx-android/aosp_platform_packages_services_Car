@@ -37,6 +37,15 @@
          android:label="@string/car_permission_label_energy"
          android:description="@string/car_permission_desc_energy"/>
 
+    <!-- Allows an application to control the vehicle EV energy information.
+         <p>Protection level: signature|privileged
+    -->
+    <permission android:name="android.car.permission.CONTROL_CAR_ENERGY"
+                android:permissionGroup="android.car.permission-group.CAR_MONITORING"
+                android:protectionLevel="signature|privileged"
+                android:label="@string/car_permission_label_control_car_energy"
+                android:description="@string/car_permission_desc_control_car_energy"/>
+
     <!-- Allows an application to adjust the vehicle's range remaining information.
          <p>Protection level: signature|privileged
     -->
@@ -229,6 +238,15 @@
          android:protectionLevel="normal"
          android:label="@string/car_permission_label_car_info"
          android:description="@string/car_permission_desc_car_info"/>
+
+    <!-- Allows an application to read the vehicle privileged car information. For example, it
+         allows an application to read the vehicle's curb weight, trailer presence, etc.
+         <p>Protection level: signature|privileged
+    -->
+    <permission android:name="android.car.permission.PRIVILEGED_CAR_INFO"
+                android:protectionLevel="signature|privileged"
+                android:label="@string/car_permission_label_privileged_car_info"
+                android:description="@string/car_permission_desc_privileged_car_info"/>
 
     <!-- Allows an application to read information of car's vendor permission.
          <p>Protection level: signature|privileged
