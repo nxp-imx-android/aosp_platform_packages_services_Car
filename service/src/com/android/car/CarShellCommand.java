@@ -91,7 +91,6 @@ import android.os.Binder;
 import android.os.FileUtils;
 import android.os.NewUserRequest;
 import android.os.NewUserResponse;
-import android.os.PersistableBundle;
 import android.os.Process;
 import android.os.RemoteException;
 import android.os.ServiceSpecificException;
@@ -127,7 +126,6 @@ import com.android.internal.util.Preconditions;
 import com.android.modules.utils.BasicShellCommandHandler;
 
 import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -1107,7 +1105,7 @@ final class CarShellCommand extends BasicShellCommandHandler {
                 listVhalProps(writer);
                 break;
             case COMMAND_GET_VHAL_BACKEND:
-                listVhalBackend(writer);
+                getVhalBackend(writer);
                 break;
             default:
                 writer.println("Unknown command: \"" + cmd + "\"");
@@ -2715,7 +2713,11 @@ final class CarShellCommand extends BasicShellCommandHandler {
                 CarTelemetryManager.MetricsReportCallback callback =
                         (metricsConfigName, report, telemetryError, status) -> {
                             if (report != null) {
-                                parseTelemetryReport(report, writer);
+                                writer.println("PersistableBundle[");
+                                for (String key : report.keySet()) {
+                                    writer.println("    " + key + ": " + report.get(key) + ",");
+                                }
+                                writer.println("]");
                             } else if (telemetryError != null) {
                                 parseTelemetryError(telemetryError, writer);
                             }
@@ -2740,16 +2742,6 @@ final class CarShellCommand extends BasicShellCommandHandler {
                 break;
             default:
                 printTelemetryHelp(writer);
-        }
-    }
-
-    private void parseTelemetryReport(byte[] report, IndentingPrintWriter writer) {
-        try {
-            PersistableBundle bundle = PersistableBundle.readFromStream(
-                    new ByteArrayInputStream(report));
-            writer.println(bundle);
-        } catch (IOException e) {
-            writer.println("Report is received, but parsing report failed: " + e);
         }
     }
 
@@ -2850,6 +2842,8 @@ final class CarShellCommand extends BasicShellCommandHandler {
     }
 
     private void listVhalProps(IndentingPrintWriter writer) {
+        // Note: The output here is used in AtsVehicleDeviceTest. DO NOT CHANGE the format without
+        // updating AtsVehicleDeviceTest.
         writer.println("All supported property IDs from Vehicle HAL:");
         List<Integer> propIds = new ArrayList<>();
         try {
@@ -2863,7 +2857,9 @@ final class CarShellCommand extends BasicShellCommandHandler {
         }
     }
 
-    private void listVhalBackend(IndentingPrintWriter writer) {
+    private void getVhalBackend(IndentingPrintWriter writer) {
+        // Note: The output here is used in AtsVehicleDeviceTest. DO NOT CHANGE the format without
+        // updating AtsVehicleDeviceTest.
         if (mHal.isAidlVhal()) {
             writer.println("Vehicle HAL backend: AIDL");
         } else {

@@ -1858,17 +1858,16 @@ public class CarPowerManagementService extends ICarPower.Stub implements
     // If we decide to go to a different power state, abort this retry mechanism.
     // Returns true if we successfully suspended.
     private boolean suspendWithRetries() {
+        boolean isDeepSleep;
+        synchronized (mLock) {
+            isDeepSleep = (mActionOnFinish == ACTION_ON_FINISH_DEEP_SLEEP);
+        }
+
+        String suspendTarget = isDeepSleep ? "Suspend-to-RAM" : "Suspend-to-Disk";
         long retryIntervalMs = INITIAL_SUSPEND_RETRY_INTERVAL_MS;
         long totalWaitDurationMs = 0;
-
         while (true) {
-            boolean isDeepSleep;
-
-            synchronized (mLock) {
-                isDeepSleep = (mActionOnFinish == ACTION_ON_FINISH_DEEP_SLEEP);
-            }
-
-            Slogf.i(TAG, "Entering Suspend-to-%s", (isDeepSleep ? "RAM" : "Disk"));
+            Slogf.i(TAG, "Entering %s", suspendTarget);
             boolean suspendSucceeded = isDeepSleep ? mSystemInterface.enterDeepSleep()
                     : mSystemInterface.enterHibernation();
 
@@ -1889,16 +1888,18 @@ public class CarPowerManagementService extends ICarPower.Stub implements
                     }
                     totalWaitDurationMs += retryIntervalMs;
                     retryIntervalMs = Math.min(retryIntervalMs * 2, MAX_RETRY_INTERVAL_MS);
-                }
-                // Check for a new power state now, before going around the loop again
-                if (!mPendingPowerStates.isEmpty()) {
-                    Slogf.i(TAG, "Terminating the attempt to Suspend to RAM");
-                    return false;
+                } else {
+                    // Check for a new power state now, before going around the loop again.
+                    CpmsState state = mPendingPowerStates.peekFirst();
+                    if (state != null && needPowerStateChangeLocked(state)) {
+                        Slogf.i(TAG, "Terminating the attempt to %s", suspendTarget);
+                        return false;
+                    }
                 }
             }
         }
         // Too many failures trying to suspend. Shut down.
-        Slogf.w(TAG, "Could not Suspend to RAM after %dms long trial. Shutting down.",
+        Slogf.w(TAG, "Could not %s after %dms long trial. Shutting down.", suspendTarget,
                 totalWaitDurationMs);
         mSystemInterface.shutdown();
         return false;
@@ -2087,17 +2088,6 @@ public class CarPowerManagementService extends ICarPower.Stub implements
     public void simulateSuspendAndMaybeReboot(boolean shouldReboot,
             @PowerState.ShutdownType int shutdownType, boolean skipGarageMode) {
         boolean isDeepSleep = shutdownType == PowerState.SHUTDOWN_TYPE_DEEP_SLEEP;
-        if (isDeepSleep) {
-            if (isDeepSleepAvailable()) {
-                throw new IllegalStateException("Can't simulate deep sleep: a real deep sleep is "
-                        + "supported by the device");
-            }
-        } else {
-            if (isHibernationAvailable()) {
-                throw new IllegalStateException("Can't simulate hibernation: a real hibernation is "
-                        + "supported by the device");
-            }
-        }
         synchronized (mSimulationWaitObject) {
             mInSimulatedDeepSleepMode = true;
             mWakeFromSimulatedSleep = false;
@@ -2291,14 +2281,14 @@ public class CarPowerManagementService extends ICarPower.Stub implements
             if (!isHibernationAvailable()) {
                 throw new IllegalStateException("The device doesn't support hibernation");
             }
-            param = skipGarageMode ? VehicleApPowerStateShutdownParam.SLEEP_IMMEDIATELY
-                    : VehicleApPowerStateShutdownParam.CAN_SLEEP;
+            param = skipGarageMode ? VehicleApPowerStateShutdownParam.HIBERNATE_IMMEDIATELY
+                    : VehicleApPowerStateShutdownParam.CAN_HIBERNATE;
         } else {
             if (!isDeepSleepAvailable()) {
                 throw new IllegalStateException("The device doesn't support deep sleep");
             }
-            param = skipGarageMode ? VehicleApPowerStateShutdownParam.HIBERNATE_IMMEDIATELY
-                    : VehicleApPowerStateShutdownParam.CAN_HIBERNATE;
+            param = skipGarageMode ? VehicleApPowerStateShutdownParam.SLEEP_IMMEDIATELY
+                    : VehicleApPowerStateShutdownParam.CAN_SLEEP;
         }
         PowerState state = new PowerState(VehicleApPowerStateReq.SHUTDOWN_PREPARE, param);
         synchronized (mLock) {
