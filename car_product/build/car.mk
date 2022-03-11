@@ -63,10 +63,10 @@ PRODUCT_COPY_FILES += \
     frameworks/av/media/libeffects/data/audio_effects.conf:system/etc/audio_effects.conf
 
 PRODUCT_PROPERTY_OVERRIDES += \
-    persist.bluetooth.enablenewavrcp=false \
     ro.carrier=unknown
 
 PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
+    persist.bluetooth.enablenewavrcp=false \
     config.disable_systemtextclassifier=true
 
 ###
