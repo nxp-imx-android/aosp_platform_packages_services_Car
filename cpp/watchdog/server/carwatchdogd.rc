@@ -51,3 +51,7 @@ on early-init
 
     # Start the service only after initializing the properties.
     start carwatchdogd
+
+on early-init && property:ro.boot.carwatchdog=0
+    # Stop the service
+    stop carwatchdogd
