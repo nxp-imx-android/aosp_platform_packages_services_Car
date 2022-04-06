@@ -30,10 +30,13 @@ import android.annotation.TestApi;
 import android.app.Activity;
 import android.app.Service;
 import android.car.admin.CarDevicePolicyManager;
+import android.car.annotation.AddedInOrBefore;
+import android.car.annotation.ExperimentalFeature;
 import android.car.annotation.MandatoryFeature;
 import android.car.annotation.OptionalFeature;
 import android.car.app.CarActivityManager;
-import android.car.builtin.os.ServiceManagerHelper;;
+import android.car.builtin.CarBuiltin;
+import android.car.builtin.os.ServiceManagerHelper;
 import android.car.cluster.CarInstrumentClusterManager;
 import android.car.cluster.ClusterActivityState;
 import android.car.cluster.ClusterHomeManager;
@@ -55,7 +58,6 @@ import android.car.media.CarMediaIntents;
 import android.car.media.CarMediaManager;
 import android.car.navigation.CarNavigationStatusManager;
 import android.car.occupantawareness.OccupantAwarenessManager;
-import android.car.os.CarPerformanceManager;
 import android.car.storagemonitoring.CarStorageMonitoringManager;
 import android.car.telemetry.CarTelemetryManager;
 import android.car.test.CarTestManager;
@@ -109,6 +111,7 @@ public final class Car {
      *  an API added in a specific car API version.
      */
     // TODO(b/214103007): Update this before T release.
+    @AddedInOrBefore(majorVersion = 33)
     public static final int API_VERSION_MAJOR_INT = 32;
 
     /**
@@ -118,7 +121,22 @@ public final class Car {
      * Client should check this version to use APIs which were added in a minor only version
      * update.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final int API_VERSION_MINOR_INT = 0;
+
+    /**
+     * Represents a minor version change of car platform for the same
+     * {@link android.os.Build.VERSION#SDK_INT}.
+     *
+     * <p>It will reset to {@code 0} whenever {@link android.os.Build.VERSION#SDK_INT} is updated
+     * and will increase by {@code 1} if car builtin or other car platform part is changed with the
+     * same {@link android.os.Build.VERSION#SDK_INT}. Client should check this version to use APIs
+     * which were added in a minor only version update.
+     *
+     * TODO(b/224982783) Remove "hide" in future release.
+     * @hide
+     */
+    public static final int PLATFORM_VERSION_MINOR_INT = CarBuiltin.PLATFORM_VERSION_MINOR_INT;
 
     /**
      * Binder service name of car service registered to service manager.
@@ -126,6 +144,7 @@ public final class Car {
      * @hide
      */
     @VisibleForHiddenApiCheck
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_SERVICE_BINDER_SERVICE_NAME = "car_service";
 
     /**
@@ -143,6 +162,7 @@ public final class Car {
      * <xml><meta-data android:name="distractionOptimized" android:value="true"/></xml>
      */
     @SuppressLint("IntentName")
+    @AddedInOrBefore(majorVersion = 33)
     public static final String META_DATA_DISTRACTION_OPTIMIZED = "distractionOptimized";
 
     /**
@@ -160,6 +180,7 @@ public final class Car {
      * <xml><meta-data android:name="requires-car-feature" android:value="diagnostic"/></xml>
      */
     @SuppressLint("IntentName")
+    @AddedInOrBefore(majorVersion = 33)
     public static final String META_DATA_REQUIRES_CAR_FEATURE = "requires-car-feature";
 
     /**
@@ -169,30 +190,37 @@ public final class Car {
      */
     @MandatoryFeature
     @Deprecated
+    @AddedInOrBefore(majorVersion = 33)
     public static final String SENSOR_SERVICE = "sensor";
 
     /** Service name for {@link CarInfoManager}, to be used in {@link #getCarManager(String)}. */
     @MandatoryFeature
+    @AddedInOrBefore(majorVersion = 33)
     public static final String INFO_SERVICE = "info";
 
     /** Service name for {@link CarAppFocusManager}. */
     @MandatoryFeature
+    @AddedInOrBefore(majorVersion = 33)
     public static final String APP_FOCUS_SERVICE = "app_focus";
 
     /** Service name for {@link CarPackageManager} */
     @MandatoryFeature
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PACKAGE_SERVICE = "package";
 
     /** Service name for {@link CarAudioManager} */
     @MandatoryFeature
+    @AddedInOrBefore(majorVersion = 33)
     public static final String AUDIO_SERVICE = "audio";
 
     /** Service name for {@link CarNavigationStatusManager} */
     @OptionalFeature
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_NAVIGATION_SERVICE = "car_navigation_service";
 
     /** Service name for {@link CarOccupantZoneManager} */
     @MandatoryFeature
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_OCCUPANT_ZONE_SERVICE = "car_occupant_zone_service";
 
     /**
@@ -203,6 +231,7 @@ public final class Car {
     @MandatoryFeature
     @SystemApi
     @TestApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_USER_SERVICE = "car_user_service";
 
     /**
@@ -211,6 +240,7 @@ public final class Car {
      * @hide
      */
     @OptionalFeature
+    @AddedInOrBefore(majorVersion = 33)
     public static final String EXPERIMENTAL_CAR_USER_SERVICE = "experimental_car_user_service";
 
     /**
@@ -221,6 +251,7 @@ public final class Car {
     @MandatoryFeature
     @SystemApi
     @TestApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_DEVICE_POLICY_SERVICE = "car_device_policy_service";
 
     /**
@@ -231,6 +262,7 @@ public final class Car {
      */
     @OptionalFeature
     @Deprecated
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_INSTRUMENT_CLUSTER_SERVICE = "cluster_service";
 
     /**
@@ -242,6 +274,7 @@ public final class Car {
     @MandatoryFeature
     @Deprecated
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CABIN_SERVICE = "cabin";
 
     /**
@@ -249,6 +282,7 @@ public final class Car {
      */
     @OptionalFeature
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String DIAGNOSTIC_SERVICE = "diagnostic";
 
     /**
@@ -259,12 +293,14 @@ public final class Car {
     @MandatoryFeature
     @Deprecated
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String HVAC_SERVICE = "hvac";
 
     /**
      * Service name for {@link CarPowerManager}
      */
     @MandatoryFeature
+    @AddedInOrBefore(majorVersion = 33)
     public static final String POWER_SERVICE = "power";
 
     /**
@@ -272,12 +308,14 @@ public final class Car {
      */
     @MandatoryFeature
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PROJECTION_SERVICE = "projection";
 
     /**
      * Service name for {@link CarPropertyManager}
      */
     @MandatoryFeature
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PROPERTY_SERVICE = "property";
 
     /**
@@ -290,6 +328,7 @@ public final class Car {
     @MandatoryFeature
     @Deprecated
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String VENDOR_EXTENSION_SERVICE = "vendor_extension";
 
     /**
@@ -299,6 +338,7 @@ public final class Car {
      */
     @OptionalFeature
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String VEHICLE_MAP_SERVICE = "vehicle_map_service";
 
     /**
@@ -310,6 +350,7 @@ public final class Car {
     @OptionalFeature
     @Deprecated
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String VMS_SUBSCRIBER_SERVICE = "vehicle_map_subscriber_service";
 
     /**
@@ -318,16 +359,19 @@ public final class Car {
      */
     @MandatoryFeature
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_DRIVING_STATE_SERVICE = "drivingstate";
 
     /**
      * Service name for {@link CarUxRestrictionsManager}
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_UX_RESTRICTION_SERVICE = "uxrestriction";
 
     /** @hide */
     @OptionalFeature
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String OCCUPANT_AWARENESS_SERVICE = "occupant_awareness";
 
     /**
@@ -336,6 +380,7 @@ public final class Car {
      */
     @MandatoryFeature
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_MEDIA_SERVICE = "car_media";
 
     /**
@@ -344,6 +389,7 @@ public final class Car {
      * @hide
      */
     @MandatoryFeature
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_BUGREPORT_SERVICE = "car_bugreport";
 
     /**
@@ -351,12 +397,14 @@ public final class Car {
      */
     @OptionalFeature
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String STORAGE_MONITORING_SERVICE = "storage_monitoring";
 
     /**
      * Service name for {@link android.car.watchdog.CarWatchdogManager}
      */
     @MandatoryFeature
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_WATCHDOG_SERVICE = "car_watchdog";
 
     /**
@@ -364,8 +412,8 @@ public final class Car {
      *
      * @hide
      */
-    @MandatoryFeature
-    @SystemApi
+    @ExperimentalFeature
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_PERFORMANCE_SERVICE = "car_performance";
 
     /**
@@ -373,12 +421,14 @@ public final class Car {
      */
     @MandatoryFeature
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_INPUT_SERVICE = "android.car.input";
 
     /**
      * @hide
      */
     @OptionalFeature
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CLUSTER_HOME_SERVICE = "cluster_home_service";
 
     /**
@@ -388,6 +438,7 @@ public final class Car {
      */
     @MandatoryFeature
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String TEST_SERVICE = "car-service-test";
 
     /**
@@ -397,6 +448,7 @@ public final class Car {
      */
     @OptionalFeature
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_EVS_SERVICE = "car_evs_service";
 
     /**
@@ -407,6 +459,7 @@ public final class Car {
     @OptionalFeature
     @SystemApi
     @TestApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_TELEMETRY_SERVICE = "car_telemetry_service";
 
     /**
@@ -416,18 +469,22 @@ public final class Car {
      */
     @MandatoryFeature
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_ACTIVITY_SERVICE = "car_activity_service";
 
     /** Permission necessary to access car's mileage information.
      *  @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_MILEAGE = "android.car.permission.CAR_MILEAGE";
 
     /** Permission necessary to access car's energy information. */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_ENERGY = "android.car.permission.CAR_ENERGY";
 
     /** Permission necessary to control car's EV charge settings. */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CONTROL_CAR_ENERGY =
             "android.car.permission.CONTROL_CAR_ENERGY";
 
@@ -436,24 +493,29 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_ADJUST_RANGE_REMAINING =
             "android.car.permission.ADJUST_RANGE_REMAINING";
 
     /** Permission necessary to access car's VIN information */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_IDENTIFICATION =
             "android.car.permission.CAR_IDENTIFICATION";
 
     /** Permission necessary to access car's speed. */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_SPEED = "android.car.permission.CAR_SPEED";
 
     /** Permission necessary to access car's dynamics state.
      *  @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CAR_DYNAMICS_STATE =
             "android.car.permission.CAR_DYNAMICS_STATE";
 
     /** Permission necessary to access car's fuel door and ev charge port. */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_ENERGY_PORTS = "android.car.permission.CAR_ENERGY_PORTS";
 
     /**
@@ -461,6 +523,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CONTROL_ENERGY_PORTS =
             "android.car.permission.CONTROL_CAR_ENERGY_PORTS";
 
@@ -469,12 +532,14 @@ public final class Car {
      *  @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_EXTERIOR_LIGHTS =
             "android.car.permission.CAR_EXTERIOR_LIGHTS";
 
     /**
      * Permission necessary to read car's interior lights information.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_READ_INTERIOR_LIGHTS =
             "android.car.permission.READ_CAR_INTERIOR_LIGHTS";
 
@@ -482,27 +547,32 @@ public final class Car {
      *  @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CONTROL_EXTERIOR_LIGHTS =
             "android.car.permission.CONTROL_CAR_EXTERIOR_LIGHTS";
 
     /**
      * Permission necessary to control car's interior lights.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CONTROL_INTERIOR_LIGHTS =
             "android.car.permission.CONTROL_CAR_INTERIOR_LIGHTS";
 
     /** Permission necessary to access car's powertrain information.*/
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_POWERTRAIN = "android.car.permission.CAR_POWERTRAIN";
 
     /**
      * Permission necessary to change car audio volume through {@link CarAudioManager}.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CAR_CONTROL_AUDIO_VOLUME =
             "android.car.permission.CAR_CONTROL_AUDIO_VOLUME";
 
     /**
      * Permission necessary to change car audio settings through {@link CarAudioManager}.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CAR_CONTROL_AUDIO_SETTINGS =
             "android.car.permission.CAR_CONTROL_AUDIO_SETTINGS";
 
@@ -512,12 +582,14 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_RECEIVE_CAR_AUDIO_DUCKING_EVENTS =
             "android.car.permission.RECEIVE_CAR_AUDIO_DUCKING_EVENTS";
 
     /**
      * Permission necessary to use {@link CarNavigationStatusManager}.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CAR_NAVIGATION_MANAGER =
             "android.car.permission.CAR_NAVIGATION_MANAGER";
 
@@ -528,6 +600,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CAR_INSTRUMENT_CLUSTER_CONTROL =
             "android.car.permission.CAR_INSTRUMENT_CLUSTER_CONTROL";
 
@@ -536,6 +609,7 @@ public final class Car {
      *
      * @hide
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CAR_MONITOR_CLUSTER_NAVIGATION_STATE =
             "android.car.permission.CAR_MONITOR_CLUSTER_NAVIGATION_STATE";
 
@@ -547,13 +621,16 @@ public final class Car {
      * @hide
      */
     @VisibleForHiddenApiCheck
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CAR_DISPLAY_IN_CLUSTER =
             "android.car.permission.CAR_DISPLAY_IN_CLUSTER";
 
     /** Permission necessary to use {@link CarInfoManager}. */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CAR_INFO = "android.car.permission.CAR_INFO";
 
     /** Permission necessary to access privileged car info. */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_PRIVILEGED_CAR_INFO =
             "android.car.permission.PRIVILEGED_CAR_INFO";
 
@@ -562,10 +639,12 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_READ_CAR_VENDOR_PERMISSION_INFO =
             "android.car.permission.READ_CAR_VENDOR_PERMISSION_INFO";
 
     /** Permission necessary to read temperature of car's exterior environment. */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_EXTERIOR_ENVIRONMENT =
             "android.car.permission.CAR_EXTERIOR_ENVIRONMENT";
 
@@ -574,6 +653,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_VENDOR_EXTENSION =
             "android.car.permission.CAR_VENDOR_EXTENSION";
 
@@ -581,6 +661,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CONTROL_APP_BLOCKING =
             "android.car.permission.CONTROL_APP_BLOCKING";
 
@@ -589,6 +670,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CAR_ENGINE_DETAILED =
             "android.car.permission.CAR_ENGINE_DETAILED";
 
@@ -597,6 +679,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_TIRES = "android.car.permission.CAR_TIRES";
 
     /**
@@ -604,6 +687,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CAR_EPOCH_TIME = "android.car.permission.CAR_EPOCH_TIME";
 
     /**
@@ -612,12 +696,14 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_STORAGE_ENCRYPTION_BINDING_SEED =
             "android.car.permission.STORAGE_ENCRYPTION_BINDING_SEED";
 
     /**
      * Permission necessary to access car's steering angle information.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_READ_STEERING_STATE =
             "android.car.permission.READ_CAR_STEERING";
 
@@ -625,6 +711,7 @@ public final class Car {
      * Permission necessary to read and write display units for distance, fuel volume, tire pressure
      * and ev battery.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_READ_DISPLAY_UNITS =
             "android.car.permission.READ_CAR_DISPLAY_UNITS";
 
@@ -632,6 +719,7 @@ public final class Car {
      * Permission necessary to control display units for distance, fuel volume, tire pressure
      * and ev battery.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CONTROL_DISPLAY_UNITS =
             "android.car.permission.CONTROL_CAR_DISPLAY_UNITS";
 
@@ -640,6 +728,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CONTROL_CAR_DOORS =
             "android.car.permission.CONTROL_CAR_DOORS";
 
@@ -648,6 +737,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CONTROL_CAR_WINDOWS =
             "android.car.permission.CONTROL_CAR_WINDOWS";
 
@@ -656,6 +746,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CONTROL_CAR_SEATS =
             "android.car.permission.CONTROL_CAR_SEATS";
 
@@ -664,6 +755,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CONTROL_CAR_MIRRORS =
             "android.car.permission.CONTROL_CAR_MIRRORS";
 
@@ -672,6 +764,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CONTROL_CAR_CLIMATE =
             "android.car.permission.CONTROL_CAR_CLIMATE";
 
@@ -680,11 +773,13 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CAR_POWER = "android.car.permission.CAR_POWER";
 
     /**
      * Permission necessary to read the current power policy or be notified of power policy change.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_READ_CAR_POWER_POLICY =
             "android.car.permission.READ_CAR_POWER_POLICY";
 
@@ -693,6 +788,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CONTROL_CAR_POWER_POLICY =
             "android.car.permission.CONTROL_CAR_POWER_POLICY";
 
@@ -701,6 +797,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CONTROL_SHUTDOWN_PROCESS =
             "android.car.permission.CONTROL_SHUTDOWN_PROCESS";
 
@@ -709,6 +806,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CAR_PROJECTION = "android.car.permission.CAR_PROJECTION";
 
     /**
@@ -716,6 +814,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CAR_PROJECTION_STATUS =
             "android.car.permission.ACCESS_CAR_PROJECTION_STATUS";
 
@@ -726,6 +825,7 @@ public final class Car {
      */
     @Deprecated
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_MOCK_VEHICLE_HAL =
             "android.car.permission.CAR_MOCK_VEHICLE_HAL";
 
@@ -734,6 +834,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CAR_TEST_SERVICE =
             "android.car.permission.CAR_TEST_SERVICE";
 
@@ -742,6 +843,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CAR_DRIVING_STATE =
             "android.car.permission.CAR_DRIVING_STATE";
 
@@ -751,6 +853,7 @@ public final class Car {
      * @hide
      */
     @VisibleForHiddenApiCheck
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_BIND_VMS_CLIENT =
             "android.car.permission.BIND_VMS_CLIENT";
 
@@ -760,6 +863,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_VMS_PUBLISHER = "android.car.permission.VMS_PUBLISHER";
 
     /**
@@ -768,6 +872,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_VMS_SUBSCRIBER = "android.car.permission.VMS_SUBSCRIBER";
 
     /**
@@ -776,6 +881,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CAR_DIAGNOSTIC_READ_ALL =
             "android.car.permission.CAR_DIAGNOSTICS";
 
@@ -785,6 +891,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CAR_DIAGNOSTIC_CLEAR =
             "android.car.permission.CLEAR_CAR_DIAGNOSTICS";
 
@@ -794,6 +901,7 @@ public final class Car {
      * @hide
      */
     @VisibleForHiddenApiCheck
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CAR_UX_RESTRICTIONS_CONFIGURATION =
             "android.car.permission.CAR_UX_RESTRICTIONS_CONFIGURATION";
 
@@ -803,6 +911,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_READ_CAR_OCCUPANT_AWARENESS_STATE =
             "android.car.permission.READ_CAR_OCCUPANT_AWARENESS_STATE";
 
@@ -812,6 +921,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String ACCESS_PRIVATE_DISPLAY_ID =
             "android.car.permission.ACCESS_PRIVATE_DISPLAY_ID";
 
@@ -821,6 +931,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CONTROL_CAR_OCCUPANT_AWARENESS_SYSTEM =
             "android.car.permission.CONTROL_CAR_OCCUPANT_AWARENESS_SYSTEM";
 
@@ -830,6 +941,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_STORAGE_MONITORING =
             "android.car.permission.STORAGE_MONITORING";
 
@@ -839,6 +951,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CONTROL_CAR_FEATURES =
             "android.car.permission.CONTROL_CAR_FEATURES";
 
@@ -848,6 +961,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_USE_CAR_WATCHDOG =
             "android.car.permission.USE_CAR_WATCHDOG";
 
@@ -857,6 +971,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CAR_MONITOR_INPUT =
             "android.car.permission.CAR_MONITOR_INPUT";
 
@@ -867,6 +982,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_REQUEST_CAR_EVS_ACTIVITY =
             "android.car.permission.REQUEST_CAR_EVS_ACTIVITY";
 
@@ -876,6 +992,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CONTROL_CAR_EVS_ACTIVITY =
             "android.car.permission.CONTROL_CAR_EVS_ACTIVITY";
 
@@ -885,6 +1002,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_USE_CAR_EVS_CAMERA =
             "android.car.permission.USE_CAR_EVS_CAMERA";
 
@@ -894,6 +1012,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_MONITOR_CAR_EVS_STATUS =
             "android.car.permission.MONITOR_CAR_EVS_STATUS";
 
@@ -903,6 +1022,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_USE_CAR_TELEMETRY_SERVICE =
             "android.car.permission.USE_CAR_TELEMETRY_SERVICE";
 
@@ -912,6 +1032,7 @@ public final class Car {
      * @deprecated connection type constants are no longer used
      */
     @Deprecated
+    @AddedInOrBefore(majorVersion = 33)
     public static final int CONNECTION_TYPE_EMBEDDED = 5;
 
     /**
@@ -921,6 +1042,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_TEMPLATE_RENDERER =
             "android.car.permission.TEMPLATE_RENDERER";
 
@@ -930,6 +1052,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CONTROL_CAR_WATCHDOG_CONFIG =
             "android.car.permission.CONTROL_CAR_WATCHDOG_CONFIG";
 
@@ -939,6 +1062,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_COLLECT_CAR_WATCHDOG_METRICS =
             "android.car.permission.COLLECT_CAR_WATCHDOG_METRICS";
 
@@ -947,7 +1071,7 @@ public final class Car {
      *
      * @hide
      */
-    @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_COLLECT_CAR_CPU_INFO =
             "android.car.permission.COLLECT_CAR_CPU_INFO";
 
@@ -957,6 +1081,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String PERMISSION_CONTROL_CAR_APP_LAUNCH =
             "android.car.permission.CONTROL_CAR_APP_LAUNCH";
 
@@ -970,6 +1095,7 @@ public final class Car {
      * @hide
      */
     @SdkConstant(SdkConstantType.SERVICE_ACTION)
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_TEMPLATE_HOST_RENDERER_SERVICE =
             "android.car.template.host.RendererService";
 
@@ -983,6 +1109,7 @@ public final class Car {
      */
     @Deprecated
     @SdkConstant(SdkConstantType.ACTIVITY_INTENT_ACTION)
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_INTENT_ACTION_MEDIA_TEMPLATE =
             "android.car.intent.action.MEDIA_TEMPLATE";
 
@@ -990,6 +1117,7 @@ public final class Car {
      * @deprecated Use {@link CarMediaIntents#EXTRA_MEDIA_COMPONENT} instead.
      */
     @Deprecated
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_EXTRA_MEDIA_COMPONENT =
             "android.car.intent.extra.MEDIA_COMPONENT";
 
@@ -1000,17 +1128,20 @@ public final class Car {
      * and above. Apps must use {@link #CAR_EXTRA_MEDIA_COMPONENT} instead.
      */
     @Deprecated
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_EXTRA_MEDIA_PACKAGE = "android.car.intent.extra.MEDIA_PACKAGE";
 
     /**
      * Used as a string extra field of media session to specify the service corresponding to the
      * session.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_EXTRA_BROWSE_SERVICE_FOR_SESSION =
             "android.media.session.BROWSE_SERVICE";
 
     /** @hide */
     @VisibleForHiddenApiCheck
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_SERVICE_INTERFACE_NAME = CommonConstants.CAR_SERVICE_INTERFACE;
 
     private static final String CAR_SERVICE_PACKAGE = "com.android.car";
@@ -1025,6 +1156,7 @@ public final class Car {
      * @hide
      */
     @VisibleForHiddenApiCheck
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_CATEGORY_NAVIGATION = "android.car.cluster.NAVIGATION";
 
     /**
@@ -1035,6 +1167,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final String CAR_EXTRA_CLUSTER_ACTIVITY_STATE =
             "android.car.cluster.ClusterActivityState";
 
@@ -1063,6 +1196,7 @@ public final class Car {
          * @param ready When {@code true, car service is ready and all accesses are ok.
          *              Otherwise car service has crashed or killed and will be restarted.
          */
+        @AddedInOrBefore(majorVersion = 33)
         void onLifecycleChanged(@NonNull Car car, boolean ready);
     }
 
@@ -1070,12 +1204,14 @@ public final class Car {
      * {@link #createCar(Context, Handler, long, CarServiceLifecycleListener)}'s
      * waitTimeoutMs value to use to wait forever inside the call until car service is ready.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final long CAR_WAIT_TIMEOUT_WAIT_FOREVER = -1;
 
     /**
      * {@link #createCar(Context, Handler, long, CarServiceLifecycleListener)}'s
      * waitTimeoutMs value to use to skip any waiting inside the call.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final long CAR_WAIT_TIMEOUT_DO_NOT_WAIT = 0;
 
     private static final long CAR_SERVICE_BIND_RETRY_INTERVAL_MS = 500;
@@ -1103,6 +1239,7 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final int FEATURE_REQUEST_SUCCESS = 0;
     /**
      * The requested feature is already enabled or disabled as requested. No need to reboot the
@@ -1110,18 +1247,21 @@ public final class Car {
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final int FEATURE_REQUEST_ALREADY_IN_THE_STATE = 1;
     /**
      * The requested feature is mandatory cannot be enabled or disabled. It is always enabled.
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final int FEATURE_REQUEST_MANDATORY = 2;
     /**
      * The requested feature is not available and cannot be enabled or disabled.
      * @hide
      */
     @SystemApi
+    @AddedInOrBefore(majorVersion = 33)
     public static final int FEATURE_REQUEST_NOT_EXISTING = 3;
 
     /** @hide */
@@ -1239,6 +1379,7 @@ public final class Car {
      * @return true if car API version in the system is same or newer than
      *              {@code requiredApiVersionMajor}.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static boolean isApiVersionAtLeast(int requiredApiVersionMajor) {
         return API_VERSION_MAJOR_INT >= requiredApiVersionMajor;
     }
@@ -1253,6 +1394,7 @@ public final class Car {
      *         {@code requiredApiVersionMajor} with minor version same or newer than
      *         {@code requiredApiVersionMinor}.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static boolean isApiVersionAtLeast(int requiredApiVersionMajor,
             int requiredApiVersionMinor) {
         return (API_VERSION_MAJOR_INT > requiredApiVersionMajor)
@@ -1269,6 +1411,7 @@ public final class Car {
      * @return true if car API version in the system is same or newer than
      *              {@code requiredApiVersionMajor}.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static boolean isApiAndPlatformVersionAtLeast(int requiredApiVersionMajor,
             int minPlatformSdkInt) {
         return API_VERSION_MAJOR_INT >= requiredApiVersionMajor
@@ -1285,6 +1428,7 @@ public final class Car {
      * @return true if car API version in the system is same or newer than
      *              {@code requiredApiVersionMajor}.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static boolean isApiAndPlatformVersionAtLeast(int requiredApiVersionMajor,
             int requiredApiVersionMinor,
             int minPlatformSdkInt) {
@@ -1312,6 +1456,7 @@ public final class Car {
      * @deprecated use {@link #createCar(Context, Handler)} instead.
      */
     @Deprecated
+    @AddedInOrBefore(majorVersion = 33)
     public static Car createCar(Context context, ServiceConnection serviceConnectionListener,
             @Nullable Handler handler) {
         assertNonNullContext(context);
@@ -1340,6 +1485,7 @@ public final class Car {
      * @deprecated use {@link #createCar(Context, Handler)} instead.
      */
     @Deprecated
+    @AddedInOrBefore(majorVersion = 33)
     public static Car createCar(Context context, ServiceConnection serviceConnectionListener) {
         return createCar(context, serviceConnectionListener, null);
     }
@@ -1355,6 +1501,7 @@ public final class Car {
      * @return Car object if operation succeeded, otherwise null.
      */
     @Nullable
+    @AddedInOrBefore(majorVersion = 33)
     public static Car createCar(Context context) {
         return createCar(context, (Handler) null);
     }
@@ -1375,6 +1522,7 @@ public final class Car {
      * @return Car object if operation succeeded, otherwise null.
      */
     @Nullable
+    @AddedInOrBefore(majorVersion = 33)
     public static Car createCar(Context context, @Nullable Handler handler) {
         assertNonNullContext(context);
         Car car = null;
@@ -1472,6 +1620,7 @@ public final class Car {
      *                      interpreted as timeout value.
      */
     @NonNull
+    @AddedInOrBefore(majorVersion = 33)
     public static Car createCar(@NonNull Context context,
             @Nullable Handler handler, long waitTimeoutMs,
             @NonNull CarServiceLifecycleListener statusChangeListener) {
@@ -1631,6 +1780,7 @@ public final class Car {
      * {@link #createCar(Context, Handler)}.
      */
     @Deprecated
+    @AddedInOrBefore(majorVersion = 33)
     public void connect() throws IllegalStateException {
         synchronized (mLock) {
             if (mConnectionState != STATE_DISCONNECTED) {
@@ -1659,6 +1809,7 @@ public final class Car {
      * called, all Car*Managers from this instance becomes invalid, and
      * {@link Car#getCarManager(String)} will return different instance if it is connected again.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public void disconnect() {
         synchronized (mLock) {
             handleCarDisconnectLocked();
@@ -1674,6 +1825,7 @@ public final class Car {
      * connecting.
      * @return
      */
+    @AddedInOrBefore(majorVersion = 33)
     public boolean isConnected() {
         synchronized (mLock) {
             return mService != null;
@@ -1684,6 +1836,7 @@ public final class Car {
      * Tells if this instance is already connecting to car service or not.
      * @return
      */
+    @AddedInOrBefore(majorVersion = 33)
     public boolean isConnecting() {
         synchronized (mLock) {
             return mConnectionState == STATE_CONNECTING;
@@ -1692,6 +1845,7 @@ public final class Car {
 
     /** @hide */
     @VisibleForTesting
+    @AddedInOrBefore(majorVersion = 33)
     public ServiceConnection getServiceConnectionListener() {
         return mServiceConnectionListener;
     }
@@ -1705,6 +1859,7 @@ public final class Car {
      * @return Matching service manager or null if there is no such service.
      */
     @Nullable
+    @AddedInOrBefore(majorVersion = 33)
     public Object getCarManager(String serviceName) {
         CarManagerBase manager;
         synchronized (mLock) {
@@ -1743,6 +1898,7 @@ public final class Car {
      */
     @ConnectionType
     @Deprecated
+    @AddedInOrBefore(majorVersion = 33)
     public int getCarConnectionType() {
         return CONNECTION_TYPE_EMBEDDED;
     }
@@ -1755,6 +1911,7 @@ public final class Car {
      *
      * <p>For mandatory features, this will always return true.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public boolean isFeatureEnabled(@NonNull String featureName) {
         ICar service;
         synchronized (mLock) {
@@ -1777,6 +1934,7 @@ public final class Car {
     @SystemApi
     @RequiresPermission(PERMISSION_CONTROL_CAR_FEATURES)
     @FeaturerRequestEnum
+    @AddedInOrBefore(majorVersion = 33)
     public int enableFeature(@NonNull String featureName) {
         ICar service;
         synchronized (mLock) {
@@ -1803,6 +1961,7 @@ public final class Car {
     @SystemApi
     @RequiresPermission(PERMISSION_CONTROL_CAR_FEATURES)
     @FeaturerRequestEnum
+    @AddedInOrBefore(majorVersion = 33)
     public int disableFeature(@NonNull String featureName) {
         ICar service;
         synchronized (mLock) {
@@ -1826,6 +1985,7 @@ public final class Car {
      */
     @SystemApi
     @RequiresPermission(PERMISSION_CONTROL_CAR_FEATURES)
+    @AddedInOrBefore(majorVersion = 33)
     @NonNull public List<String> getAllEnabledFeatures() {
         ICar service;
         synchronized (mLock) {
@@ -1849,6 +2009,7 @@ public final class Car {
      */
     @SystemApi
     @RequiresPermission(PERMISSION_CONTROL_CAR_FEATURES)
+    @AddedInOrBefore(majorVersion = 33)
     @NonNull public List<String> getAllPendingDisabledFeatures() {
         ICar service;
         synchronized (mLock) {
@@ -1872,6 +2033,7 @@ public final class Car {
      */
     @SystemApi
     @RequiresPermission(PERMISSION_CONTROL_CAR_FEATURES)
+    @AddedInOrBefore(majorVersion = 33)
     @NonNull public List<String> getAllPendingEnabledFeatures() {
         ICar service;
         synchronized (mLock) {
@@ -1889,18 +2051,21 @@ public final class Car {
 
     /** @hide */
     @VisibleForHiddenApiCheck
+    @AddedInOrBefore(majorVersion = 33)
     public Context getContext() {
         return mContext;
     }
 
     /** @hide */
     @VisibleForTesting
+    @AddedInOrBefore(majorVersion = 33)
     public Handler getEventHandler() {
         return mEventHandler;
     }
 
     /** @hide */
     @VisibleForTesting
+    @AddedInOrBefore(majorVersion = 33)
     public <T> T handleRemoteExceptionFromCarService(RemoteException e, T returnValue) {
         handleRemoteExceptionFromCarService(e);
         return returnValue;
@@ -1908,6 +2073,7 @@ public final class Car {
 
     /** @hide */
     @VisibleForHiddenApiCheck
+    @AddedInOrBefore(majorVersion = 33)
     public void handleRemoteExceptionFromCarService(RemoteException e) {
         if (e instanceof TransactionTooLargeException) {
             Log.w(TAG_CAR, "Car service threw TransactionTooLargeException", e);
@@ -1949,6 +2115,7 @@ public final class Car {
 
     /** @hide */
     @VisibleForHiddenApiCheck
+    @AddedInOrBefore(majorVersion = 33)
     public static <T> T handleRemoteExceptionFromCarService(Service service, RemoteException e,
             T returnValue) {
         handleRemoteExceptionFromCarService(service, e);
@@ -1957,6 +2124,7 @@ public final class Car {
 
     /** @hide */
     @VisibleForHiddenApiCheck
+    @AddedInOrBefore(majorVersion = 33)
     public static  void handleRemoteExceptionFromCarService(Service service, RemoteException e) {
         if (e instanceof TransactionTooLargeException) {
             Log.w(TAG_CAR, "Car service threw TransactionTooLargeException, client:"
@@ -2059,9 +2227,6 @@ public final class Car {
                 break;
             case CAR_WATCHDOG_SERVICE:
                 manager = new CarWatchdogManager(this, binder);
-                break;
-            case CAR_PERFORMANCE_SERVICE:
-                manager = new CarPerformanceManager(this, binder);
                 break;
             case CAR_INPUT_SERVICE:
                 manager = new CarInputManager(this, binder);

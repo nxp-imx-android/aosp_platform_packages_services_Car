@@ -66,6 +66,7 @@ import android.car.watchdog.ResourceOveruseConfiguration;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.hardware.automotive.vehicle.CreateUserRequest;
 import android.hardware.automotive.vehicle.CreateUserStatus;
@@ -89,6 +90,7 @@ import android.hardware.automotive.vehicle.VehicleGear;
 import android.hardware.automotive.vehicle.VehiclePropError;
 import android.os.Binder;
 import android.os.FileUtils;
+import android.os.IBinder;
 import android.os.NewUserRequest;
 import android.os.NewUserResponse;
 import android.os.PersistableBundle;
@@ -120,6 +122,9 @@ import com.android.car.pm.CarPackageManagerService;
 import com.android.car.power.CarPowerManagementService;
 import com.android.car.systeminterface.SystemInterface;
 import com.android.car.telemetry.CarTelemetryService;
+import com.android.car.telemetry.scriptexecutorinterface.IScriptExecutor;
+import com.android.car.telemetry.scriptexecutorinterface.IScriptExecutorListener;
+import com.android.car.telemetry.util.IoUtils;
 import com.android.car.user.CarUserService;
 import com.android.car.user.UserHandleHelper;
 import com.android.car.watchdog.CarWatchdogService;
@@ -127,8 +132,8 @@ import com.android.internal.util.Preconditions;
 import com.android.modules.utils.BasicShellCommandHandler;
 
 import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.time.Duration;
@@ -171,6 +176,8 @@ final class CarShellCommand extends BasicShellCommandHandler {
     private static final String PARAM_REAL = "--real";
     private static final String PARAM_AUTO = "--auto";
     private static final String PARAM_SKIP_GARAGEMODE = "--skip-garagemode";
+    private static final String PARAM_REBOOT = "--reboot";
+    private static final String PARAM_WAKEUP_AFTER = "--wakeup-after";
     private static final String COMMAND_SET_UID_TO_ZONE = "set-audio-zone-for-uid";
     private static final String COMMAND_RESET_VOLUME_CONTEXT = "reset-selected-volume-context";
     private static final String COMMAND_SET_MUTE_CAR_VOLUME_GROUP = "set-mute-car-volume-group";
@@ -350,7 +357,7 @@ final class CarShellCommand extends BasicShellCommandHandler {
     private static final String PARAM_ON_MODE = "on";
     private static final String PARAM_OFF_MODE = "off";
     private static final String PARAM_QUERY_MODE = "query";
-    private static final String PARAM_REBOOT = "reboot";
+    private static final String PARAM_REBOOT_AFTER_GARAGEMODE = "reboot";
     private static final String PARAM_MUTE = "mute";
     private static final String PARAM_UNMUTE = "unmute";
 
@@ -434,6 +441,8 @@ final class CarShellCommand extends BasicShellCommandHandler {
     private final CarWatchdogService mCarWatchdogService;
     private final CarTelemetryService mCarTelemetryService;
     private long mKeyDownTime;
+    private ServiceConnection mScriptExecutorConn;
+    private IScriptExecutor mScriptExecutor;
 
     CarShellCommand(Context context,
             VehicleHal hal,
@@ -541,6 +550,8 @@ final class CarShellCommand extends BasicShellCommandHandler {
         pw.printf("\t  %s depending on the device capability, real or simulated suspend-to-RAM is "
                 + "performed.\n", PARAM_AUTO);
         pw.printf("\t  %s skips Garage Mode before going into sleep.\n", PARAM_SKIP_GARAGEMODE);
+        pw.printf("\t  %s [RESUME_DELAY] wakes up the device RESUME_DELAY seconds after suspend.\n",
+                PARAM_WAKEUP_AFTER);
         pw.printf("\t%s\n", getSuspendCommandUsage(COMMAND_HIBERNATE));
         pw.println("\t  Suspend the system to disk.");
         pw.printf("\t  %s forces the device to perform suspend-to-disk.\n", PARAM_REAL);
@@ -693,7 +704,7 @@ final class CarShellCommand extends BasicShellCommandHandler {
         pw.println("\t  Define and apply the cts_verifier_on power policy with "
                 + "--enable WIFI,LOCATION,BLUETOOTH");
 
-        pw.printf("\t%s [%s]\n", COMMAND_POWER_OFF, PARAM_SKIP_GARAGEMODE);
+        pw.printf("\t%s [%s] [%s]\n", COMMAND_POWER_OFF, PARAM_SKIP_GARAGEMODE, PARAM_REBOOT);
         pw.println("\t  Powers off the car.");
 
         pw.printf("\t%s <CAMERA_ID>\n", COMMAND_SET_REARVIEW_CAMERA_ID);
@@ -1107,7 +1118,7 @@ final class CarShellCommand extends BasicShellCommandHandler {
                 listVhalProps(writer);
                 break;
             case COMMAND_GET_VHAL_BACKEND:
-                listVhalBackend(writer);
+                getVhalBackend(writer);
                 break;
             default:
                 writer.println("Unknown command: \"" + cmd + "\"");
@@ -2106,16 +2117,12 @@ final class CarShellCommand extends BasicShellCommandHandler {
     private void runSuspendCommand(String[] args, IndentingPrintWriter writer) {
         // args[0] is always either COMMAND_SUSPEND or COMMAND_HIBERNE.
         String command = args[0];
-        if (args.length > 4) {
-            writer.printf("Invalid command syntax.\nUsage: %s\n", getSuspendCommandUsage(command));
-            return;
-        }
-
         boolean isHibernation = command.equals(COMMAND_HIBERNATE);
         // Default is --auto, so simulate is decided based on device capability.
         boolean simulate = !mCarPowerManagementService.isSuspendAvailable(isHibernation);
         boolean modeSet = false;
         boolean skipGarageMode = false;
+        int resumeDelay = CarPowerManagementService.NO_WAKEUP_BY_TIMER;
         int index = 1;
         while (index < args.length) {
             switch (args[index]) {
@@ -2149,6 +2156,15 @@ final class CarShellCommand extends BasicShellCommandHandler {
                 case PARAM_SKIP_GARAGEMODE:
                     skipGarageMode = true;
                     break;
+                case PARAM_WAKEUP_AFTER:
+                    index++;
+                    if (index >= args.length) {
+                        writer.printf("Invalid command syntax.\nUsage: %s\n",
+                                getSuspendCommandUsage(command));
+                        return;
+                    }
+                    resumeDelay = Integer.parseInt(args[index]);
+                    break;
                 default:
                     writer.printf("Invalid command syntax.\nUsage: %s\n",
                             getSuspendCommandUsage(command));
@@ -2156,14 +2172,19 @@ final class CarShellCommand extends BasicShellCommandHandler {
             }
             index++;
         }
+        if (resumeDelay >= 0 && !simulate) {
+            writer.printf("Wake up by timer is available only with simulated suspend.\n");
+            return;
+        }
 
         String suspendType = isHibernation ? "disk" : "RAM";
         if (simulate) {
             try {
                 writer.printf("Suspend: simulating suspend-to-%s.\n", suspendType);
-                mCarPowerManagementService.simulateSuspendAndMaybeReboot(/* shouldReboot= */ false,
+                mCarPowerManagementService.simulateSuspendAndMaybeReboot(
                         isHibernation ? PowerHalService.PowerState.SHUTDOWN_TYPE_HIBERNATION
-                        : PowerHalService.PowerState.SHUTDOWN_TYPE_DEEP_SLEEP, skipGarageMode);
+                        : PowerHalService.PowerState.SHUTDOWN_TYPE_DEEP_SLEEP,
+                        /* shouldReboot= */ false, skipGarageMode, resumeDelay);
             } catch (Exception e) {
                 writer.printf("Simulating suspend-to-%s failed: %s\n", suspendType, e.getMessage());
             }
@@ -2191,12 +2212,12 @@ final class CarShellCommand extends BasicShellCommandHandler {
             case PARAM_QUERY_MODE:
                 mGarageModeService.dump(writer);
                 break;
-            case PARAM_REBOOT:
+            case PARAM_REBOOT_AFTER_GARAGEMODE:
+                writer.printf("\"cmd car_service garagemode reboot\" is deprecated. Use "
+                        + "\"cmd car_service power-off --reboot\" next time");
                 try {
-                    mCarPowerManagementService.simulateSuspendAndMaybeReboot(
-                            /* shouldReboot= */ true,
-                            PowerHalService.PowerState.SHUTDOWN_TYPE_DEEP_SLEEP,
-                            /*skipGarageMode= */ false);
+                    mCarPowerManagementService.powerOffFromCommand(/*skipGarageMode= */ false,
+                            /* reboot= */ true);
                     writer.println("Entering Garage Mode. Will reboot when it completes.");
                 } catch (IllegalStateException e) {
                     writer.printf("Entering Garage Mode failed: %s\n", e.getMessage());
@@ -2204,7 +2225,8 @@ final class CarShellCommand extends BasicShellCommandHandler {
                 break;
             default:
                 writer.printf("Unknown value: %s. Valid argument: %s|%s|%s|%s\n",
-                        arg, PARAM_ON_MODE, PARAM_OFF_MODE, PARAM_QUERY_MODE, PARAM_REBOOT);
+                        arg, PARAM_ON_MODE, PARAM_OFF_MODE, PARAM_QUERY_MODE,
+                        PARAM_REBOOT_AFTER_GARAGEMODE);
         }
     }
 
@@ -2351,15 +2373,24 @@ final class CarShellCommand extends BasicShellCommandHandler {
 
     private void powerOff(String[] args, IndentingPrintWriter writer) {
         boolean skipGarageMode = false;
-        if (args.length > 2
-                || (args.length == 2 && !args[1].equals(PARAM_SKIP_GARAGEMODE))) {
-            writer.printf("Invalid usage: %s [%s]\n", COMMAND_POWER_OFF, PARAM_SKIP_GARAGEMODE);
-            return;
+        boolean reboot = false;
+        int index = 1;
+        while (index < args.length) {
+            switch (args[index]) {
+                case PARAM_SKIP_GARAGEMODE:
+                    skipGarageMode = true;
+                    break;
+                case PARAM_REBOOT:
+                    reboot = true;
+                    break;
+                default:
+                    writer.printf("Invalid usage: %s [%s] [%s]\n", COMMAND_POWER_OFF,
+                            PARAM_SKIP_GARAGEMODE, PARAM_REBOOT);
+                    return;
+            }
+            index++;
         }
-        if (args.length == 2) {
-            skipGarageMode = true;
-        }
-        mCarPowerManagementService.powerOffFromCommand(skipGarageMode);
+        mCarPowerManagementService.powerOffFromCommand(skipGarageMode, reboot);
     }
 
     /**
@@ -2627,6 +2658,15 @@ final class CarShellCommand extends BasicShellCommandHandler {
         writer.println("\t  Removes metrics config.");
         writer.println("\tremove-all");
         writer.println("\t  Removes all metrics configs.");
+        writer.println("\tping-script-executor [published data filepath] [state filepath]");
+        writer.println("\nEXAMPLES:");
+        writer.println("\t$ adb shell cmd car_service telemetry ping-script-executor "
+                + "< example_script.lua");
+        writer.println("\t$ adb shell cmd car_service telemetry ping-script-executor "
+                + "/data/local/tmp/published_data < example_script.lua");
+        writer.println("\t$ adb shell cmd car_service telemetry ping-script-executor "
+                + "/data/local/tmp/bundle /data/local/tmp/bundle2 < example_script.lua");
+        writer.println("\t  Removes all metrics configs.");
         writer.println("\tlist");
         writer.println("\t  Lists the config metrics in the service.");
         writer.println("\tget-result <name>");
@@ -2698,6 +2738,48 @@ final class CarShellCommand extends BasicShellCommandHandler {
                 carTelemetryManager.removeAllMetricsConfigs();
                 writer.printf("Removing all MetricsConfigs... Please see logcat for details.\n");
                 break;
+            case "ping-script-executor":
+                if (args.length < 2 || args.length > 4) {
+                    writer.println("Invalid number of arguments.");
+                    printTelemetryHelp(writer);
+                    return;
+                }
+                PersistableBundle publishedData = new PersistableBundle();
+                publishedData.putInt("age", 99);
+                publishedData.putStringArray(
+                        "string_array",
+                        new String[]{"a", "b", "c", "a", "b", "c", "a", "b", "c"});
+                PersistableBundle nestedBundle = new PersistableBundle();
+                nestedBundle.putInt("age", 100);
+                nestedBundle.putStringArray(
+                        "string_array",
+                        new String[]{"q", "w", "e", "r", "t", "y"});
+                publishedData.putPersistableBundle("pers_bundle", nestedBundle);
+                PersistableBundle savedState = null;
+                // Read published data
+                if (args.length >= 3) {
+                    try {
+                        publishedData = IoUtils.readBundle(new File(args[2]));
+                    } catch (IOException e) {
+                        writer.println("Published data path is invalid: " + e);
+                        return;
+                    }
+                }
+                // Read saved state
+                if (args.length == 4) {
+                    try {
+                        savedState = IoUtils.readBundle(new File(args[3]));
+                    } catch (IOException e) {
+                        writer.println("Saved data path is invalid: " + e);
+                        return;
+                    }
+                }
+                try {
+                    pingScriptExecutor(writer, publishedData, savedState);
+                } catch (InterruptedException | RemoteException e) {
+                    throw new RuntimeException(e);
+                }
+                break;
             case "list":
                 writer.println("Active metric configs:");
                 mCarTelemetryService.getActiveMetricsConfigDetails().forEach((configDetails) -> {
@@ -2715,7 +2797,8 @@ final class CarShellCommand extends BasicShellCommandHandler {
                 CarTelemetryManager.MetricsReportCallback callback =
                         (metricsConfigName, report, telemetryError, status) -> {
                             if (report != null) {
-                                parseTelemetryReport(report, writer);
+                                report.size(); // unparcel()'s
+                                writer.println("Report for " + metricsConfigName + ": " + report);
                             } else if (telemetryError != null) {
                                 parseTelemetryError(telemetryError, writer);
                             }
@@ -2743,14 +2826,118 @@ final class CarShellCommand extends BasicShellCommandHandler {
         }
     }
 
-    private void parseTelemetryReport(byte[] report, IndentingPrintWriter writer) {
-        try {
-            PersistableBundle bundle = PersistableBundle.readFromStream(
-                    new ByteArrayInputStream(report));
-            writer.println(bundle);
-        } catch (IOException e) {
-            writer.println("Report is received, but parsing report failed: " + e);
+    private void pingScriptExecutor(
+            IndentingPrintWriter writer,
+            PersistableBundle publishedData,
+            PersistableBundle savedState)
+            throws InterruptedException, RemoteException {
+        writer.println("Sending data to script executor...");
+        if (mScriptExecutor == null) {
+            writer.println("[I] No mScriptExecutor, creating a new one");
+            connectToScriptExecutor(writer);
         }
+        String script;
+        try (
+                BufferedInputStream in = new BufferedInputStream(
+                        new FileInputStream(getInFileDescriptor()));
+                ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            FileUtils.copy(in, out);
+            script = out.toString();
+        } catch (IOException | NumberFormatException e) {
+            writer.println("[E] Failed to read from stdin: " + e);
+            return;
+        }
+        writer.println("[I] Running the script: ");
+        writer.println(script);
+        writer.flush();
+
+        CountDownLatch resultLatch = new CountDownLatch(1);
+        IScriptExecutorListener listener =
+                new IScriptExecutorListener.Stub() {
+                    @Override
+                    public void onScriptFinished(PersistableBundle result) {
+                        writer.println("Script finished");
+                        result.size(); // unparcel()'s
+                        writer.println("result: " + result);
+                        writer.flush();
+                        resultLatch.countDown();
+                    }
+
+                    @Override
+                    public void onSuccess(PersistableBundle state) {
+                        writer.println("Script succeeded, saving inter result");
+                        state.size(); // unparcel()'s
+                        writer.println("state: " + state);
+                        writer.flush();
+                        resultLatch.countDown();
+                    }
+
+                    @Override
+                    public void onError(int errorType, String msg, String stack) {
+                        writer.println("Script error: " + errorType + ": " + msg);
+                        writer.println("Stack: " + stack);
+                        writer.flush();
+                        resultLatch.countDown();
+                    }
+                };
+        mScriptExecutor.invokeScript(
+                script,
+                "foo",
+                publishedData,
+                savedState,
+                listener);
+        writer.println("[I] Waiting for the result");
+        writer.flush();
+        resultLatch.await(10, TimeUnit.SECONDS); // seconds
+        mContext.unbindService(mScriptExecutorConn);
+    }
+
+    private void connectToScriptExecutor(IndentingPrintWriter writer) throws InterruptedException {
+        CountDownLatch connectionLatch = new CountDownLatch(1);
+        mScriptExecutorConn =
+                new ServiceConnection() {
+                    @Override
+                    public void onServiceConnected(ComponentName name, IBinder service) {
+                        writer.println("[I] Connected to ScriptExecutor Service");
+                        writer.flush();
+                        mScriptExecutor = IScriptExecutor.Stub.asInterface(service);
+                        connectionLatch.countDown();
+                    }
+
+                    @Override
+                    public void onServiceDisconnected(ComponentName name) {
+                        writer.println("[E] Failed to connect to ScriptExecutor Service");
+                        writer.flush();
+                        mScriptExecutor = null;
+                        connectionLatch.countDown();
+                    }
+                };
+        Intent intent = new Intent();
+        intent.setComponent(
+                new ComponentName(
+                        "com.android.car.scriptexecutor",
+                        "com.android.car.scriptexecutor.ScriptExecutor"));
+        writer.println("[I] Binding to the script executor");
+        boolean success =
+                mContext.bindServiceAsUser(
+                        intent,
+                        mScriptExecutorConn,
+                        Context.BIND_AUTO_CREATE,
+                        UserHandle.SYSTEM);
+        if (success) {
+            writer.println("[I] Found ScriptExecutor package");
+            writer.flush();
+        } else {
+            writer.println("[E] Failed to bind to ScriptExecutor");
+            writer.flush();
+            mScriptExecutor = null;
+            if (mScriptExecutorConn != null) {
+                mContext.unbindService(mScriptExecutorConn);
+            }
+            return;
+        }
+        writer.println("[I] Waiting for the connection");
+        connectionLatch.await(5, TimeUnit.SECONDS); // seconds
     }
 
     private void parseTelemetryError(byte[] telemetryError, IndentingPrintWriter writer) {
@@ -2850,6 +3037,8 @@ final class CarShellCommand extends BasicShellCommandHandler {
     }
 
     private void listVhalProps(IndentingPrintWriter writer) {
+        // Note: The output here is used in AtsVehicleDeviceTest. DO NOT CHANGE the format without
+        // updating AtsVehicleDeviceTest.
         writer.println("All supported property IDs from Vehicle HAL:");
         List<Integer> propIds = new ArrayList<>();
         try {
@@ -2863,7 +3052,9 @@ final class CarShellCommand extends BasicShellCommandHandler {
         }
     }
 
-    private void listVhalBackend(IndentingPrintWriter writer) {
+    private void getVhalBackend(IndentingPrintWriter writer) {
+        // Note: The output here is used in AtsVehicleDeviceTest. DO NOT CHANGE the format without
+        // updating AtsVehicleDeviceTest.
         if (mHal.isAidlVhal()) {
             writer.println("Vehicle HAL backend: AIDL");
         } else {
@@ -2881,6 +3072,6 @@ final class CarShellCommand extends BasicShellCommandHandler {
 
     private static String getSuspendCommandUsage(String command) {
         return command + " [" + PARAM_AUTO + "|" + PARAM_SIMULATE + "|" + PARAM_REAL + "] ["
-                + PARAM_SKIP_GARAGEMODE + "]";
+                + PARAM_SKIP_GARAGEMODE + "] [" + PARAM_WAKEUP_AFTER + " RESUME_DELAY]";
     }
 }

@@ -19,9 +19,10 @@ package android.car.os;
 import android.annotation.CallbackExecutor;
 import android.annotation.NonNull;
 import android.annotation.RequiresPermission;
-import android.annotation.SystemApi;
 import android.car.Car;
 import android.car.CarManagerBase;
+import android.car.annotation.AddedInOrBefore;
+import android.car.annotation.ExperimentalFeature;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -32,9 +33,11 @@ import java.util.concurrent.Executor;
  * CarPerformanceManager allows applications to tweak performance settings for their
  * processes/threads and listen for CPU available change notifications.
  *
+ * <p>This feature is still under development and will not be available for user builds.
+ *
  * @hide
  */
-@SystemApi
+@ExperimentalFeature
 public final class CarPerformanceManager extends CarManagerBase {
     private static final String TAG = CarPerformanceManager.class.getSimpleName();
     private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
@@ -83,6 +86,7 @@ public final class CarPerformanceManager extends CarManagerBase {
          *
          * @param info CPU availability information.
          */
+        @AddedInOrBefore(majorVersion = 33)
         void onCpuAvailabilityChange(@NonNull CpuAvailabilityInfo info);
     }
 
@@ -96,6 +100,7 @@ public final class CarPerformanceManager extends CarManagerBase {
      * @throws IllegalStateException if {@code listener} is already added.
      */
     @RequiresPermission(Car.PERMISSION_COLLECT_CAR_CPU_INFO)
+    @AddedInOrBefore(majorVersion = 33)
     public void addCpuAvailabilityChangeListener(
             @NonNull @CallbackExecutor Executor executor,
             @NonNull CpuAvailabilityMonitoringConfig config,
@@ -115,6 +120,7 @@ public final class CarPerformanceManager extends CarManagerBase {
      * interface.
      */
     @RequiresPermission(Car.PERMISSION_COLLECT_CAR_CPU_INFO)
+    @AddedInOrBefore(majorVersion = 33)
     public void removeCpuAvailabilityChangeListener(
             @NonNull @CallbackExecutor Executor executor,
             @NonNull CpuAvailabilityChangeListener listener) {

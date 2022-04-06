@@ -37,8 +37,8 @@ interface ICarWatchdog {
   void unregisterCarWatchdogService(in android.automotive.watchdog.internal.ICarWatchdogServiceForSystem service);
   void registerMonitor(in android.automotive.watchdog.internal.ICarWatchdogMonitor monitor);
   void unregisterMonitor(in android.automotive.watchdog.internal.ICarWatchdogMonitor monitor);
-  void tellCarWatchdogServiceAlive(in android.automotive.watchdog.internal.ICarWatchdogServiceForSystem service, in int[] clientsNotResponding, in int sessionId);
-  void tellDumpFinished(in android.automotive.watchdog.internal.ICarWatchdogMonitor monitor, in int pid);
+  void tellCarWatchdogServiceAlive(in android.automotive.watchdog.internal.ICarWatchdogServiceForSystem service, in List<android.automotive.watchdog.internal.ProcessIdentifier> processIdentifiers, in int sessionId);
+  void tellDumpFinished(in android.automotive.watchdog.internal.ICarWatchdogMonitor monitor, in android.automotive.watchdog.internal.ProcessIdentifier processIdentifier);
   void notifySystemStateChange(in android.automotive.watchdog.internal.StateType type, in int arg1, in int arg2);
   void updateResourceOveruseConfigurations(in List<android.automotive.watchdog.internal.ResourceOveruseConfiguration> configs);
   List<android.automotive.watchdog.internal.ResourceOveruseConfiguration> getResourceOveruseConfigurations();

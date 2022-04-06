@@ -31,7 +31,7 @@ import android.car.Car;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.ServiceConnection;
-import android.hardware.automotive.vehicle.V2_0.InitialUserInfoRequestType;
+import android.hardware.automotive.vehicle.InitialUserInfoRequestType;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.Looper;
@@ -168,12 +168,15 @@ public abstract class CarApiTestBase {
             PowerManager powerManager = sContext.getSystemService(PowerManager.class);
             // clear log
             runShellCommand("logcat -b all -c");
-            runShellCommand("cmd car_service suspend --skip-garagemode");
+            // We use a simulated suspend because physically suspended devices cannot be woken up by
+            // a shell command.
+            runShellCommand("cmd car_service suspend --simulate --skip-garagemode "
+                    + "--wakeup-after 3");
             // Check for suspend success
             waitUntil("screen is still on after suspend",
                     SUSPEND_TIMEOUT_MS, () -> !powerManager.isScreenOn());
 
-            runShellCommand("cmd car_service resume");
+            // The device will resume after 3 seconds.
             waitForLogcatMessage("logcat -b events", "car_user_svc_initial_user_info_req_complete: "
                     + InitialUserInfoRequestType.RESUME, 60_000);
         } catch (Exception e) {

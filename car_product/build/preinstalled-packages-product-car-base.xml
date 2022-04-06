@@ -172,7 +172,7 @@
     </install-in-user-type>
 
     <!-- Needs to run on system user otherwise cannot find available device -->
-    <install-in-user-type package="com.android.bluetooth">
+    <install-in-user-type package="com.android.bluetooth.services">
         <install-in user-type="FULL" />
         <install-in user-type="SYSTEM" />
     </install-in-user-type>
@@ -233,12 +233,6 @@
 
     <!-- Required to initialize the Safety Center service -->
     <install-in-user-type package="com.android.safetycenter.resources">
-        <install-in user-type="FULL" />
-        <install-in user-type="SYSTEM" />
-    </install-in-user-type>
-
-    <!-- Needs to run CarEvsCameraPreviewActivity for all users -->
-    <install-in-user-type package="com.google.android.car.evs">
         <install-in user-type="FULL" />
         <install-in user-type="SYSTEM" />
     </install-in-user-type>
@@ -377,13 +371,14 @@
     <install-in-user-type package="com.android.nearby.halfsheet">
         <install-in user-type="FULL" />
     </install-in-user-type>
-    <install-in-user-type package="com.google.android.car.evs">
-        <install-in user-type="FULL" />
-    </install-in-user-type>
     <install-in-user-type package="com.android.ondevicepersonalization.services">
         <install-in user-type="FULL" />
     </install-in-user-type>
     <install-in-user-type package="com.android.sdksandbox">
+        <install-in user-type="FULL" />
+    </install-in-user-type>
+    <!-- Mainline module -->
+    <install-in-user-type package="com.android.adservices.api">
         <install-in user-type="FULL" />
     </install-in-user-type>
 </config>

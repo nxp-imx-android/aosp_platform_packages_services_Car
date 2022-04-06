@@ -389,12 +389,12 @@ public final class CarEvsService extends android.car.evs.ICarEvsService.Stub
             }
         }
 
-        public boolean checkCurrentStateRequiresActivity() {
+        public boolean checkCurrentStateRequiresSystemActivity() {
             synchronized (mLock) {
-                return mState == SERVICE_STATE_ACTIVE || mState == SERVICE_STATE_REQUESTED;
+                return (mState == SERVICE_STATE_ACTIVE || mState == SERVICE_STATE_REQUESTED) &&
+                        mLastRequestPriority == REQUEST_PRIORITY_HIGH;
             }
         }
-
 
         @GuardedBy("mLock")
         private @CarEvsError int handleTransitionToUnavailableLocked() {
@@ -710,7 +710,7 @@ public final class CarEvsService extends android.car.evs.ICarEvsService.Stub
     @GuardedBy("mLock")
     private boolean requestActivityIfNecessaryLocked() {
         // TODO(b/202398413): add a test case to verify below logic
-        if (!mStateEngine.checkCurrentStateRequiresActivity() &&
+        if (!mStateEngine.checkCurrentStateRequiresSystemActivity() &&
                 (mLastEvsHalEvent == null || !mLastEvsHalEvent.isRequestingToStartActivity())) {
             return false;
         }
@@ -866,14 +866,8 @@ public final class CarEvsService extends android.car.evs.ICarEvsService.Stub
                     mGearSelectionPropertyListener);
         }
 
-
-
-        // Attempts to transit to the INACTIVE state
-        if (!mHalWrapper.init() || mStateEngine.execute(REQUEST_PRIORITY_HIGH,
-                SERVICE_STATE_INACTIVE) != ERROR_NONE) {
-            Slogf.e(TAG_EVS, "Failed to create a service handle or transit to the INACTIVE state,");
-            mHalWrapper.release();
-
+        if (!mHalWrapper.init()) {
+            Slogf.e(TAG_EVS, "Failed to initialize a service handle");
             if (mUseGearSelection && mPropertyService != null) {
                 if (DBG) {
                     Slogf.d(TAG_EVS, "Unregister a property listener on init() failure.");
@@ -881,7 +875,11 @@ public final class CarEvsService extends android.car.evs.ICarEvsService.Stub
                 mPropertyService.unregisterListener(VehicleProperty.GEAR_SELECTION,
                         mGearSelectionPropertyListener);
             }
+            return;
         }
+
+        // Attempts to transit to the INACTIVE state
+        connectToHalServiceIfNecessary(EVS_HAL_SERVICE_BIND_RETRY_INTERVAL_MS);
     }
 
     @Override

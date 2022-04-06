@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import android.annotation.NonNull;
 import android.annotation.SystemApi;
+import android.car.annotation.AddedInOrBefore;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -53,26 +54,31 @@ public final class WearEstimateChange implements Parcelable {
     /**
      * The previous wear estimate.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public final @NonNull WearEstimate oldEstimate;
 
     /**
      * The new wear estimate.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public final @NonNull WearEstimate newEstimate;
 
     /**
      * Total CarService uptime when this change was detected.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public final long uptimeAtChange;
 
     /**
      * Wall-clock time when this change was detected.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public final @NonNull Instant dateAtChange;
 
     /**
      * Whether this change was within the vendor range for acceptable flash degradation.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public final boolean isAcceptableDegradation;
 
     public WearEstimateChange(WearEstimate oldEstimate,
@@ -94,22 +100,27 @@ public final class WearEstimateChange implements Parcelable {
         oldEstimate = in.readParcelable(WearEstimate.class.getClassLoader());
         newEstimate = in.readParcelable(WearEstimate.class.getClassLoader());
         uptimeAtChange = in.readLong();
-        dateAtChange = Instant.ofEpochMilli(in.readLong());
+        long secs = in.readLong();
+        int nanos = in.readInt();
+        dateAtChange = Instant.ofEpochSecond(secs, nanos);
         isAcceptableDegradation = in.readInt() == 1;
     }
 
     @Override
     @ExcludeFromCodeCoverageGeneratedReport(reason = BOILERPLATE_CODE)
+    @AddedInOrBefore(majorVersion = 33)
     public int describeContents() {
         return 0;
     }
 
     @Override
+    @AddedInOrBefore(majorVersion = 33)
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeParcelable(oldEstimate, flags);
         dest.writeParcelable(newEstimate, flags);
         dest.writeLong(uptimeAtChange);
-        dest.writeLong(dateAtChange.toEpochMilli());
+        dest.writeLong(dateAtChange.getEpochSecond());
+        dest.writeInt(dateAtChange.getNano());
         dest.writeInt(isAcceptableDegradation ? 1 : 0);
     }
 

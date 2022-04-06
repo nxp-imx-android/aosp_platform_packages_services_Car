@@ -24,7 +24,10 @@ import android.content.Context;
 import android.os.Handler;
 
 import com.android.car.CarPropertyService;
+import com.android.car.telemetry.ResultStore;
+import com.android.car.telemetry.UidPackageMapper;
 import com.android.car.telemetry.publisher.net.NetworkStatsManagerProxy;
+import com.android.car.telemetry.sessioncontroller.SessionController;
 import com.android.internal.util.Preconditions;
 
 import java.io.File;
@@ -42,7 +45,7 @@ import java.util.Objects;
 public class PublisherFactory {
     // Some publishers must be initialized as early as possible during boot.
     private static final TelemetryProto.Publisher.PublisherCase[] sForceInitPublishers = {
-        TelemetryProto.Publisher.PublisherCase.CONNECTIVITY
+            TelemetryProto.Publisher.PublisherCase.CONNECTIVITY
     };
 
     private final Object mLock = new Object();
@@ -50,22 +53,33 @@ public class PublisherFactory {
     private final File mPublisherDirectory;
     private final Handler mTelemetryHandler;
     private final Context mContext;  // CarService context
+    private final UidPackageMapper mUidMapper;
 
     private VehiclePropertyPublisher mVehiclePropertyPublisher;
     private CarTelemetrydPublisher mCarTelemetrydPublisher;
     private StatsPublisher mStatsPublisher;
     private ConnectivityPublisher mConnectivityPublisher;
     private AbstractPublisher.PublisherFailureListener mFailureListener;
+    // To enable publishers to subscribe to session updates if needed.
+    private final SessionController mSessionController;
+    // To enable publishers to store pulled data in the event of suspend-to-RAM or shutdown.
+    private final ResultStore mResultStore;
 
     public PublisherFactory(
             @NonNull CarPropertyService carPropertyService,
             @NonNull Handler handler,
             @NonNull Context context,
-            @NonNull File publisherDirectory) {
+            @NonNull File publisherDirectory,
+            @NonNull SessionController sessionController,
+            @NonNull ResultStore resultStore,
+            @NonNull UidPackageMapper uidMapper) {
         mCarPropertyService = carPropertyService;
         mTelemetryHandler = handler;
         mContext = context;
         mPublisherDirectory = publisherDirectory;
+        mSessionController = sessionController;
+        mResultStore = resultStore;
+        mUidMapper = uidMapper;
     }
 
     /** Returns the publisher by given type. This method is thread-safe. */
@@ -94,7 +108,7 @@ public class PublisherFactory {
                         StatsManagerProxy statsManager = new StatsManagerImpl(stats);
                         mStatsPublisher = new StatsPublisher(
                                 mFailureListener, statsManager, mPublisherDirectory,
-                                        mTelemetryHandler);
+                                mTelemetryHandler);
                     }
                     return mStatsPublisher;
                 case TelemetryProto.Publisher.CONNECTIVITY_FIELD_NUMBER:
@@ -106,7 +120,8 @@ public class PublisherFactory {
                                 new ConnectivityPublisher(
                                         mFailureListener,
                                         new NetworkStatsManagerProxy(networkStatsManager),
-                                        mTelemetryHandler);
+                                        mTelemetryHandler, mResultStore, mSessionController,
+                                        mUidMapper);
                     }
                     return mConnectivityPublisher;
                 default:
@@ -140,7 +155,7 @@ public class PublisherFactory {
         Preconditions.checkState(
                 mFailureListener == null, "PublisherFactory is already initialized");
         mFailureListener = listener;
-        for (TelemetryProto.Publisher.PublisherCase publisher: sForceInitPublishers) {
+        for (TelemetryProto.Publisher.PublisherCase publisher : sForceInitPublishers) {
             getPublisher(publisher);
         }
     }

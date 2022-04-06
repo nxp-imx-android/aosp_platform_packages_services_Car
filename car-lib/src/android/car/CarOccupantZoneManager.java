@@ -24,6 +24,7 @@ import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
 import android.annotation.SystemApi;
 import android.annotation.UserIdInt;
+import android.car.annotation.AddedInOrBefore;
 import android.car.builtin.os.UserManagerHelper;
 import android.hardware.display.DisplayManager;
 import android.os.Handler;
@@ -60,27 +61,33 @@ public class CarOccupantZoneManager extends CarManagerBase {
     /** Display type is not known. In some system, some displays may be just public display without
      *  any additional information and such displays will be treated as unknown.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final int DISPLAY_TYPE_UNKNOWN = 0;
 
     /** Main display users are interacting with. UI for the user will be launched to this display by
      *  default. {@link Display#DEFAULT_DISPLAY} will be always have this type. But there can be
      *  multiple of this type as each passenger can have their own main display.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final int DISPLAY_TYPE_MAIN = 1;
 
     /** Instrument cluster display. This may exist only for driver. */
+    @AddedInOrBefore(majorVersion = 33)
     public static final int DISPLAY_TYPE_INSTRUMENT_CLUSTER = 2;
 
     /** Head Up Display. This may exist only for driver. */
+    @AddedInOrBefore(majorVersion = 33)
     public static final int DISPLAY_TYPE_HUD = 3;
 
     /** Dedicated display for showing IME for {@link #DISPLAY_TYPE_MAIN} */
+    @AddedInOrBefore(majorVersion = 33)
     public static final int DISPLAY_TYPE_INPUT = 4;
 
     /** Auxiliary display which can provide additional screen for {@link #DISPLAY_TYPE_MAIN}.
      *  Activity running in {@link #DISPLAY_TYPE_MAIN} may use {@link android.app.Presentation} to
      *  show additional information.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final int DISPLAY_TYPE_AUXILIARY = 5;
 
     /** @hide */
@@ -97,16 +104,20 @@ public class CarOccupantZoneManager extends CarManagerBase {
     public @interface DisplayTypeEnum {}
 
     /** @hide */
+    @AddedInOrBefore(majorVersion = 33)
     public static final int OCCUPANT_TYPE_INVALID = -1;
 
     /** Represents driver. There can be only one driver for the system. */
+    @AddedInOrBefore(majorVersion = 33)
     public static final int OCCUPANT_TYPE_DRIVER = 0;
 
     /** Represents front passengers who sits in front side of car. Most cars will have only
      *  one passenger of this type but this can be multiple. */
+    @AddedInOrBefore(majorVersion = 33)
     public static final int OCCUPANT_TYPE_FRONT_PASSENGER = 1;
 
     /** Represents passengers in rear seats. There can be multiple passengers of this type. */
+    @AddedInOrBefore(majorVersion = 33)
     public static final int OCCUPANT_TYPE_REAR_PASSENGER = 2;
 
     /** @hide */
@@ -128,6 +139,7 @@ public class CarOccupantZoneManager extends CarManagerBase {
      */
     public static final class OccupantZoneInfo implements Parcelable {
         /** @hide */
+        @AddedInOrBefore(majorVersion = 33)
         public static final int INVALID_ZONE_ID = -1;
         /**
          * This is an unique id to distinguish each occupant zone.
@@ -138,15 +150,18 @@ public class CarOccupantZoneManager extends CarManagerBase {
          * <p>This id will remain the same for the same zone across configuration changes like
          * user switching or display changes</p>
          */
+        @AddedInOrBefore(majorVersion = 33)
         public int zoneId;
         /** Represents type of passenger */
         @OccupantTypeEnum
+        @AddedInOrBefore(majorVersion = 33)
         public final int occupantType;
         /**
          * Represents seat assigned for the occupant. In some system, this can have value of
          * {@link VehicleAreaSeat#SEAT_UNKNOWN}.
          */
         @VehicleAreaSeat.Enum
+        @AddedInOrBefore(majorVersion = 33)
         public final int seat;
 
         /** @hide */
@@ -166,11 +181,13 @@ public class CarOccupantZoneManager extends CarManagerBase {
 
         @Override
         @ExcludeFromCodeCoverageGeneratedReport(reason = BOILERPLATE_CODE)
+        @AddedInOrBefore(majorVersion = 33)
         public int describeContents() {
             return 0;
         }
 
         @Override
+        @AddedInOrBefore(majorVersion = 33)
         public void writeToParcel(Parcel dest, int flags) {
             dest.writeInt(zoneId);
             dest.writeInt(occupantType);
@@ -227,14 +244,17 @@ public class CarOccupantZoneManager extends CarManagerBase {
     /** Zone config change caused by display changes. A display could have been added / removed.
      *  Besides change in display itself. this can lead into removal / addition of passenger zones.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final int ZONE_CONFIG_CHANGE_FLAG_DISPLAY = 0x1;
 
     /** Zone config change caused by user change. Assigned user for passenger zones have changed. */
+    @AddedInOrBefore(majorVersion = 33)
     public static final int ZONE_CONFIG_CHANGE_FLAG_USER = 0x2;
 
     /** Zone config change caused by audio zone change.
      * Assigned audio zone for passenger zones have changed.
      **/
+    @AddedInOrBefore(majorVersion = 33)
     public static final int ZONE_CONFIG_CHANGE_FLAG_AUDIO = 0x4;
 
     /** @hide */
@@ -288,6 +308,7 @@ public class CarOccupantZoneManager extends CarManagerBase {
      * or none is available at the moment, it will return empty list.
      */
     @NonNull
+    @AddedInOrBefore(majorVersion = 33)
     public List<OccupantZoneInfo> getAllOccupantZones() {
         try {
             return mService.getAllOccupantZones();
@@ -301,6 +322,7 @@ public class CarOccupantZoneManager extends CarManagerBase {
      * the passenger, it will return empty list.
      */
     @NonNull
+    @AddedInOrBefore(majorVersion = 33)
     public List<Display> getAllDisplaysForOccupant(@NonNull OccupantZoneInfo occupantZone) {
         assertNonNullOccupant(occupantZone);
         try {
@@ -330,6 +352,7 @@ public class CarOccupantZoneManager extends CarManagerBase {
      *                    {@link #DISPLAY_TYPE_UNKNOWN} will always lead into {@link null} return.
      */
     @Nullable
+    @AddedInOrBefore(majorVersion = 33)
     public Display getDisplayForOccupant(@NonNull OccupantZoneInfo occupantZone,
             @DisplayTypeEnum int displayType) {
         assertNonNullOccupant(occupantZone);
@@ -359,6 +382,7 @@ public class CarOccupantZoneManager extends CarManagerBase {
      */
     @SystemApi
     @RequiresPermission(Car.ACCESS_PRIVATE_DISPLAY_ID)
+    @AddedInOrBefore(majorVersion = 33)
     public int getDisplayIdForDriver(@DisplayTypeEnum int displayType) {
         try {
             return mService.getDisplayIdForDriver(displayType);
@@ -376,6 +400,7 @@ public class CarOccupantZoneManager extends CarManagerBase {
      */
     @SystemApi
     @RequiresPermission(Car.PERMISSION_CAR_CONTROL_AUDIO_SETTINGS)
+    @AddedInOrBefore(majorVersion = 33)
     public int getAudioZoneIdForOccupant(@NonNull OccupantZoneInfo occupantZone) {
         assertNonNullOccupant(occupantZone);
         try {
@@ -394,6 +419,7 @@ public class CarOccupantZoneManager extends CarManagerBase {
     @Nullable
     @SystemApi
     @RequiresPermission(Car.PERMISSION_CAR_CONTROL_AUDIO_SETTINGS)
+    @AddedInOrBefore(majorVersion = 33)
     public OccupantZoneInfo getOccupantForAudioZoneId(int audioZoneId) {
         try {
             return mService.getOccupantForAudioZoneId(audioZoneId);
@@ -407,6 +433,7 @@ public class CarOccupantZoneManager extends CarManagerBase {
      * if type is not specified or if display is no longer available.
      */
     @DisplayTypeEnum
+    @AddedInOrBefore(majorVersion = 33)
     public int getDisplayType(@NonNull Display display) {
         assertNonNullDisplay(display);
         try {
@@ -421,6 +448,7 @@ public class CarOccupantZoneManager extends CarManagerBase {
      * {@link UserHandle#USER_NULL} if user is not assigned or if zone is not available.
      */
     @UserIdInt
+    @AddedInOrBefore(majorVersion = 33)
     public int getUserForOccupant(@NonNull OccupantZoneInfo occupantZone) {
         assertNonNullOccupant(occupantZone);
         try {
@@ -445,6 +473,7 @@ public class CarOccupantZoneManager extends CarManagerBase {
      * @hide
      */
     @RequiresPermission(android.Manifest.permission.MANAGE_USERS)
+    @AddedInOrBefore(majorVersion = 33)
     public boolean assignProfileUserToOccupantZone(@NonNull OccupantZoneInfo occupantZone,
             @UserIdInt int userId) {
         assertNonNullOccupant(occupantZone);
@@ -471,6 +500,7 @@ public class CarOccupantZoneManager extends CarManagerBase {
      * Registers the listener for occupant zone config change. Registering multiple listeners are
      * allowed.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public void registerOccupantZoneConfigChangeListener(
             @NonNull OccupantZoneConfigChangeListener listener) {
         if (mListeners.addIfAbsent(listener)) {
@@ -487,6 +517,7 @@ public class CarOccupantZoneManager extends CarManagerBase {
     /**
      * Unregisters the listener. Listeners not registered before will be ignored.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public void unregisterOccupantZoneConfigChangeListener(
             @NonNull OccupantZoneConfigChangeListener listener) {
         if (mListeners.remove(listener)) {

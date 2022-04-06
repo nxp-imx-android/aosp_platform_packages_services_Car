@@ -2,7 +2,7 @@
 package android.car.builtin {
 
   public final class CarBuiltin {
-    field public static final int API_VERSION_MINOR_INT = 0; // 0x0
+    field public static final int PLATFORM_VERSION_MINOR_INT;
   }
 
   public final class PermissionHelper {
@@ -88,7 +88,7 @@ package android.car.builtin.content.pm {
     method public static boolean isUpdatedSystemApp(@NonNull android.content.pm.ApplicationInfo);
     method public static boolean isVendorApp(@NonNull android.content.pm.ApplicationInfo);
     method public static void setApplicationEnabledSettingForUser(@NonNull String, int, int, int, @NonNull String) throws android.os.RemoteException;
-    field public static final String PROPERTY_CAR_SERVICE_OVERLAY_PACKAGES = "ro.android.car.service.overlay.packages";
+    field public static final String PROPERTY_CAR_SERVICE_OVERLAY_PACKAGES = "ro.android.car.carservice.overlay.packages";
     field public static final String PROPERTY_CAR_SERVICE_PACKAGE_NAME = "ro.android.car.carservice.package";
   }
 
@@ -243,7 +243,7 @@ package android.car.builtin.power {
 package android.car.builtin.provider {
 
   public final class SettingsHelper {
-    field @Deprecated public static final String SYSTEM_LOCALES = "system_locales";
+    field public static final String SYSTEM_LOCALES = "system_locales";
   }
 
 }
@@ -251,7 +251,15 @@ package android.car.builtin.provider {
 package android.car.builtin.util {
 
   public final class AssistUtilsHelper {
+    method public static void hideCurrentSession(@NonNull android.content.Context);
+    method public static boolean isSessionRunning(@NonNull android.content.Context);
+    method public static void registerVoiceInteractionSessionListenerHelper(@NonNull android.content.Context, @NonNull android.car.builtin.util.AssistUtilsHelper.VoiceInteractionSessionListenerHelper);
     method public static boolean showPushToTalkSessionForActiveService(@NonNull android.content.Context, @NonNull android.car.builtin.util.AssistUtilsHelper.VoiceInteractionSessionShowCallbackHelper);
+  }
+
+  public static interface AssistUtilsHelper.VoiceInteractionSessionListenerHelper {
+    method public void onVoiceSessionHidden();
+    method public void onVoiceSessionShown();
   }
 
   public static interface AssistUtilsHelper.VoiceInteractionSessionShowCallbackHelper {

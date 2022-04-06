@@ -25,6 +25,7 @@ import android.app.Activity;
 import android.app.ActivityManager;
 import android.car.Car;
 import android.car.CarManagerBase;
+import android.car.annotation.AddedInOrBefore;
 import android.car.user.CarUserManager;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
@@ -52,13 +53,16 @@ public final class CarActivityManager extends CarManagerBase {
     private static final String TAG = CarUserManager.class.getSimpleName();
 
     /** Indicates that the operation was successful. */
+    @AddedInOrBefore(majorVersion = 33)
     public static final int RESULT_SUCCESS = 0;
     /** Indicates that the operation was failed with the unknown reason. */
+    @AddedInOrBefore(majorVersion = 33)
     public static final int RESULT_FAILURE = -1;
     /**
      * Indicates that the operation was failed because the requester isn't the current user or
      * the system user
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final int RESULT_INVALID_USER = -2;
 
     /** @hide */
@@ -75,6 +79,7 @@ public final class CarActivityManager extends CarManagerBase {
      * Internal error code for throwing {@link ActivityNotFoundException} from service.
      * @hide
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final int ERROR_CODE_ACTIVITY_NOT_FOUND = -101;
 
     private final ICarActivityService mService;
@@ -118,6 +123,7 @@ public final class CarActivityManager extends CarManagerBase {
      */
     @RequiresPermission(Car.PERMISSION_CONTROL_CAR_APP_LAUNCH)
     @ResultTypeEnum
+    @AddedInOrBefore(majorVersion = 33)
     public int setPersistentActivity(
             @NonNull ComponentName activity, int displayId, int featureId) {
         try {
@@ -153,6 +159,7 @@ public final class CarActivityManager extends CarManagerBase {
      * @hide
      */
     @RequiresPermission(android.Manifest.permission.MANAGE_ACTIVITY_TASKS)
+    @AddedInOrBefore(majorVersion = 33)
     public boolean registerTaskMonitor() {
         IBinder token = new Binder();
         try {
@@ -170,6 +177,7 @@ public final class CarActivityManager extends CarManagerBase {
      * @hide
      */
     @RequiresPermission(android.Manifest.permission.MANAGE_ACTIVITY_TASKS)
+    @AddedInOrBefore(majorVersion = 33)
     public void onTaskAppeared(ActivityManager.RunningTaskInfo taskInfo) {
         if (!hasValidToken()) return;
         try {
@@ -184,6 +192,7 @@ public final class CarActivityManager extends CarManagerBase {
      * @hide
      */
     @RequiresPermission(android.Manifest.permission.MANAGE_ACTIVITY_TASKS)
+    @AddedInOrBefore(majorVersion = 33)
     public void onTaskVanished(ActivityManager.RunningTaskInfo taskInfo) {
         if (!hasValidToken()) return;
         try {
@@ -198,6 +207,7 @@ public final class CarActivityManager extends CarManagerBase {
      * @hide
      */
     @RequiresPermission(android.Manifest.permission.MANAGE_ACTIVITY_TASKS)
+    @AddedInOrBefore(majorVersion = 33)
     public void onTaskInfoChanged(ActivityManager.RunningTaskInfo taskInfo) {
         if (!hasValidToken()) return;
         try {
@@ -212,6 +222,7 @@ public final class CarActivityManager extends CarManagerBase {
      * @hide
      */
     @RequiresPermission(android.Manifest.permission.MANAGE_ACTIVITY_TASKS)
+    @AddedInOrBefore(majorVersion = 33)
     public void unregisterTaskMonitor() {
         if (!hasValidToken()) return;
         try {

@@ -18,6 +18,7 @@ package android.car.storagemonitoring;
 import static com.android.car.internal.ExcludeFromCodeCoverageGeneratedReport.BOILERPLATE_CODE;
 
 import android.annotation.SystemApi;
+import android.car.annotation.AddedInOrBefore;
 import android.car.storagemonitoring.IoStatsEntry.Metrics;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -39,7 +40,11 @@ import java.util.StringJoiner;
  * Delta of uid_io stats taken at a sample point.
  *
  * @hide
+ *
+ * @deprecated use {@link android.car.watchdog.CarWatchdogManager} and its related classes
+ * for I/O related tasks.
  */
+@Deprecated
 @SystemApi
 public final class IoStats implements Parcelable {
     public static final Creator<IoStats> CREATOR = new Creator<IoStats>() {
@@ -80,6 +85,7 @@ public final class IoStats implements Parcelable {
     }
 
     @Override
+    @AddedInOrBefore(majorVersion = 33)
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeTypedList(mStats);
         dest.writeLong(mUptimeTimestamp);
@@ -88,6 +94,7 @@ public final class IoStats implements Parcelable {
     /**
      * @hide
      */
+    @AddedInOrBefore(majorVersion = 33)
     public void writeToJson(JsonWriter jsonWriter) throws IOException {
         jsonWriter.beginObject();
         jsonWriter.name("uptime").value(mUptimeTimestamp);
@@ -101,14 +108,17 @@ public final class IoStats implements Parcelable {
 
     @Override
     @ExcludeFromCodeCoverageGeneratedReport(reason = BOILERPLATE_CODE)
+    @AddedInOrBefore(majorVersion = 33)
     public int describeContents() {
         return 0;
     }
 
+    @AddedInOrBefore(majorVersion = 33)
     public long getTimestamp() {
         return mUptimeTimestamp;
     }
 
+    @AddedInOrBefore(majorVersion = 33)
     public List<IoStatsEntry> getStats() {
         return mStats;
     }
@@ -123,6 +133,7 @@ public final class IoStats implements Parcelable {
      *
      * @param uid Android's user id
      */
+    @AddedInOrBefore(majorVersion = 33)
     public IoStatsEntry getUserIdStats(int uid) {
         for (IoStatsEntry stats : getStats()) {
             if (stats.uid == uid) {
@@ -137,6 +148,7 @@ public final class IoStats implements Parcelable {
      * Returns the following foreground total metrics: bytes written and read, bytes read from and
      * written to storage, and number of sync calls.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public IoStatsEntry.Metrics getForegroundTotals() {
         long bytesRead = 0;
         long bytesWritten = 0;
@@ -163,6 +175,7 @@ public final class IoStats implements Parcelable {
      * Returns the following background total metrics: bytes written and read, bytes read from and
      * written to storage, and number of sync calls.
      */
+    @AddedInOrBefore(majorVersion = 33)
     public IoStatsEntry.Metrics getBackgroundTotals() {
         long bytesRead = 0;
         long bytesWritten = 0;
@@ -189,6 +202,7 @@ public final class IoStats implements Parcelable {
      * Returns the sum of all foreground and background metrics (bytes written, bytes read from
      * storage, bytes written to storage and number of sync calls).
      */
+    @AddedInOrBefore(majorVersion = 33)
     public IoStatsEntry.Metrics getTotals() {
         IoStatsEntry.Metrics foreground = getForegroundTotals();
         IoStatsEntry.Metrics background = getBackgroundTotals();

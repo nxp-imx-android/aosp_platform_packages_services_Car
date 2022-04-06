@@ -21,6 +21,7 @@ import android.annotation.Nullable;
 import android.annotation.RequiresPermission;
 import android.car.Car;
 import android.car.CarManagerBase;
+import android.car.annotation.AddedInOrBefore;
 import android.car.builtin.content.ContextHelper;
 import android.os.Handler;
 import android.os.IBinder;
@@ -52,6 +53,7 @@ public final class CarUxRestrictionsManager extends CarManagerBase {
      *
      * @hide
      */
+    @AddedInOrBefore(majorVersion = 33)
     public static final String UX_RESTRICTION_MODE_BASELINE = "baseline";
 
     private final Object mLock = new Object();
@@ -138,6 +140,7 @@ public final class CarUxRestrictionsManager extends CarManagerBase {
     /**
      * Unregisters the registered {@link OnUxRestrictionsChangedListener}
      */
+    @AddedInOrBefore(majorVersion = 33)
     public void unregisterListener() {
         CarUxRestrictionsChangeListenerToService serviceListener;
         synchronized (mLock) {
@@ -222,6 +225,7 @@ public final class CarUxRestrictionsManager extends CarManagerBase {
      * @hide
      */
     @RequiresPermission(value = Car.PERMISSION_CAR_UX_RESTRICTIONS_CONFIGURATION)
+    @AddedInOrBefore(majorVersion = 33)
     public boolean setRestrictionMode(@NonNull String mode) {
         Objects.requireNonNull(mode, "mode must not be null");
         try {
@@ -243,6 +247,7 @@ public final class CarUxRestrictionsManager extends CarManagerBase {
      */
     @RequiresPermission(value = Car.PERMISSION_CAR_UX_RESTRICTIONS_CONFIGURATION)
     @NonNull
+    @AddedInOrBefore(majorVersion = 33)
     public String getRestrictionMode() {
         try {
             return mUxRService.getRestrictionMode();
@@ -281,6 +286,7 @@ public final class CarUxRestrictionsManager extends CarManagerBase {
      */
     @Nullable
     @RequiresPermission(value = Car.PERMISSION_CAR_UX_RESTRICTIONS_CONFIGURATION)
+    @AddedInOrBefore(majorVersion = 33)
     public List<CarUxRestrictionsConfiguration> getStagedConfigs() {
         try {
             return mUxRService.getStagedConfigs();
@@ -296,6 +302,7 @@ public final class CarUxRestrictionsManager extends CarManagerBase {
      * @hide
      */
     @RequiresPermission(value = Car.PERMISSION_CAR_UX_RESTRICTIONS_CONFIGURATION)
+    @AddedInOrBefore(majorVersion = 33)
     public List<CarUxRestrictionsConfiguration> getConfigs() {
         try {
             return mUxRService.getConfigs();

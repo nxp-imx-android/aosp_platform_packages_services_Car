@@ -66,9 +66,7 @@ import com.android.internal.annotations.VisibleForTesting;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -105,14 +103,29 @@ public class CarTelemetryService extends ICarTelemetryService.Stub implements Ca
     private SessionController mSessionController;
     private SystemMonitor mSystemMonitor;
     private TimingsTraceLog mTelemetryThreadTraceLog; // can only be used on telemetry thread
+    private final UidPackageMapper mUidMapper;
 
     static class Dependencies {
         /**
          * Get a PublisherFactory instance.
          */
-        public PublisherFactory getPublisherFactory(CarPropertyService carPropertyService,
-                Handler handler, Context context, File publisherDirectory) {
-            return new PublisherFactory(carPropertyService, handler, context, publisherDirectory);
+
+        /** Returns a new PublisherFactory instance. */
+        public PublisherFactory getPublisherFactory(
+                CarPropertyService carPropertyService,
+                Handler handler,
+                Context context,
+                File publisherDirectory,
+                SessionController sessionController, ResultStore resultStore,
+                UidPackageMapper uidMapper) {
+            return new PublisherFactory(
+                    carPropertyService, handler, context, publisherDirectory, sessionController,
+                    resultStore, uidMapper);
+        }
+
+        /** Returns a new UidPackageMapper instance. */
+        public UidPackageMapper getUidPackageMapper(Context context, Handler telemetryHandler) {
+            return new UidPackageMapper(context, telemetryHandler);
         }
     }
 
@@ -125,6 +138,7 @@ public class CarTelemetryService extends ICarTelemetryService.Stub implements Ca
         mContext = context;
         mCarPropertyService = carPropertyService;
         mDependencies = deps;
+        mUidMapper = mDependencies.getUidPackageMapper(mContext, mTelemetryHandler);
     }
 
     @Override
@@ -139,11 +153,13 @@ public class CarTelemetryService extends ICarTelemetryService.Stub implements Ca
             File publisherDirectory = new File(rootDirectory, PUBLISHER_DIR);
             publisherDirectory.mkdirs();
             // initialize all necessary components
+            mUidMapper.init();
             mMetricsConfigStore = new MetricsConfigStore(rootDirectory);
             mResultStore = new ResultStore(rootDirectory);
             mSessionController = new SessionController(mContext, mTelemetryHandler);
             mPublisherFactory = mDependencies.getPublisherFactory(mCarPropertyService,
-                    mTelemetryHandler, mContext, publisherDirectory);
+                    mTelemetryHandler, mContext, publisherDirectory, mSessionController,
+                    mResultStore, mUidMapper);
             mDataBroker = new DataBrokerImpl(mContext, mPublisherFactory, mResultStore,
                     mTelemetryThreadTraceLog);
             ActivityManager activityManager = mContext.getSystemService(ActivityManager.class);
@@ -170,6 +186,7 @@ public class CarTelemetryService extends ICarTelemetryService.Stub implements Ca
             mResultStore.flushToDisk();
             mOnShutdownReboot.release();
             mSessionController.release();
+            mUidMapper.release();
             mTelemetryThreadTraceLog.traceEnd();
         });
         mTelemetryThread.quitSafely();
@@ -223,9 +240,10 @@ public class CarTelemetryService extends ICarTelemetryService.Stub implements Ca
 
     /**
      * Send a telemetry metrics config to the service.
+     *
      * @param metricsConfigName name of the MetricsConfig.
-     * @param config the serialized bytes of a MetricsConfig object.
-     * @param callback to send status code to CarTelemetryManager.
+     * @param config            the serialized bytes of a MetricsConfig object.
+     * @param callback          to send status code to CarTelemetryManager.
      */
     @Override
     public void addMetricsConfig(@NonNull String metricsConfigName, @NonNull byte[] config,
@@ -317,7 +335,7 @@ public class CarTelemetryService extends ICarTelemetryService.Stub implements Ca
      * {@link ICarTelemetryReportListener}.
      *
      * @param metricsConfigName the unique identifier of a MetricsConfig.
-     * @param listener to receive finished report or error.
+     * @param listener          to receive finished report or error.
      */
     @Override
     public void getFinishedReport(@NonNull String metricsConfigName,
@@ -438,21 +456,6 @@ public class CarTelemetryService extends ICarTelemetryService.Stub implements Ca
     }
 
     @Nullable
-    private byte[] getBytes(@Nullable PersistableBundle report) {
-        if (report == null) {
-            return null;
-        }
-        try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-            report.writeToStream(bos);
-            return bos.toByteArray();
-        } catch (IOException e) {
-            String msg = "Failed to write PersistableBundle to output stream. ";
-            Slogf.w(CarLog.TAG_TELEMETRY, msg, e);
-            return null;
-        }
-    }
-
-    @Nullable
     private byte[] getBytes(@Nullable TelemetryProto.TelemetryError error) {
         if (error == null) {
             return null;
@@ -467,7 +470,7 @@ public class CarTelemetryService extends ICarTelemetryService.Stub implements Ca
             @Nullable TelemetryProto.TelemetryError error,
             @CarTelemetryManager.MetricsReportStatus int status) {
         try {
-            listener.onResult(metricsConfigName, getBytes(report), getBytes(error), status);
+            listener.onResult(metricsConfigName, report, getBytes(error), status);
         } catch (RemoteException e) {
             Slogf.w(CarLog.TAG_TELEMETRY, "error with ICarTelemetryReportListener", e);
         }

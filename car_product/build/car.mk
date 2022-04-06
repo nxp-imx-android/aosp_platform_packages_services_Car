@@ -67,8 +67,9 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.carrier=unknown
 
-PRODUCT_SYSTEM_PROPERTIES += \
-    persist.bluetooth.enablenewavrcp=false
+# Set default Bluetooth profiles
+TARGET_SYSTEM_PROP += \
+    packages/services/Car/car_product/properties/bluetooth.prop
 
 PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
     config.disable_systemtextclassifier=true
@@ -123,11 +124,14 @@ PRODUCT_SYSTEM_PROPERTIES += \
 # TODO(b/198516172): Find a better location to add this read only property
 # It is added here to check the functionality, will be updated in next CL
 PRODUCT_SYSTEM_PROPERTIES += \
-    ro.android.car.service.overlay.packages=com.android.car.resources.vendor;com.google.android.car.resources.vendor;
+    ro.android.car.carservice.overlay.packages?=com.android.car.resources.vendor;com.google.android.car.resources.vendor;
 
 # vendor layer can override this
 PRODUCT_SYSTEM_PROPERTIES += \
     ro.android.car.carservice.package?=com.android.car.updatable
+
+# Update with PLATFORM_VERSION_MINOR_INT update
+PRODUCT_SYSTEM_PROPERTIES += ro.android.car.version.platform_minor=0
 
 # Automotive specific packages
 PRODUCT_PACKAGES += \
