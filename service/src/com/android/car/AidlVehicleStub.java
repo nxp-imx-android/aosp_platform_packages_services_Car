@@ -54,6 +54,7 @@ import com.android.car.internal.LargeParcelable;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 
+import java.io.FileDescriptor;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -321,6 +322,11 @@ final class AidlVehicleStub extends VehicleStub {
         }
     }
 
+    @Override
+    public void dump(FileDescriptor fd, ArrayList<String> args) throws RemoteException {
+        mAidlVehicle.asBinder().dump(fd, args.toArray(new String[args.size()]));
+    }
+
     @Nullable
     private static IVehicle getAidlVehicle() {
         try {
@@ -390,6 +396,16 @@ final class AidlVehicleStub extends VehicleStub {
         @Override
         public void unsubscribe(int prop) throws RemoteException, ServiceSpecificException {
             mAidlVehicle.unsubscribe(this, new int[]{prop});
+        }
+
+        @Override
+        public String getInterfaceHash() {
+            return IVehicleCallback.HASH;
+        }
+
+        @Override
+        public int getInterfaceVersion() {
+            return IVehicleCallback.VERSION;
         }
     }
 
@@ -462,6 +478,16 @@ final class AidlVehicleStub extends VehicleStub {
         public void onPropertySetError(VehiclePropErrors errors) throws RemoteException {
             throw new UnsupportedOperationException(
                     "GetSetValuesCallback only support onGetValues or onSetValues");
+        }
+
+        @Override
+        public String getInterfaceHash() {
+            return IVehicleCallback.HASH;
+        }
+
+        @Override
+        public int getInterfaceVersion() {
+            return IVehicleCallback.VERSION;
         }
     }
 }
