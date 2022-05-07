@@ -241,8 +241,9 @@
     <string name="radio_na" translatable="false">N/A</string>
 
     <!-- sensors test -->
-    <string name="location_title" translatable="false">Location/Orientation:</string>
-    <string name="sensor_title" translatable="false">Car Sensor Data:</string>
+    <string name="location_title" translatable="false">Location Data:</string>
+    <string name="sensor_title" translatable="false">Sensor Data:</string>
+    <string name="car_sensor_title" translatable="false">Car Sensor Data:</string>
     <string name="sensor_na" translatable="false">N/A</string>
 
     <string name="sensor_environment" translatable="false">Environment[%1$s]: temperature=%2$s</string>
@@ -395,6 +396,7 @@
     <string name="wtf_occurred_config" translatable="false">wtf_occurred:</string>
     <string name="wifi_netstats_config" translatable="false">wifi_netstats:</string>
     <string name="stats_and_connectivity_config" translatable="false">stats and connectivity:</string>
+    <string name="memory_config" translatable="false">memory:</string>
     <string name="add_metrics_config" translatable="false">Add MetricsConfig</string>
     <string name="remove_metrics_config" translatable="false">Remove MetricsConfig</string>
     <string name="download_data" translatable="false">Download Data</string>
