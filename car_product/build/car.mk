@@ -132,7 +132,7 @@ PRODUCT_SYSTEM_PROPERTIES += \
     ro.android.car.carservice.package?=com.android.car.updatable
 
 # Update with PLATFORM_VERSION_MINOR_INT update
-PRODUCT_SYSTEM_PROPERTIES += ro.android.car.version.platform_minor=0
+PRODUCT_SYSTEM_PROPERTIES += ro.android.car.version.platform_minor=1
 
 # Automotive specific packages
 PRODUCT_PACKAGES += \
@@ -153,6 +153,8 @@ PRODUCT_PACKAGES += \
     CarLatinIME \
     CarSettings \
     CarUsbHandler \
+    RotaryIME \
+    RotaryPlayground \
     android.car.builtin \
     car-frameworks-service \
     com.android.car.procfsinspector \
