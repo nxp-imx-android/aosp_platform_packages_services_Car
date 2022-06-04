@@ -260,6 +260,8 @@ final class CarShellCommand extends BasicShellCommandHandler {
 
     private static final String COMMAND_TEST_ECHO_REVERSE_BYTES = "test-echo-reverse-bytes";
 
+    private static final String COMMAND_GET_TARGET_CAR_VERSIONS = "get-target-car-versions";
+
     private static final String[] CREATE_OR_MANAGE_USERS_PERMISSIONS = new String[] {
             android.Manifest.permission.CREATE_USERS,
             android.Manifest.permission.MANAGE_USERS
@@ -347,6 +349,8 @@ final class CarShellCommand extends BasicShellCommandHandler {
                 android.Manifest.permission.INJECT_EVENTS);
         USER_BUILD_COMMAND_TO_PERMISSION_MAP.put(COMMAND_TEST_ECHO_REVERSE_BYTES,
                 android.car.Car.PERMISSION_CAR_DIAGNOSTIC_READ_ALL);
+        USER_BUILD_COMMAND_TO_PERMISSION_MAP.put(COMMAND_GET_TARGET_CAR_VERSIONS,
+                android.Manifest.permission.QUERY_ALL_PACKAGES);
     }
 
     private static final String PARAM_DAY_MODE = "day";
@@ -756,6 +760,10 @@ final class CarShellCommand extends BasicShellCommandHandler {
         pw.println("\t  test the ECHO_REVERSE_BYTES property. PROP_ID is the ID (int) for "
                 + "ECHO_REVERSE_BYTES, REQUEST_SIZE is how many byteValues in the request. "
                 + "This command can be used for testing LargeParcelable by passing large request.");
+
+        pw.printf("\t%s [--user USER] <APP1> [APPN]", COMMAND_GET_TARGET_CAR_VERSIONS);
+        pw.println("\t  Gets the target API versions (major and minor) defined by the given apps "
+                + "for the given user (or current user when --user is not set).");
     }
 
     private static int showInvalidArguments(IndentingPrintWriter pw) {
@@ -1128,6 +1136,9 @@ final class CarShellCommand extends BasicShellCommandHandler {
                 break;
             case COMMAND_TEST_ECHO_REVERSE_BYTES:
                 testEchoReverseBytes(args, writer);
+                break;
+            case COMMAND_GET_TARGET_CAR_VERSIONS:
+                getTargetCarVersions(args, writer);
                 break;
             default:
                 writer.println("Unknown command: \"" + cmd + "\"");
@@ -1927,12 +1938,7 @@ final class CarShellCommand extends BasicShellCommandHandler {
 
     private CarUserManager getCarUserManager(IndentingPrintWriter writer,
             @UserIdInt int userId) {
-        Context context;
-        if (userId == mContext.getUser().getIdentifier()) {
-            context = mContext;
-        } else {
-            context = mContext.createContextAsUser(UserHandle.of(userId), /* flags= */ 0);
-        }
+        Context context = getContextForUser(userId);
         int actualUserId = Binder.getCallingUid();
         if (actualUserId != userId) {
             writer.printf("Emulating call for user id %d, but caller's user id is %d, so that's "
@@ -1940,6 +1946,13 @@ final class CarShellCommand extends BasicShellCommandHandler {
         }
 
         return getCarUserManager(context);
+    }
+
+    private Context getContextForUser(int userId) {
+        if (userId == mContext.getUser().getIdentifier()) {
+            return mContext;
+        }
+        return mContext.createContextAsUser(UserHandle.of(userId), /* flags= */ 0);
     }
 
     private CarUserManager getCarUserManager(Context context) {
@@ -3156,6 +3169,48 @@ final class CarShellCommand extends BasicShellCommandHandler {
         }
 
         writer.println("Test Succeeded!");
+    }
+
+    private void getTargetCarVersions(String[] args, IndentingPrintWriter writer) {
+        if (args.length < 2) {
+            showInvalidArguments(writer);
+            return;
+        }
+
+        int firstAppArg = 1;
+
+        // TODO(b/234499460): move --user logic to private helper / support 'all'
+        int userId = UserHandle.CURRENT.getIdentifier();
+        if (args[1].equals("--user")) {
+            if (args.length < 4) {
+                showInvalidArguments(writer);
+                return;
+            }
+            String userArg = args[2];
+            firstAppArg += 2;
+            if (!"current".equals(userArg) && !"cur".equals(userArg)) {
+                try {
+                    userId = Integer.parseInt(args[2]);
+                } catch (NumberFormatException e) {
+                    showInvalidArguments(writer);
+                    return;
+                }
+            }
+        }
+        if (userId == UserHandle.CURRENT.getIdentifier()) {
+            userId = ActivityManager.getCurrentUser();
+        }
+        writer.printf("User %d:\n", userId);
+
+        Context userContext = getContextForUser(userId);
+        for (int i = firstAppArg; i < args.length; i++) {
+            String app = args[i];
+            int majorVersion = CarPackageManagerService.getTargetCarVersion(userContext,
+                    CarPackageManager.MANIFEST_METADATA_TARGET_CAR_MAJOR_VERSION, app);
+            int minorVersion = CarPackageManagerService.getTargetCarVersion(userContext,
+                    CarPackageManager.MANIFEST_METADATA_TARGET_CAR_MINOR_VERSION, app);
+            writer.printf("  %s: major=%d, minor=%d\n", app, majorVersion, minorVersion);
+        }
     }
 
     // Check if the given property is global
