@@ -12,7 +12,7 @@
         <RotationOp>
             <VhalProperty>
                 <!-- Uses VHAL Property DOOR_POS -->
-                <PropertyId>0x16000B00</PropertyId>
+                <PropertyId>0x16400B00</PropertyId>
                 <!-- AreadId = VehicleAreaDoor::ROW_1_LEFT -->
                 <AreaId>0x00000001</AreaId>
             </VhalProperty>
@@ -51,7 +51,7 @@
         <TranslationOp>
             <VhalProperty>
                 <!-- Uses VHAL Property WINDOW_POS -->
-                <PropertyId>0x13000BC0</PropertyId>
+                <PropertyId>0x13400BC0</PropertyId>
                 <!-- AreaId = VehicleAreaWindow::ROW_1_LEFT -->
                 <AreaId>0x00000010</AreaId>
             </VhalProperty>

@@ -50,8 +50,8 @@ TEST(CarModelConfigReaderTests, CarModelReadConfigSuccess) {
 
         EXPECT_EQ(doorAnimation.rotationOpsMap.size(), 1);
         {
-            RotationOp rotationOp = (doorAnimation.rotationOpsMap.at(0x16000B0000000001)).at(0);
-            EXPECT_EQ(rotationOp.vhalProperty, 0x16000B0000000001);
+            RotationOp rotationOp = (doorAnimation.rotationOpsMap.at(0x16400B0000000001)).at(0);
+            EXPECT_EQ(rotationOp.vhalProperty, 0x16400B0000000001);
             EXPECT_EQ(rotationOp.type, AnimationType::ROTATION_ANGLE);
             EXPECT_EQ(rotationOp.animationTime, 2000);
             std::array<float, 3> axis = {0, 0, 1};
@@ -74,8 +74,8 @@ TEST(CarModelConfigReaderTests, CarModelReadConfigSuccess) {
         EXPECT_EQ(windowAnimation.translationOpsMap.size(), 1);
         {
             TranslationOp translationOp =
-                    (windowAnimation.translationOpsMap.at(0x13000BC000000010)).at(0);
-            EXPECT_EQ(translationOp.vhalProperty, 0x13000BC000000010);
+                    (windowAnimation.translationOpsMap.at(0x13400BC000000010)).at(0);
+            EXPECT_EQ(translationOp.vhalProperty, 0x13400BC000000010);
             EXPECT_EQ(translationOp.type, AnimationType::TRANSLATION);
             EXPECT_EQ(translationOp.animationTime, 2000);
             std::array<float, 3> dir = {0.0, 0.0, -1.0};
