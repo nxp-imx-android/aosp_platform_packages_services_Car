@@ -24,6 +24,8 @@
 #include <utils/StrongPointer.h>
 #include <utils/Log.h>
 #include <thread>
+#include <hwbinder/IPCThreadState.h>
+#include <hwbinder/ProcessState.h>
 
 #include "SurroundViewServiceCallback.h"
 
@@ -50,16 +52,59 @@ enum DemoMode {
     DEMO_3D,
 };
 
+DemoMode mode = UNKNOWN;
+
+namespace {
+
+android::sp<IEvsEnumerator> pEvs;
+android::sp<IEvsDisplay> pDisplay;
+android::sp<ISurroundViewService> surroundViewService;
+sp<ISurroundView3dSession> surroundView3dSession;
+sp<SurroundViewServiceCallback> sv3dCallback;
+sp<ISurroundView2dSession> surroundView2dSession;
+sp<SurroundViewServiceCallback> sv2dCallback;
+
+void sigHandler(int sig) {
+    LOG(ERROR) << "sv_app is being terminated on receiving a signal " << sig;
+    if (pEvs != nullptr) {
+      pEvs->closeDisplay(pDisplay);
+    }
+    if (mode == DEMO_3D) {
+        surroundView3dSession->stopStream();
+        sv3dCallback->waitStreamStopped();
+        surroundViewService->stop3dSession(surroundView3dSession);
+        surroundView3dSession = nullptr;
+    }
+    if (mode == DEMO_2D) {
+        surroundView2dSession->stopStream();
+        sv2dCallback->waitStreamStopped();
+        surroundViewService->stop2dSession(surroundView2dSession);
+        surroundView2dSession = nullptr;
+    }
+
+    android::hardware::IPCThreadState::self()->stopProcess();
+    exit(EXIT_FAILURE);
+}
+
+void registerSigHandler() {
+    struct sigaction sa;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sa.sa_handler = sigHandler;
+    sigaction(SIGABRT, &sa, nullptr);
+    sigaction(SIGTERM, &sa, nullptr);
+    sigaction(SIGINT,  &sa, nullptr);
+}
+
+} // namespace
+
 bool run2dSurroundView(sp<ISurroundViewService> pSurroundViewService,
                        sp<IEvsDisplay> pDisplay) {
     LOG(INFO) << "Run 2d Surround View demo";
 
-    // Call HIDL API "start2dSession"
-    sp<ISurroundView2dSession> surroundView2dSession;
-
     SvResult svResult;
     pSurroundViewService->start2dSession(
-        [&surroundView2dSession, &svResult](
+        [&svResult](
             const sp<ISurroundView2dSession>& session, SvResult result) {
         surroundView2dSession = session;
         svResult = result;
@@ -114,12 +159,9 @@ bool run3dSurroundView(sp<ISurroundViewService> pSurroundViewService,
                        sp<IEvsDisplay> pDisplay) {
     LOG(INFO) << "Run 3d Surround View demo";
 
-    // Call HIDL API "start3dSession"
-    sp<ISurroundView3dSession> surroundView3dSession;
-
     SvResult svResult;
     pSurroundViewService->start3dSession(
-        [&surroundView3dSession, &svResult](
+        [&svResult](
             const sp<ISurroundView3dSession>& session, SvResult result) {
         surroundView3dSession = session;
         svResult = result;
@@ -141,8 +183,7 @@ bool run3dSurroundView(sp<ISurroundViewService> pSurroundViewService,
         return false;
     }
 
-    sp<SurroundViewServiceCallback> sv3dCallback
-        = new SurroundViewServiceCallback(pDisplay, surroundView3dSession);
+    sv3dCallback = new SurroundViewServiceCallback(pDisplay, surroundView3dSession);
 
     // Start 3d stream with callback
     if (surroundView3dSession->startStream(sv3dCallback) != SvResult::OK) {
@@ -184,7 +225,9 @@ int main(int argc, char** argv) {
     // Start up
     LOG(INFO) << "SV app starting";
 
-    DemoMode mode = UNKNOWN;
+    // Register a signal handler
+    registerSigHandler();
+
     for (int i=1; i< argc; i++) {
         if (strcmp(argv[i], "--use2d") == 0) {
             mode = DEMO_2D;
@@ -207,16 +250,15 @@ int main(int argc, char** argv) {
 
     // Try to connect to EVS service
     LOG(INFO) << "Acquiring EVS Enumerator";
-    sp<IEvsEnumerator> evs = IEvsEnumerator::getService("EvsEnumeratorHw");
-    if (evs == nullptr) {
+    pEvs = IEvsEnumerator::getService("EvsEnumeratorHw");
+    if (pEvs == nullptr) {
         LOG(ERROR) << "getService(default) returned NULL.  Exiting.";
         return EXIT_FAILURE;
     }
 
     // Try to connect to SV service
     LOG(INFO) << "Acquiring SV Service";
-    android::sp<ISurroundViewService> surroundViewService
-        = ISurroundViewService::getService("default");
+    surroundViewService = ISurroundViewService::getService("default");
 
     if (surroundViewService == nullptr) {
         LOG(ERROR) << "getService(default) returned NULL.";
@@ -225,35 +267,32 @@ int main(int argc, char** argv) {
         LOG(INFO) << "Get ISurroundViewService default";
     }
 
-    // Connect to evs display
-    int displayId;
-    evs->getDisplayIdList([&displayId](auto idList) {
-        displayId = idList[0];
-    });
+    LOG(INFO) << "Acquiring EVS Display with ID: 0";
 
-    LOG(INFO) << "Acquiring EVS Display with ID: "
-              << displayId;
-    sp<IEvsDisplay> display = evs->openDisplay_1_1(displayId);
-    if (display == nullptr) {
+    pDisplay = pEvs->openDisplay_1_1(0);
+    if (pDisplay == nullptr) {
         LOG(ERROR) << "EVS Display unavailable.  Exiting.";
         return EXIT_FAILURE;
     }
 
     if (mode == DEMO_2D) {
-        if (!run2dSurroundView(surroundViewService, display)) {
+        if (!run2dSurroundView(surroundViewService, pDisplay)) {
             LOG(ERROR) << "Something went wrong in 2d surround view demo. "
                        << "Exiting.";
             return EXIT_FAILURE;
         }
     } else if (mode == DEMO_3D) {
-        if (!run3dSurroundView(surroundViewService, display)) {
+        if (!run3dSurroundView(surroundViewService, pDisplay)) {
             LOG(ERROR) << "Something went wrong in 3d surround view demo. "
                        << "Exiting.";
             return EXIT_FAILURE;
         }
+    } else {
+        LOG(ERROR) << " Unknown mode";
+        return EXIT_FAILURE;
     }
 
-    evs->closeDisplay(display);
+    pEvs->closeDisplay(pDisplay);
 
     LOG(DEBUG) << "SV sample app finished running successfully";
     return EXIT_SUCCESS;
