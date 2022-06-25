@@ -42,6 +42,7 @@ import android.app.ActivityManager;
 import android.app.ActivityOptions;
 import android.app.UiModeManager;
 import android.car.Car;
+import android.car.CarApiVersion;
 import android.car.CarOccupantZoneManager;
 import android.car.VehiclePropertyIds;
 import android.car.builtin.content.pm.PackageManagerHelper;
@@ -147,6 +148,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -260,7 +263,7 @@ final class CarShellCommand extends BasicShellCommandHandler {
 
     private static final String COMMAND_TEST_ECHO_REVERSE_BYTES = "test-echo-reverse-bytes";
 
-    private static final String COMMAND_GET_TARGET_CAR_VERSIONS = "get-target-car-versions";
+    private static final String COMMAND_GET_TARGET_CAR_API_VERSION = "get-target-car-api-version";
 
     private static final String[] CREATE_OR_MANAGE_USERS_PERMISSIONS = new String[] {
             android.Manifest.permission.CREATE_USERS,
@@ -349,7 +352,7 @@ final class CarShellCommand extends BasicShellCommandHandler {
                 android.Manifest.permission.INJECT_EVENTS);
         USER_BUILD_COMMAND_TO_PERMISSION_MAP.put(COMMAND_TEST_ECHO_REVERSE_BYTES,
                 android.car.Car.PERMISSION_CAR_DIAGNOSTIC_READ_ALL);
-        USER_BUILD_COMMAND_TO_PERMISSION_MAP.put(COMMAND_GET_TARGET_CAR_VERSIONS,
+        USER_BUILD_COMMAND_TO_PERMISSION_MAP.put(COMMAND_GET_TARGET_CAR_API_VERSION,
                 android.Manifest.permission.QUERY_ALL_PACKAGES);
     }
 
@@ -761,8 +764,8 @@ final class CarShellCommand extends BasicShellCommandHandler {
                 + "ECHO_REVERSE_BYTES, REQUEST_SIZE is how many byteValues in the request. "
                 + "This command can be used for testing LargeParcelable by passing large request.");
 
-        pw.printf("\t%s [--user USER] <APP1> [APPN]", COMMAND_GET_TARGET_CAR_VERSIONS);
-        pw.println("\t  Gets the target API versions (major and minor) defined by the given apps "
+        pw.printf("\t%s [--user USER] <APP1> [APPN]", COMMAND_GET_TARGET_CAR_API_VERSION);
+        pw.println("\t  Gets the target API version (major and minor) defined by the given apps "
                 + "for the given user (or current user when --user is not set).");
     }
 
@@ -1137,8 +1140,8 @@ final class CarShellCommand extends BasicShellCommandHandler {
             case COMMAND_TEST_ECHO_REVERSE_BYTES:
                 testEchoReverseBytes(args, writer);
                 break;
-            case COMMAND_GET_TARGET_CAR_VERSIONS:
-                getTargetCarVersions(args, writer);
+            case COMMAND_GET_TARGET_CAR_API_VERSION:
+                getTargetCarApiVersion(args, writer);
                 break;
             default:
                 writer.println("Unknown command: \"" + cmd + "\"");
@@ -2681,22 +2684,24 @@ final class CarShellCommand extends BasicShellCommandHandler {
         writer.println("\tremove-all");
         writer.println("\t  Removes all metrics configs.");
         writer.println("\tping-script-executor [published data filepath] [state filepath]");
+        writer.println("\t  Runs a Lua script from stdin.");
+        writer.println("\tlist");
+        writer.println("\t  Lists the active config metrics.");
+        writer.println("\tget-result <name>");
+        writer.println("\t  Blocks until a metrics report is available and returns it.");
+        writer.println("\t  If there are multiple reports, the CLI is guaranteed to receive "
+                + "at least one report. There is no guarantee that it will be able to get "
+                + "all of them.");
         writer.println("\nEXAMPLES:");
+        writer.println("\t$ adb shell cmd car_service telemetry add name < config1.protobin");
+        writer.println("\t\tWhere config1.protobin is a serialized MetricsConfig proto.");
+        writer.println("\n\t$ adb shell cmd car_service telemetry get-result name");
         writer.println("\t$ adb shell cmd car_service telemetry ping-script-executor "
                 + "< example_script.lua");
         writer.println("\t$ adb shell cmd car_service telemetry ping-script-executor "
                 + "/data/local/tmp/published_data < example_script.lua");
         writer.println("\t$ adb shell cmd car_service telemetry ping-script-executor "
                 + "/data/local/tmp/bundle /data/local/tmp/bundle2 < example_script.lua");
-        writer.println("\t  Removes all metrics configs.");
-        writer.println("\tlist");
-        writer.println("\t  Lists the config metrics in the service.");
-        writer.println("\tget-result <name>");
-        writer.println("\t  Gets if available or waits for the results for the metrics config.");
-        writer.println("\nEXAMPLES:");
-        writer.println("\t$ adb shell cmd car_service telemetry add name < config1.protobin");
-        writer.println("\t\tWhere config1.protobin is a serialized MetricsConfig proto.");
-        writer.println("\n\t$ adb shell cmd car_service telemetry get-result name");
     }
 
     private void handleTelemetryCommands(String[] args, IndentingPrintWriter writer) {
@@ -2824,13 +2829,16 @@ final class CarShellCommand extends BasicShellCommandHandler {
                             } else if (telemetryError != null) {
                                 parseTelemetryError(telemetryError, writer);
                             }
+                            // the latch counts after receiving 1 report even if there are
+                            // multiple reports
                             latch.countDown();
                         };
                 carTelemetryManager.clearReportReadyListener();
-                carTelemetryManager.setReportReadyListener(Runnable::run, metricsConfigName -> {
+                Executor executor = Executors.newSingleThreadExecutor();
+                carTelemetryManager.setReportReadyListener(executor, metricsConfigName -> {
                     if (metricsConfigName.equals(configName)) {
                         carTelemetryManager.getFinishedReport(
-                                metricsConfigName, Runnable::run, callback);
+                                metricsConfigName, executor, callback);
                     }
                 });
                 try {
@@ -3171,7 +3179,7 @@ final class CarShellCommand extends BasicShellCommandHandler {
         writer.println("Test Succeeded!");
     }
 
-    private void getTargetCarVersions(String[] args, IndentingPrintWriter writer) {
+    private void getTargetCarApiVersion(String[] args, IndentingPrintWriter writer) {
         if (args.length < 2) {
             showInvalidArguments(writer);
             return;
@@ -3205,12 +3213,19 @@ final class CarShellCommand extends BasicShellCommandHandler {
         Context userContext = getContextForUser(userId);
         for (int i = firstAppArg; i < args.length; i++) {
             String app = args[i];
-            // TODO(b/228506662): handle when it's not found
-            int majorVersion = CarPackageManagerService.getTargetCarVersion(userContext,
-                    CarPackageManager.MANIFEST_METADATA_TARGET_CAR_MAJOR_VERSION, app);
-            int minorVersion = CarPackageManagerService.getTargetCarVersion(userContext,
-                    CarPackageManager.MANIFEST_METADATA_TARGET_CAR_MINOR_VERSION, app);
-            writer.printf("  %s: major=%d, minor=%d\n", app, majorVersion, minorVersion);
+            try {
+                CarApiVersion apiVersion = CarPackageManagerService.getTargetCarApiVersion(
+                        userContext, app);
+                writer.printf("  %s: major=%d, minor=%d\n", app,
+                        apiVersion.getMajorVersion(), apiVersion.getMinorVersion());
+            } catch (ServiceSpecificException e) {
+                if (e.errorCode == CarPackageManager.ERROR_CODE_NO_PACKAGE) {
+                    writer.printf("  %s: not found\n", app);
+                } else {
+                    writer.printf("  %s: unexpected exception: %s \n", app, e);
+                }
+                continue;
+            }
         }
     }
 

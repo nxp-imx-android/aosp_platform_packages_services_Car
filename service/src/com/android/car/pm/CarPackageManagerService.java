@@ -23,9 +23,6 @@ import static android.car.content.pm.CarPackageManager.BLOCKING_INTENT_EXTRA_BLO
 import static android.car.content.pm.CarPackageManager.BLOCKING_INTENT_EXTRA_DISPLAY_ID;
 import static android.car.content.pm.CarPackageManager.BLOCKING_INTENT_EXTRA_IS_ROOT_ACTIVITY_DO;
 import static android.car.content.pm.CarPackageManager.BLOCKING_INTENT_EXTRA_ROOT_ACTIVITY_NAME;
-import static android.car.content.pm.CarPackageManager.CAR_TARGET_VERSION_UNDEFINED;
-import static android.car.content.pm.CarPackageManager.MANIFEST_METADATA_TARGET_CAR_MAJOR_VERSION;
-import static android.car.content.pm.CarPackageManager.MANIFEST_METADATA_TARGET_CAR_MINOR_VERSION;
 import static android.car.user.CarUserManager.USER_LIFECYCLE_EVENT_TYPE_SWITCHING;
 
 import static com.android.car.internal.ExcludeFromCodeCoverageGeneratedReport.DUMP_INFO;
@@ -38,6 +35,7 @@ import android.app.ActivityManager;
 import android.app.PendingIntent;
 import android.app.TaskInfo;
 import android.car.Car;
+import android.car.CarApiVersion;
 import android.car.builtin.app.ActivityManagerHelper;
 import android.car.builtin.app.TaskInfoHelper;
 import android.car.builtin.content.pm.PackageManagerHelper;
@@ -109,6 +107,7 @@ import com.android.car.internal.util.LocalLog;
 import com.android.car.internal.util.Sets;
 import com.android.car.power.CarPowerManagementService;
 import com.android.car.user.CarUserService;
+import com.android.car.util.Utils;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 
@@ -136,7 +135,7 @@ public final class CarPackageManagerService extends ICarPackageManager.Stub
     @VisibleForTesting
     static final String TAG = CarLog.tagFor(CarPackageManagerService.class);
 
-    static final boolean DBG = false;
+    static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
 
     // Delimiters to parse packages and activities in the configuration XML resource.
     private static final String PACKAGE_DELIMITER = ",";
@@ -1518,32 +1517,34 @@ public final class CarPackageManagerService extends ICarPackageManager.Stub
     }
 
     @Override
-    public int getTargetCarMajorVersion(String packageName) {
-        return getTargetCarVersion(Binder.getCallingUserHandle(),
-                MANIFEST_METADATA_TARGET_CAR_MAJOR_VERSION, packageName);
+    public CarApiVersion getTargetCarApiVersion(String packageName) {
+        return getTargetCarApiVersion(Binder.getCallingUserHandle(), packageName);
     }
 
     @Override
-    public int getTargetCarMinorVersion(String packageName) {
-        return getTargetCarVersion(Binder.getCallingUserHandle(),
-                MANIFEST_METADATA_TARGET_CAR_MINOR_VERSION, packageName);
+    public CarApiVersion getSelfTargetCarApiVersion(String packageName) {
+        Utils.checkCalledByPackage(mContext, packageName);
+
+        return getTargetCarApiVersion(Binder.getCallingUserHandle(), packageName);
     }
 
-    private int getTargetCarVersion(UserHandle user, String metadataAttribute,
-            String packageName) {
+    /**
+     * Public, as it's also used by {@code ICarImpl}.
+     */
+    public CarApiVersion getTargetCarApiVersion(UserHandle user, String packageName) {
         Context context = mContext.createContextAsUser(user, /* flags= */ 0);
-        return getTargetCarVersion(context, metadataAttribute, packageName);
+        return getTargetCarApiVersion(context, packageName);
     }
 
     /**
      * Used by {@code CarShellCommand} as well.
      */
-    public static int getTargetCarVersion(Context context, String metadataAttribute,
-            String packageName) {
+    @Nullable
+    public static CarApiVersion getTargetCarApiVersion(Context context, String packageName) {
         String permission = android.Manifest.permission.QUERY_ALL_PACKAGES;
         if (context.checkCallingOrSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
-            Slogf.w(TAG, "getTargetCarVersion(%s, %s): UID %d doesn't have %s permission",
-                    metadataAttribute, packageName, Binder.getCallingUid(), permission);
+            Slogf.w(TAG, "getTargetCarVersion(%s): UID %d doesn't have %s permission",
+                    packageName, Binder.getCallingUid(), permission);
             throw new SecurityException("requires permission " + permission);
         }
         ApplicationInfo info = null;
@@ -1552,27 +1553,13 @@ public final class CarPackageManagerService extends ICarPackageManager.Stub
                     PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA));
         } catch (NameNotFoundException e) {
             if (DBG) {
-                Slogf.w(TAG, e, "getTargetCarVersion(%s, %s, %s): not found", context.getUser(),
-                        metadataAttribute, packageName);
+                Slogf.d(TAG, "getTargetCarVersion(%s, %s): not found: %s", context.getUser(),
+                        packageName, e);
             }
-            // Manager will convert it to NameNotFoundException
-            return CAR_TARGET_VERSION_UNDEFINED;
+            throw new ServiceSpecificException(CarPackageManager.ERROR_CODE_NO_PACKAGE,
+                    e.getMessage());
         }
-        int version = CAR_TARGET_VERSION_UNDEFINED;
-        if (info.metaData != null) {
-            version = info.metaData.getInt(metadataAttribute, CAR_TARGET_VERSION_UNDEFINED);
-        }
-        if (version == CAR_TARGET_VERSION_UNDEFINED) {
-            version = MANIFEST_METADATA_TARGET_CAR_MAJOR_VERSION.equals(metadataAttribute)
-                    ? info.targetSdkVersion
-                    : 0;
-            if (DBG) {
-                Slogf.d(TAG, "getTargetCarVersion(%s, %s, %s): no metadata, returning %d",
-                        context.getUser(), metadataAttribute, packageName, version);
-            }
-
-        }
-        return version;
+        return CarApiVersionParser.getTargetCarApiVersion(info);
     }
 
     /**

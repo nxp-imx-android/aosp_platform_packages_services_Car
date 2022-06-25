@@ -73,9 +73,12 @@ package android.car {
     method public void onLifecycleChanged(@NonNull android.car.Car, boolean);
   }
 
-  public final class CarApiVersion extends android.car.ApiVersion<android.car.CarApiVersion> {
+  public final class CarApiVersion extends android.car.ApiVersion<android.car.CarApiVersion> implements android.os.Parcelable {
+    method public int describeContents();
     method @NonNull public static android.car.CarApiVersion forMajorAndMinorVersions(int, int);
     method @NonNull public static android.car.CarApiVersion forMajorVersion(int);
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.car.CarApiVersion> CREATOR;
     field @NonNull public static final android.car.CarApiVersion TIRAMISU_0;
     field @NonNull public static final android.car.CarApiVersion TIRAMISU_1;
   }
@@ -449,6 +452,7 @@ package android.car {
 package android.car.content.pm {
 
   public final class CarPackageManager {
+    method @NonNull public android.car.CarApiVersion getTargetCarApiVersion();
     method public boolean isActivityDistractionOptimized(String, String);
     method public boolean isPendingIntentDistractionOptimized(@NonNull android.app.PendingIntent);
     method public boolean isServiceDistractionOptimized(String, String);

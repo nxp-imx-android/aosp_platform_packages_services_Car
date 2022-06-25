@@ -104,8 +104,7 @@ public class CarMainlineFragment extends Fragment {
         if (isCarApiTQpr) {
             mPlatformVersion.setText(platformApiVersion.toString());
             mCarVersion.setText(carApiVersion.toString());
-            setTargetCarVersion(/* isMajor= */ true);
-            setTargetCarVersion(/* isMajor= */ false);
+            setTargetCarApiVersion();
         } else {
             // TODO(b/228506662): install on device running T to make sure it works
             String unsupported = String.format("N/A on %s", carApiVersion);
@@ -116,23 +115,20 @@ public class CarMainlineFragment extends Fragment {
         }
     }
 
-    private void setTargetCarVersion(boolean isMajor) {
+    private void setTargetCarApiVersion() {
         String ksPkg = getContext().getPackageName();
-        TextView textView;
-        String text = null;
+        CarApiVersion apiVersion;
         try {
-            if (isMajor) {
-                textView = mAppCarTargetMajorSdk;
-                text = String.valueOf(mCarPm.getTargetCarMajorVersion(ksPkg));
-            } else {
-                textView = mAppCarTargetMinorSdk;
-                text = String.valueOf(mCarPm.getTargetCarMinorVersion(ksPkg));
-            }
+            apiVersion = mCarPm.getTargetCarApiVersion(ksPkg);
         } catch (NameNotFoundException e) {
-            Log.e(TAG, "Could not get version of " + ksPkg, e);
+            Log.w(TAG, "Could not get target car version for " + ksPkg, e);
+            String text = "N/A";
+            mAppCarTargetMajorSdk.setText(text);
+            mAppCarTargetMinorSdk.setText(text);
             return;
         }
-        textView.setText(text);
+        mAppCarTargetMajorSdk.setText(String.valueOf(apiVersion.getMajorVersion()));
+        mAppCarTargetMinorSdk.setText(String.valueOf(apiVersion.getMinorVersion()));
     }
 
     @Override
