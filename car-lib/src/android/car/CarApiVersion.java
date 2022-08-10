@@ -25,9 +25,12 @@ import android.os.Parcelable;
 
 /**
  * Represents the API version of the {@code Car} SDK.
+ *
+ * @deprecated use CarVersion instead
  */
 @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
         minPlatformVersion = PlatformVersion.TIRAMISU_0)
+@Deprecated
 public final class CarApiVersion extends ApiVersion<CarApiVersion> implements Parcelable {
 
     /**
