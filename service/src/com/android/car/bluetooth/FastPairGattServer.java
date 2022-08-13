@@ -577,13 +577,6 @@ class FastPairGattServer {
      * configurations.
      */
     void setup() {
-        // Setup filter to receive pairing attempts and passkey. Make this a high priority broadcast
-        // receiver so others can't intercept it before we can handle it.
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(BluetoothDevice.ACTION_PAIRING_REQUEST);
-        filter.setPriority(IntentFilter.SYSTEM_HIGH_PRIORITY);
-        mContext.registerReceiver(mPairingAttemptsReceiver, filter);
-
         mModelIdCharacteristic = new BluetoothGattCharacteristic(FAST_PAIR_MODEL_ID_UUID.getUuid(),
                 BluetoothGattCharacteristic.PROPERTY_READ,
                 BluetoothGattCharacteristic.PERMISSION_READ);
@@ -633,6 +626,13 @@ class FastPairGattServer {
         if (mBluetoothGattServer == null) {
             return;
         }
+        // Setup filter to receive pairing attempts and passkey. Make this a high priority broadcast
+        // receiver so others can't intercept it before we can handle it.
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(BluetoothDevice.ACTION_PAIRING_REQUEST);
+        filter.setPriority(IntentFilter.SYSTEM_HIGH_PRIORITY);
+        mContext.registerReceiver(mPairingAttemptsReceiver, filter);
+
         mBluetoothGattServer.addService(mFastPairService);
     }
 
@@ -640,7 +640,15 @@ class FastPairGattServer {
         if (mBluetoothGattServer == null) {
             return;
         }
+        if (isConnected()) {
+            mBluetoothGattServer.cancelConnection(mRemoteGattDevice);
+            mRemoteGattDevice = null;
+            mCallbacks.onPairingCompleted(false);
+        }
+        mPairingPasskey = -1;
+        mSharedSecretKey = null;
         mBluetoothGattServer.removeService(mFastPairService);
+        mContext.unregisterReceiver(mPairingAttemptsReceiver);
     }
 
     void dump(IndentingPrintWriter writer) {
