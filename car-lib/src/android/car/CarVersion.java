@@ -43,7 +43,7 @@ public final class CarVersion extends ApiVersion<CarVersion> implements Parcelab
                 minPlatformVersion = PlatformVersion.TIRAMISU_0)
         @NonNull
         public static final CarVersion TIRAMISU_0 =
-                forMajorAndMinorVersions(Build.VERSION_CODES.TIRAMISU, 0);
+                new CarVersion("TIRAMISU_0", Build.VERSION_CODES.TIRAMISU, 0);
 
         /**
          * Helper object for first minor upgrade of Android 13.
@@ -52,11 +52,21 @@ public final class CarVersion extends ApiVersion<CarVersion> implements Parcelab
                 minPlatformVersion = PlatformVersion.TIRAMISU_0)
         @NonNull
         public static final CarVersion TIRAMISU_1 =
-                forMajorAndMinorVersions(Build.VERSION_CODES.TIRAMISU, 1);
+                new CarVersion("TIRAMISU_1", Build.VERSION_CODES.TIRAMISU, 1);
 
         private VERSION_CODES() {
             throw new UnsupportedOperationException("Only provide constants");
         }
+    }
+
+    /**
+     * Creates a named instance with the given major and minor versions.
+     */
+    // TODO(b/243429779): should not need @ApiRequirements as it's package-protected
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
+            minPlatformVersion = PlatformVersion.TIRAMISU_0)
+    static CarVersion newInstance(String versionName, int majorVersion, int minorVersion) {
+        return new CarVersion(versionName, majorVersion, minorVersion);
     }
 
     /**
@@ -77,6 +87,10 @@ public final class CarVersion extends ApiVersion<CarVersion> implements Parcelab
     @NonNull
     public static CarVersion forMajorVersion(int majorVersion) {
         return new CarVersion(majorVersion, /* minorVersion= */ 0);
+    }
+
+    private CarVersion(String name, int majorVersion, int minorVersion) {
+        super(name, majorVersion, minorVersion);
     }
 
     private CarVersion(int majorVersion, int minorVersion) {
@@ -106,7 +120,7 @@ public final class CarVersion extends ApiVersion<CarVersion> implements Parcelab
         @Override
         public CarVersion createFromParcel(Parcel source) {
             return ApiVersion.readFromParcel(source,
-                    (major, minor) -> forMajorAndMinorVersions(major, minor));
+                    (name, major, minor) -> new CarVersion(name, major, minor));
         }
 
         @Override
