@@ -943,6 +943,7 @@ public final class Car {
      */
     @VisibleForHiddenApiCheck
     @AddedInOrBefore(majorVersion = 33)
+    @SystemApi
     public static final String PERMISSION_CAR_UX_RESTRICTIONS_CONFIGURATION =
             "android.car.permission.CAR_UX_RESTRICTIONS_CONFIGURATION";
 
@@ -1132,7 +1133,8 @@ public final class Car {
      * @hide
      */
     @SystemApi
-    @AddedIn(majorVersion = 33, minorVersion = 1)
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_1)
     public static final String PERMISSION_MANAGE_THREAD_PRIORITY =
             "android.car.permission.MANAGE_THREAD_PRIORITY";
 
