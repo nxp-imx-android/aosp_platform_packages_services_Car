@@ -18,7 +18,7 @@ package android.car;
 import static com.android.car.internal.ExcludeFromCodeCoverageGeneratedReport.BOILERPLATE_CODE;
 
 import android.annotation.NonNull;
-import android.car.annotation.AddedIn;
+import android.car.annotation.ApiRequirements;
 import android.car.annotation.MinimumPlatformSdkVersion;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -32,21 +32,22 @@ import com.android.car.internal.util.DataClass;
  *
  * <p>Apps are expected to check the {@link MinimumPlatformSdkVersion} for each API. If the API is
  * not supported for the current platform, the API should not be called. Apps can use
- * {@link Car#getPlatformApiVersion()} to get the current platform version.
+ * {@link Car#getPlatformVersion()} to get the current platform version.
  */
 @DataClass()
 public final class PlatformVersionMismatchException extends UnsupportedOperationException
         implements Parcelable {
 
     @NonNull
-    private final PlatformApiVersion mExpectedPlatformApiVersion;
+    private final PlatformVersion mExpectedPlatformApiVersion;
 
     @Override
     @NonNull
-    @AddedIn(majorVersion = 33, minorVersion = 1)
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
+             minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     public String getMessage() {
         return "Expected version: "
-                + mExpectedPlatformApiVersion + ", Current version: " + Car.getPlatformApiVersion();
+                + mExpectedPlatformApiVersion + ", Current version: " + Car.getPlatformVersion();
     }
 
 
@@ -65,7 +66,7 @@ public final class PlatformVersionMismatchException extends UnsupportedOperation
 
     @DataClass.Generated.Member
     public PlatformVersionMismatchException(
-            @NonNull PlatformApiVersion expectedPlatformApiVersion) {
+            @NonNull PlatformVersion expectedPlatformApiVersion) {
         this.mExpectedPlatformApiVersion = expectedPlatformApiVersion;
         AnnotationValidations.validate(
                 NonNull.class, null, mExpectedPlatformApiVersion);
@@ -77,14 +78,16 @@ public final class PlatformVersionMismatchException extends UnsupportedOperation
      * Gets expected platform API version.
      */
     @DataClass.Generated.Member
-    @AddedIn(majorVersion = 33, minorVersion = 1)
-    public @NonNull PlatformApiVersion getExpectedPlatformApiVersion() {
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
+             minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
+    public @NonNull PlatformVersion getMinimumPlatformApiVersion() {
         return mExpectedPlatformApiVersion;
     }
 
     @Override
     @DataClass.Generated.Member
-    @AddedIn(majorVersion = 33, minorVersion = 1)
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
+             minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         // You can override field parcelling by defining methods like:
         // void parcelFieldName(Parcel dest, int flags) { ... }
@@ -95,7 +98,8 @@ public final class PlatformVersionMismatchException extends UnsupportedOperation
     @Override
     @DataClass.Generated.Member
     @ExcludeFromCodeCoverageGeneratedReport(reason = BOILERPLATE_CODE)
-    @AddedIn(majorVersion = 33, minorVersion = 1)
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
+             minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     public int describeContents() { return 0; }
 
     /** @hide */
@@ -105,8 +109,8 @@ public final class PlatformVersionMismatchException extends UnsupportedOperation
         // You can override field unparcelling by defining methods like:
         // static FieldType unparcelFieldName(Parcel in) { ... }
 
-        PlatformApiVersion expectedPlatformApiVersion = (PlatformApiVersion) in
-                .readTypedObject(PlatformApiVersion.CREATOR);
+        PlatformVersion expectedPlatformApiVersion = (PlatformVersion) in
+                .readTypedObject(PlatformVersion.CREATOR);
 
         this.mExpectedPlatformApiVersion = expectedPlatformApiVersion;
         AnnotationValidations.validate(
@@ -116,7 +120,8 @@ public final class PlatformVersionMismatchException extends UnsupportedOperation
     }
 
     @DataClass.Generated.Member
-    @AddedIn(majorVersion = 33, minorVersion = 1)
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
+             minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     public static final @NonNull Parcelable.Creator<PlatformVersionMismatchException> CREATOR
             = new Parcelable.Creator<PlatformVersionMismatchException>() {
         @Override

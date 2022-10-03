@@ -17,7 +17,6 @@ package android.car;
 
 import android.annotation.NonNull;
 import android.car.annotation.ApiRequirements;
-import android.car.annotation.ApiRequirements.CarVersion;
 import android.car.annotation.ApiRequirements.PlatformVersion;
 import android.os.Build;
 import android.os.Parcel;
@@ -26,34 +25,34 @@ import android.os.Parcelable;
 /**
  * Represents the API version of the {@code Car} SDK.
  */
-@ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
+@ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
         minPlatformVersion = PlatformVersion.TIRAMISU_0)
-public final class CarApiVersion extends ApiVersion<CarApiVersion> implements Parcelable {
+public final class CarVersion extends ApiVersion<CarVersion> implements Parcelable {
 
     /**
      * Contains pre-defined versions matching Car releases.
      */
-    @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
             minPlatformVersion = PlatformVersion.TIRAMISU_0)
     public static class VERSION_CODES {
 
         /**
          * Helper object for main version of Android 13.
          */
-        @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
+        @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
                 minPlatformVersion = PlatformVersion.TIRAMISU_0)
         @NonNull
-        public static final CarApiVersion TIRAMISU_0 =
-                forMajorAndMinorVersions(Build.VERSION_CODES.TIRAMISU, 0);
+        public static final CarVersion TIRAMISU_0 =
+                new CarVersion("TIRAMISU_0", Build.VERSION_CODES.TIRAMISU, 0);
 
         /**
          * Helper object for first minor upgrade of Android 13.
          */
-        @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
+        @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
                 minPlatformVersion = PlatformVersion.TIRAMISU_0)
         @NonNull
-        public static final CarApiVersion TIRAMISU_1 =
-                forMajorAndMinorVersions(Build.VERSION_CODES.TIRAMISU, 1);
+        public static final CarVersion TIRAMISU_1 =
+                new CarVersion("TIRAMISU_1", Build.VERSION_CODES.TIRAMISU, 1);
 
         private VERSION_CODES() {
             throw new UnsupportedOperationException("Only provide constants");
@@ -61,58 +60,72 @@ public final class CarApiVersion extends ApiVersion<CarApiVersion> implements Pa
     }
 
     /**
+     * Creates a named instance with the given major and minor versions.
+     */
+    // TODO(b/243429779): should not need @ApiRequirements as it's package-protected
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
+            minPlatformVersion = PlatformVersion.TIRAMISU_0)
+    static CarVersion newInstance(String versionName, int majorVersion, int minorVersion) {
+        return new CarVersion(versionName, majorVersion, minorVersion);
+    }
+
+    /**
      * Creates a new instance with the given major and minor versions.
      */
-    @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
             minPlatformVersion = PlatformVersion.TIRAMISU_0)
     @NonNull
-    public static CarApiVersion forMajorAndMinorVersions(int majorVersion, int minorVersion) {
-        return new CarApiVersion(majorVersion, minorVersion);
+    public static CarVersion forMajorAndMinorVersions(int majorVersion, int minorVersion) {
+        return new CarVersion(majorVersion, minorVersion);
     }
 
     /**
      * Creates a new instance for a major version (i.e., the minor version will be {@code 0}.
      */
-    @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
             minPlatformVersion = PlatformVersion.TIRAMISU_0)
     @NonNull
-    public static CarApiVersion forMajorVersion(int majorVersion) {
-        return new CarApiVersion(majorVersion, /* minorVersion= */ 0);
+    public static CarVersion forMajorVersion(int majorVersion) {
+        return new CarVersion(majorVersion, /* minorVersion= */ 0);
     }
 
-    private CarApiVersion(int majorVersion, int minorVersion) {
+    private CarVersion(String name, int majorVersion, int minorVersion) {
+        super(name, majorVersion, minorVersion);
+    }
+
+    private CarVersion(int majorVersion, int minorVersion) {
         super(majorVersion, minorVersion);
     }
 
     @Override
-    @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
             minPlatformVersion = PlatformVersion.TIRAMISU_0)
     public int describeContents() {
         return 0;
     }
 
     @Override
-    @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
             minPlatformVersion = PlatformVersion.TIRAMISU_0)
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         writeToParcel(dest);
     }
 
-    @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
             minPlatformVersion = PlatformVersion.TIRAMISU_0)
     @NonNull
-    public static final Parcelable.Creator<CarApiVersion> CREATOR =
-            new Parcelable.Creator<CarApiVersion>() {
+    public static final Parcelable.Creator<CarVersion> CREATOR =
+            new Parcelable.Creator<CarVersion>() {
 
         @Override
-        public CarApiVersion createFromParcel(Parcel source) {
+        public CarVersion createFromParcel(Parcel source) {
             return ApiVersion.readFromParcel(source,
-                    (major, minor) -> forMajorAndMinorVersions(major, minor));
+                    (name, major, minor) -> new CarVersion(name, major, minor));
         }
 
         @Override
-        public CarApiVersion[] newArray(int size) {
-            return new CarApiVersion[size];
+        public CarVersion[] newArray(int size) {
+            return new CarVersion[size];
         }
     };
 }

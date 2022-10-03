@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.android.car.util;
+package com.android.car.internal.util;
 
 import static com.google.common.truth.Truth.assertThat;
 
 import static org.junit.Assert.assertThrows;
 
-import android.car.PlatformApiVersion;
+import android.car.PlatformVersion;
 import android.car.PlatformVersionMismatchException;
 
 import org.junit.Test;
@@ -29,27 +29,27 @@ public class VersionUtilsTest {
     @Test
     public void testMismatchVersionException() {
         assertThrows(PlatformVersionMismatchException.class,
-                () -> VersionUtils.assertPlatformApiVersionAtLeast(
-                        PlatformApiVersion.forMajorAndMinorVersions(Integer.MAX_VALUE,
+                () -> VersionUtils.assertPlatformVersionAtLeast(
+                        PlatformVersion.forMajorAndMinorVersions(Integer.MAX_VALUE,
                                 Integer.MAX_VALUE)));
     }
 
     @Test
     public void testNoExceptionForCorrectVersion() {
-        VersionUtils.assertPlatformApiVersionAtLeast(
-                PlatformApiVersion.forMajorAndMinorVersions(33, 0));
+        VersionUtils.assertPlatformVersionAtLeast(
+                PlatformVersion.forMajorAndMinorVersions(33, 0));
     }
 
     @Test
-    public void testIsPlatformApiVersionAtLeastSuccess() {
-        assertThat(VersionUtils.isPlatformApiVersionAtLeast(
-                PlatformApiVersion.forMajorAndMinorVersions(33, 0))).isTrue();
+    public void testIsPlatformVersionAtLeastSuccess() {
+        assertThat(VersionUtils.isPlatformVersionAtLeast(
+                PlatformVersion.forMajorAndMinorVersions(33, 0))).isTrue();
     }
 
     @Test
-    public void testIsPlatformApiVersionAtLeastFailure() {
-        assertThat(VersionUtils.isPlatformApiVersionAtLeast(
-                PlatformApiVersion.forMajorAndMinorVersions(Integer.MAX_VALUE, Integer.MAX_VALUE)))
+    public void testIsPlatformVersionAtLeastFailure() {
+        assertThat(VersionUtils.isPlatformVersionAtLeast(
+                PlatformVersion.forMajorAndMinorVersions(Integer.MAX_VALUE, Integer.MAX_VALUE)))
                         .isFalse();
     }
 

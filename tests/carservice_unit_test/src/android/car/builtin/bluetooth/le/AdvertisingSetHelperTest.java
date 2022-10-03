@@ -13,6 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package android.car;
 
-parcelable CarApiVersion;
+package android.car.builtin.bluetooth.le;
+
+import static org.mockito.Mockito.verify;
+
+import android.bluetooth.le.AdvertisingSet;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
+
+@RunWith(MockitoJUnitRunner.class)
+public final class AdvertisingSetHelperTest {
+
+    @Mock
+    private AdvertisingSet mMockAdvertisingSet;
+
+    @Test
+    public void getOwnAddress_delegate() {
+        AdvertisingSetHelper.getOwnAddress(mMockAdvertisingSet);
+
+        verify(mMockAdvertisingSet).getOwnAddress();
+    }
+}

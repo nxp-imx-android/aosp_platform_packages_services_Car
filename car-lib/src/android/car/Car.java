@@ -30,11 +30,12 @@ import android.annotation.TestApi;
 import android.app.Activity;
 import android.app.Service;
 import android.car.admin.CarDevicePolicyManager;
-import android.car.annotation.AddedIn;
 import android.car.annotation.AddedInOrBefore;
+import android.car.annotation.ApiRequirements;
 import android.car.annotation.MandatoryFeature;
 import android.car.annotation.OptionalFeature;
 import android.car.app.CarActivityManager;
+import android.car.builtin.os.BuildHelper;
 import android.car.builtin.os.ServiceManagerHelper;
 import android.car.cluster.CarInstrumentClusterManager;
 import android.car.cluster.ClusterActivityState;
@@ -118,30 +119,64 @@ public final class Car {
      * @deprecated - use {@code getCarApiVersion().getMajorVersion()} instead
      */
     @Deprecated
-    @AddedIn(majorVersion = 33)
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_0,
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     public static final int API_VERSION_MAJOR_INT = 33;
 
     /**
      * @deprecated - use {@code getCarApiVersion().getMinorVersion()} instead
      */
     @Deprecated
-    @AddedIn(majorVersion = 33)
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_0,
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     public static final int API_VERSION_MINOR_INT = 1;
-
 
     /**
      * @deprecated - use {@code getPlatformApiVersion().getMinorVersion()} instead
      */
     @Deprecated
-    @AddedIn(majorVersion = 33)
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_0,
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     public static final int PLATFORM_VERSION_MINOR_INT = SystemProperties
             .getInt(PROPERTY_PLATFORM_MINOR_VERSION, /* def= */ 0);
 
-    private static final CarApiVersion CAR_API_VERSION = CarApiVersion
-            .forMajorAndMinorVersions(API_VERSION_MAJOR_INT, API_VERSION_MINOR_INT);
+    private static final CarVersion CAR_VERSION = CarVersion.newInstance("Car.CAR_VERSION",
+            API_VERSION_MAJOR_INT, API_VERSION_MINOR_INT);
 
-    private static final PlatformApiVersion PLATFORM_API_VERSION = PlatformApiVersion
-            .forMajorAndMinorVersions(Build.VERSION.SDK_INT, PLATFORM_VERSION_MINOR_INT);
+    private static final PlatformVersion PLATFORM_VERSION;
+
+    /**
+     * @hide
+     */
+    @TestApi
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
+    public static final String PROPERTY_EMULATED_PLATFORM_VERSION_MAJOR =
+            "com.android.car.internal.debug.platform_major_version";
+    /**
+     * @hide
+     */
+    @TestApi
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
+    public static final String PROPERTY_EMULATED_PLATFORM_VERSION_MINOR =
+            "com.android.car.internal.debug.platform_minor_version";
+
+    static {
+        PlatformVersion emulated = null;
+        if (!BuildHelper.isUserBuild()) {
+            int major = SystemProperties.getInt(PROPERTY_EMULATED_PLATFORM_VERSION_MAJOR, -1);
+            if (major != -1) {
+                int minor = SystemProperties.getInt(PROPERTY_EMULATED_PLATFORM_VERSION_MINOR,
+                        PLATFORM_VERSION_MINOR_INT);
+                emulated = android.car.PlatformVersion.newInstance("EMULATED", major, minor);
+                Log.i(TAG_CAR, "Emulating PLATFORM_VERSION version: " + emulated);
+            }
+        }
+        PLATFORM_VERSION = emulated != null ? emulated : PlatformVersion
+                .newInstance("Car.PLATFORM_VERSION",
+                        Build.VERSION.SDK_INT, PLATFORM_VERSION_MINOR_INT);
+    }
 
     /**
      * Binder service name of car service registered to service manager.
@@ -909,6 +944,7 @@ public final class Car {
      */
     @VisibleForHiddenApiCheck
     @AddedInOrBefore(majorVersion = 33)
+    @SystemApi
     public static final String PERMISSION_CAR_UX_RESTRICTIONS_CONFIGURATION =
             "android.car.permission.CAR_UX_RESTRICTIONS_CONFIGURATION";
 
@@ -1098,7 +1134,8 @@ public final class Car {
      * @hide
      */
     @SystemApi
-    @AddedIn(majorVersion = 33, minorVersion = 1)
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_1)
     public static final String PERMISSION_MANAGE_THREAD_PRIORITY =
             "android.car.permission.MANAGE_THREAD_PRIORITY";
 
@@ -1390,84 +1427,90 @@ public final class Car {
     private final CarFeatures mFeatures = new CarFeatures();
 
     /**
-     * Defines the {@link CarApiVersion version} of the {@code Car} APIs in the device.
+     * Defines the {@link CarVersion version} of the {@code Car} APIs in the device.
      *
      * <p>Starting on {@link Build.VERSION_CODES#TIRAMISU Android 13}, the {@code Car} APIs can be
      * upgraded without an OTA, so it's possible that these APIs are higher than the
-     * {@link #PLATFORM_API_VERSION platform's}.
+     * {@link #getPlatformVersion() platform's}.
      */
-    @AddedIn(majorVersion = 33, minorVersion = 1)
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     @NonNull
-    public static CarApiVersion getCarApiVersion() {
-        return CAR_API_VERSION;
+    public static android.car.CarVersion getCarVersion() {
+        return CAR_VERSION;
     }
 
     /**
-     * Defines the {@link PlatformApiVersion version} of the standard {@code SDK} APIs in the
+     * Defines the {@link PlatformVersion version} of the standard {@code SDK} APIs in the
      * device.
      *
      * <p>Its {@link ApiVersion#getMajorVersion() major version} will always be the same as
      * {@link Build.VERSION#SDK_INT}, but its {@link ApiVersion#getMinorVersion() minor version}
      * will reflect the incremental, quarterly releases.
      */
-    @AddedIn(majorVersion = 33, minorVersion = 1)
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     @NonNull
-    public static PlatformApiVersion getPlatformApiVersion() {
-        return PLATFORM_API_VERSION;
+    public static android.car.PlatformVersion getPlatformVersion() {
+        return PLATFORM_VERSION;
     }
 
     /**
-     * @deprecated - use {@code getCarApiVersion().isAtLeast(CarApiVersion.forMajorAndMinorVersions(
+     * @deprecated - use {@code getCarApiVersion().isAtLeast(CarVersion.forMajorAndMinorVersions(
      * requiredApiVersionMajor))} instead
      */
     @Deprecated
-    @AddedIn(majorVersion = 33)
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_0,
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     public static boolean isApiVersionAtLeast(int requiredApiVersionMajor) {
-        return getCarApiVersion().isAtLeast(CarApiVersion.forMajorVersion(requiredApiVersionMajor));
+        return getCarVersion().isAtLeast(CarVersion.forMajorVersion(requiredApiVersionMajor));
     }
 
     /**
-     * @deprecated - use {@code getCarApiVersion().isAtLeast(CarApiVersion.forMajorAndMinorVersions(
+     * @deprecated - use {@code getCarVersion().isAtLeast(CarVersion.forMajorAndMinorVersions(
      * requiredApiVersionMajor, requiredApiVersionMinor)} instead
      */
     @Deprecated
-    @AddedIn(majorVersion = 33)
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_0,
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     public static boolean isApiVersionAtLeast(int requiredApiVersionMajor,
             int requiredApiVersionMinor) {
-        return getCarApiVersion()
-                .isAtLeast(CarApiVersion.forMajorAndMinorVersions(requiredApiVersionMajor,
+        return getCarVersion()
+                .isAtLeast(CarVersion.forMajorAndMinorVersions(requiredApiVersionMajor,
                         requiredApiVersionMinor));
     }
 
     /**
      * @deprecated - use
-     * {@code getCarApiVersion().isAtLeast(CarApiVersion.forMajorVersion(requiredApiVersionMajor))
-     * && getPlatformApiVersion().isAtLeast(PlatformApiVersion.forMajorVersion(minPlatformSdkInt))}
+     * {@code getCarVersion().isAtLeast(CarVersion.forMajorVersion(requiredApiVersionMajor))
+     * && getPlatformVersion().isAtLeast(PlatformVersion.forMajorVersion(minPlatformSdkInt))}
      * instead.
      */
     @Deprecated
-    @AddedIn(majorVersion = 33)
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_0,
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     public static boolean isApiAndPlatformVersionAtLeast(int requiredApiVersionMajor,
             int minPlatformSdkInt) {
-        return getCarApiVersion().isAtLeast(CarApiVersion.forMajorVersion(requiredApiVersionMajor))
-                && getPlatformApiVersion()
-                        .isAtLeast(PlatformApiVersion.forMajorVersion(minPlatformSdkInt));
+        return getCarVersion().isAtLeast(CarVersion.forMajorVersion(requiredApiVersionMajor))
+                && getPlatformVersion()
+                        .isAtLeast(PlatformVersion.forMajorVersion(minPlatformSdkInt));
     }
 
     /**
-     * @deprecated - use {@code getCarApiVersion().isAtLeast(CarApiVersion.forMajorAndMinorVersions(
-     * requiredApiVersionMajor, requiredApiVersionMinor)) && getPlatformApiVersion().isAtLeast(
-     * PlatformApiVersion.forMajorVersion(minPlatformSdkInt))} instead.
+     * @deprecated - use {@code getCarVersion().isAtLeast(CarVersion.forMajorAndMinorVersions(
+     * requiredApiVersionMajor, requiredApiVersionMinor)) && getPlatformVersion().isAtLeast(
+     * PlatformVersion.forMajorVersion(minPlatformSdkInt))} instead.
      */
-    @AddedInOrBefore(majorVersion = 33)
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_0,
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     @Deprecated
     public static boolean isApiAndPlatformVersionAtLeast(int requiredApiVersionMajor,
             int requiredApiVersionMinor, int minPlatformSdkInt) {
-        return getCarApiVersion().isAtLeast(
-                CarApiVersion.forMajorAndMinorVersions(requiredApiVersionMajor,
+        return getCarVersion()
+                .isAtLeast(CarVersion.forMajorAndMinorVersions(requiredApiVersionMajor,
                         requiredApiVersionMinor))
-                && getPlatformApiVersion()
-                        .isAtLeast(PlatformApiVersion.forMajorVersion(minPlatformSdkInt));
+                && getPlatformVersion()
+                        .isAtLeast(PlatformVersion.forMajorVersion(minPlatformSdkInt));
     }
 
     /**

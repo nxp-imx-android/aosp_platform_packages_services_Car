@@ -50,6 +50,7 @@ package android.car {
     field public static final String PERMISSION_CAR_PROJECTION = "android.car.permission.CAR_PROJECTION";
     field public static final String PERMISSION_CAR_PROJECTION_STATUS = "android.car.permission.ACCESS_CAR_PROJECTION_STATUS";
     field public static final String PERMISSION_CAR_TEST_SERVICE = "android.car.permission.CAR_TEST_SERVICE";
+    field public static final String PERMISSION_CAR_UX_RESTRICTIONS_CONFIGURATION = "android.car.permission.CAR_UX_RESTRICTIONS_CONFIGURATION";
     field public static final String PERMISSION_COLLECT_CAR_WATCHDOG_METRICS = "android.car.permission.COLLECT_CAR_WATCHDOG_METRICS";
     field public static final String PERMISSION_CONTROL_APP_BLOCKING = "android.car.permission.CONTROL_APP_BLOCKING";
     field public static final String PERMISSION_CONTROL_CAR_APP_LAUNCH = "android.car.permission.CONTROL_CAR_APP_LAUNCH";
@@ -67,7 +68,7 @@ package android.car {
     field public static final String PERMISSION_CONTROL_EXTERIOR_LIGHTS = "android.car.permission.CONTROL_CAR_EXTERIOR_LIGHTS";
     field public static final String PERMISSION_CONTROL_SHUTDOWN_PROCESS = "android.car.permission.CONTROL_SHUTDOWN_PROCESS";
     field public static final String PERMISSION_EXTERIOR_LIGHTS = "android.car.permission.CAR_EXTERIOR_LIGHTS";
-    field public static final String PERMISSION_MANAGE_THREAD_PRIORITY = "android.car.permission.MANAGE_THREAD_PRIORITY";
+    field @android.car.annotation.ApiRequirements(minCarVersion=android.car.annotation.ApiRequirements.CarVersion.TIRAMISU_1, minPlatformVersion=android.car.annotation.ApiRequirements.PlatformVersion.TIRAMISU_1) public static final String PERMISSION_MANAGE_THREAD_PRIORITY = "android.car.permission.MANAGE_THREAD_PRIORITY";
     field public static final String PERMISSION_MILEAGE = "android.car.permission.CAR_MILEAGE";
     field @Deprecated public static final String PERMISSION_MOCK_VEHICLE_HAL = "android.car.permission.CAR_MOCK_VEHICLE_HAL";
     field public static final String PERMISSION_MONITOR_CAR_EVS_STATUS = "android.car.permission.MONITOR_CAR_EVS_STATUS";
@@ -86,6 +87,8 @@ package android.car {
     field public static final String PERMISSION_VMS_PUBLISHER = "android.car.permission.VMS_PUBLISHER";
     field public static final String PERMISSION_VMS_SUBSCRIBER = "android.car.permission.VMS_SUBSCRIBER";
     field public static final String PROJECTION_SERVICE = "projection";
+    field @android.car.annotation.ApiRequirements(minCarVersion=android.car.annotation.ApiRequirements.CarVersion.TIRAMISU_1, minPlatformVersion=android.car.annotation.ApiRequirements.PlatformVersion.TIRAMISU_0) public static final String PROPERTY_EMULATED_PLATFORM_VERSION_MAJOR = "com.android.car.internal.debug.platform_major_version";
+    field @android.car.annotation.ApiRequirements(minCarVersion=android.car.annotation.ApiRequirements.CarVersion.TIRAMISU_1, minPlatformVersion=android.car.annotation.ApiRequirements.PlatformVersion.TIRAMISU_0) public static final String PROPERTY_EMULATED_PLATFORM_VERSION_MINOR = "com.android.car.internal.debug.platform_minor_version";
     field public static final String STORAGE_MONITORING_SERVICE = "storage_monitoring";
     field public static final String TEST_SERVICE = "car-service-test";
     field public static final String VEHICLE_MAP_SERVICE = "vehicle_map_service";
@@ -210,6 +213,10 @@ package android.car {
     field public static final int WRITE = 2; // 0x2
   }
 
+  public final class VehiclePropertyIds {
+    field @RequiresPermission(android.car.Car.PERMISSION_CONTROL_CAR_CLIMATE) public static final int HVAC_ELECTRIC_DEFROSTER_ON = 320865556; // 0x13200514
+  }
+
   public class VehiclePropertyType {
     field public static final int BOOLEAN = 2097152; // 0x200000
     field public static final int BYTES = 7340032; // 0x700000
@@ -302,13 +309,13 @@ package android.car.annotation {
   }
 
   public enum ApiRequirements.CarVersion {
-    method public android.car.CarApiVersion get();
+    method public android.car.CarVersion get();
     enum_constant public static final android.car.annotation.ApiRequirements.CarVersion TIRAMISU_0;
     enum_constant public static final android.car.annotation.ApiRequirements.CarVersion TIRAMISU_1;
   }
 
   public enum ApiRequirements.PlatformVersion {
-    method public android.car.PlatformApiVersion get();
+    method public android.car.PlatformVersion get();
     enum_constant public static final android.car.annotation.ApiRequirements.PlatformVersion TIRAMISU_0;
     enum_constant public static final android.car.annotation.ApiRequirements.PlatformVersion TIRAMISU_1;
   }
@@ -340,7 +347,7 @@ package android.car.cluster {
     method @Deprecated public void onClusterActivityStateChanged(String, android.os.Bundle);
   }
 
-  public class ClusterActivityState {
+  public final class ClusterActivityState {
     method @NonNull public static android.car.cluster.ClusterActivityState create(boolean, @NonNull android.graphics.Rect);
     method @NonNull public static android.car.cluster.ClusterActivityState fromBundle(@NonNull android.os.Bundle);
     method @Nullable public android.os.Bundle getExtras();
@@ -427,14 +434,13 @@ package android.car.content.pm {
   }
 
   public final class CarPackageManager {
-    method @NonNull @RequiresPermission(android.Manifest.permission.QUERY_ALL_PACKAGES) public android.car.CarApiVersion getTargetCarApiVersion(@NonNull String) throws android.content.pm.PackageManager.NameNotFoundException;
+    method @android.car.annotation.ApiRequirements(minCarVersion=android.car.annotation.ApiRequirements.CarVersion.TIRAMISU_1, minPlatformVersion=android.car.annotation.ApiRequirements.PlatformVersion.TIRAMISU_0) @NonNull @RequiresPermission(android.Manifest.permission.QUERY_ALL_PACKAGES) public android.car.CarVersion getTargetCarVersion(@NonNull String) throws android.content.pm.PackageManager.NameNotFoundException;
     method public boolean isActivityBackedBySafeActivity(android.content.ComponentName);
     method @Deprecated public void setAppBlockingPolicy(String, android.car.content.pm.CarAppBlockingPolicy, int);
     method public void setEnableActivityBlocking(boolean);
     field @Deprecated public static final int FLAG_SET_POLICY_ADD = 2; // 0x2
     field @Deprecated public static final int FLAG_SET_POLICY_REMOVE = 4; // 0x4
     field @Deprecated public static final int FLAG_SET_POLICY_WAIT_FOR_CHANGE = 1; // 0x1
-    field public static final String MANIFEST_METADATA_TARGET_CAR_API_VERSION = "android.car.targetCarApiVersion";
   }
 
 }
@@ -727,6 +733,28 @@ package android.car.drivingstate {
 
   public static interface CarDrivingStateManager.CarDrivingStateEventListener {
     method public void onDrivingStateChanged(android.car.drivingstate.CarDrivingStateEvent);
+  }
+
+  public final class CarUxRestrictionsConfiguration implements android.os.Parcelable {
+    method public int describeContents();
+    method @Nullable public Integer getPhysicalPort();
+    method @NonNull public android.car.drivingstate.CarUxRestrictions getUxRestrictions(int, float);
+    method @NonNull public android.car.drivingstate.CarUxRestrictions getUxRestrictions(int, @FloatRange(from=0.0f) float, @NonNull String);
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.car.drivingstate.CarUxRestrictionsConfiguration> CREATOR;
+  }
+
+  public final class CarUxRestrictionsManager {
+    method @Nullable @RequiresPermission(android.car.Car.PERMISSION_CAR_UX_RESTRICTIONS_CONFIGURATION) public java.util.List<android.car.drivingstate.CarUxRestrictionsConfiguration> getConfigs();
+    method @Nullable public android.car.drivingstate.CarUxRestrictions getCurrentCarUxRestrictions(int);
+    method @NonNull @RequiresPermission(android.car.Car.PERMISSION_CAR_UX_RESTRICTIONS_CONFIGURATION) public String getRestrictionMode();
+    method @Nullable @RequiresPermission(android.car.Car.PERMISSION_CAR_UX_RESTRICTIONS_CONFIGURATION) public java.util.List<android.car.drivingstate.CarUxRestrictionsConfiguration> getStagedConfigs();
+    method public void onCarDisconnected();
+    method @RequiresPermission(android.car.Car.PERMISSION_CAR_UX_RESTRICTIONS_CONFIGURATION) public boolean saveUxRestrictionsConfigurationForNextBoot(@NonNull java.util.List<android.car.drivingstate.CarUxRestrictionsConfiguration>);
+    method @RequiresPermission(android.car.Car.PERMISSION_CAR_UX_RESTRICTIONS_CONFIGURATION) public boolean saveUxRestrictionsConfigurationForNextBoot(@NonNull android.car.drivingstate.CarUxRestrictionsConfiguration);
+    method public void setListener(int, @NonNull android.car.drivingstate.CarUxRestrictionsManager.OnUxRestrictionsChangedListener);
+    method @RequiresPermission(android.car.Car.PERMISSION_CAR_UX_RESTRICTIONS_CONFIGURATION) public boolean setRestrictionMode(@NonNull String);
+    field public static final String UX_RESTRICTION_MODE_BASELINE = "baseline";
   }
 
 }
@@ -1182,21 +1210,21 @@ package android.car.os {
     method @android.car.annotation.ApiRequirements(minCarVersion=android.car.annotation.ApiRequirements.CarVersion.TIRAMISU_1, minPlatformVersion=android.car.annotation.ApiRequirements.PlatformVersion.TIRAMISU_1) @RequiresPermission(android.car.Car.PERMISSION_MANAGE_THREAD_PRIORITY) public void setThreadPriority(@NonNull android.car.os.ThreadPolicyWithPriority) throws android.car.os.CarPerformanceManager.SetSchedulerFailedException;
   }
 
-  public static final class CarPerformanceManager.SetSchedulerFailedException extends java.lang.Exception {
+  @android.car.annotation.ApiRequirements(minCarVersion=android.car.annotation.ApiRequirements.CarVersion.TIRAMISU_1, minPlatformVersion=android.car.annotation.ApiRequirements.PlatformVersion.TIRAMISU_1) public static final class CarPerformanceManager.SetSchedulerFailedException extends java.lang.Exception {
   }
 
   public final class ThreadPolicyWithPriority implements android.os.Parcelable {
     ctor public ThreadPolicyWithPriority(int, @IntRange(from=0, to=99) int);
-    method public int describeContents();
-    method public int getPolicy();
-    method @IntRange(from=0, to=99) public int getPriority();
-    method public void writeToParcel(@NonNull android.os.Parcel, int);
-    field @NonNull public static final android.os.Parcelable.Creator<android.car.os.ThreadPolicyWithPriority> CREATOR;
-    field public static final int PRIORITY_MAX = 99; // 0x63
-    field public static final int PRIORITY_MIN = 1; // 0x1
-    field public static final int SCHED_DEFAULT = 0; // 0x0
-    field public static final int SCHED_FIFO = 1; // 0x1
-    field public static final int SCHED_RR = 2; // 0x2
+    method @android.car.annotation.ApiRequirements(minCarVersion=android.car.annotation.ApiRequirements.CarVersion.TIRAMISU_1, minPlatformVersion=android.car.annotation.ApiRequirements.PlatformVersion.TIRAMISU_1) public int describeContents();
+    method @android.car.annotation.ApiRequirements(minCarVersion=android.car.annotation.ApiRequirements.CarVersion.TIRAMISU_1, minPlatformVersion=android.car.annotation.ApiRequirements.PlatformVersion.TIRAMISU_1) public int getPolicy();
+    method @android.car.annotation.ApiRequirements(minCarVersion=android.car.annotation.ApiRequirements.CarVersion.TIRAMISU_1, minPlatformVersion=android.car.annotation.ApiRequirements.PlatformVersion.TIRAMISU_1) @IntRange(from=0, to=99) public int getPriority();
+    method @android.car.annotation.ApiRequirements(minCarVersion=android.car.annotation.ApiRequirements.CarVersion.TIRAMISU_1, minPlatformVersion=android.car.annotation.ApiRequirements.PlatformVersion.TIRAMISU_1) public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @android.car.annotation.ApiRequirements(minCarVersion=android.car.annotation.ApiRequirements.CarVersion.TIRAMISU_1, minPlatformVersion=android.car.annotation.ApiRequirements.PlatformVersion.TIRAMISU_1) @NonNull public static final android.os.Parcelable.Creator<android.car.os.ThreadPolicyWithPriority> CREATOR;
+    field @android.car.annotation.ApiRequirements(minCarVersion=android.car.annotation.ApiRequirements.CarVersion.TIRAMISU_1, minPlatformVersion=android.car.annotation.ApiRequirements.PlatformVersion.TIRAMISU_1) public static final int PRIORITY_MAX = 99; // 0x63
+    field @android.car.annotation.ApiRequirements(minCarVersion=android.car.annotation.ApiRequirements.CarVersion.TIRAMISU_1, minPlatformVersion=android.car.annotation.ApiRequirements.PlatformVersion.TIRAMISU_1) public static final int PRIORITY_MIN = 1; // 0x1
+    field @android.car.annotation.ApiRequirements(minCarVersion=android.car.annotation.ApiRequirements.CarVersion.TIRAMISU_1, minPlatformVersion=android.car.annotation.ApiRequirements.PlatformVersion.TIRAMISU_1) public static final int SCHED_DEFAULT = 0; // 0x0
+    field @android.car.annotation.ApiRequirements(minCarVersion=android.car.annotation.ApiRequirements.CarVersion.TIRAMISU_1, minPlatformVersion=android.car.annotation.ApiRequirements.PlatformVersion.TIRAMISU_1) public static final int SCHED_FIFO = 1; // 0x1
+    field @android.car.annotation.ApiRequirements(minCarVersion=android.car.annotation.ApiRequirements.CarVersion.TIRAMISU_1, minPlatformVersion=android.car.annotation.ApiRequirements.PlatformVersion.TIRAMISU_1) public static final int SCHED_RR = 2; // 0x2
   }
 
 }
@@ -1453,6 +1481,8 @@ package android.car.user {
     method public static String lifecycleEventTypeToString(int);
     method @RequiresPermission(anyOf={android.Manifest.permission.INTERACT_ACROSS_USERS, android.Manifest.permission.INTERACT_ACROSS_USERS_FULL}) public void removeListener(@NonNull android.car.user.CarUserManager.UserLifecycleListener);
     method @RequiresPermission(anyOf={android.Manifest.permission.MANAGE_USERS, android.Manifest.permission.CREATE_USERS}) public android.car.util.concurrent.AsyncFuture<android.car.user.UserSwitchResult> switchUser(int);
+    field @android.car.annotation.ApiRequirements(minCarVersion=android.car.annotation.ApiRequirements.CarVersion.TIRAMISU_1, minPlatformVersion=android.car.annotation.ApiRequirements.PlatformVersion.TIRAMISU_1) public static final int USER_LIFECYCLE_EVENT_TYPE_CREATED = 8; // 0x8
+    field @android.car.annotation.ApiRequirements(minCarVersion=android.car.annotation.ApiRequirements.CarVersion.TIRAMISU_1, minPlatformVersion=android.car.annotation.ApiRequirements.PlatformVersion.TIRAMISU_1) public static final int USER_LIFECYCLE_EVENT_TYPE_REMOVED = 9; // 0x9
     field public static final int USER_LIFECYCLE_EVENT_TYPE_STARTING = 1; // 0x1
     field public static final int USER_LIFECYCLE_EVENT_TYPE_STOPPED = 6; // 0x6
     field public static final int USER_LIFECYCLE_EVENT_TYPE_STOPPING = 5; // 0x5

@@ -16,10 +16,12 @@
 package android.car;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.car.annotation.ApiRequirements;
 import android.car.annotation.ApiRequirements.CarVersion;
 import android.car.annotation.ApiRequirements.PlatformVersion;
 import android.os.Parcel;
+import android.text.TextUtils;
 
 import java.util.Objects;
 
@@ -41,12 +43,24 @@ import java.util.Objects;
         minPlatformVersion = PlatformVersion.TIRAMISU_0)
 public abstract class ApiVersion<T extends ApiVersion<?>> {
 
+    /**
+     * When set, it's used on {@link #toString()} - useful for versions that are pre-defined
+     * (like {@code TIRAMISU_1}).
+     */
+    @Nullable
+    private final String mVersionName;
+
     private final int mMajorVersion;
     private final int mMinorVersion;
 
     ApiVersion(int majorVersion, int minorVersion) {
-        this.mMajorVersion = majorVersion;
-        this.mMinorVersion = minorVersion;
+        this(/* name= */ null, majorVersion, minorVersion);
+    }
+
+    ApiVersion(String name, int majorVersion, int minorVersion) {
+        mVersionName = name;
+        mMajorVersion = majorVersion;
+        mMinorVersion = minorVersion;
     }
 
     /**
@@ -143,8 +157,14 @@ public abstract class ApiVersion<T extends ApiVersion<?>> {
     @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
             minPlatformVersion = PlatformVersion.TIRAMISU_0)
     public final String toString() {
-        return getClass().getSimpleName()
-                + "[major=" + mMajorVersion + ", minor=" + mMinorVersion + "]";
+        StringBuilder builder = new StringBuilder(getClass().getSimpleName()).append('[');
+        if (!TextUtils.isEmpty(mVersionName)) {
+            builder.append("name=").append(mVersionName).append(", ");
+        }
+        return builder
+                .append("major=").append(mMajorVersion)
+                .append(", minor=").append(mMinorVersion)
+                .append(']').toString();
     }
 
     /**
@@ -153,6 +173,7 @@ public abstract class ApiVersion<T extends ApiVersion<?>> {
     @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
             minPlatformVersion = PlatformVersion.TIRAMISU_0)
     protected void writeToParcel(Parcel dest) {
+        dest.writeString(mVersionName);
         dest.writeInt(getMajorVersion());
         dest.writeInt(getMinorVersion());
     }
@@ -164,17 +185,18 @@ public abstract class ApiVersion<T extends ApiVersion<?>> {
             minPlatformVersion = PlatformVersion.TIRAMISU_0)
     protected static <T extends ApiVersion<?>> T readFromParcel(Parcel source,
             ApiVersionFactory<T> factory) {
+        String name = source.readString();
         int major = source.readInt();
         int minor = source.readInt();
-        return factory.forMajorAndMinor(major, minor);
+        return factory.newInstance(name, major, minor);
     }
 
     /**
      * @hide
      */
-    @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
-            minPlatformVersion = PlatformVersion.TIRAMISU_0)
     interface ApiVersionFactory<T extends ApiVersion<?>> {
-        T forMajorAndMinor(int major, int minor);
+        @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
+                minPlatformVersion = PlatformVersion.TIRAMISU_0)
+        T newInstance(String name, int major, int minor);
     }
 }

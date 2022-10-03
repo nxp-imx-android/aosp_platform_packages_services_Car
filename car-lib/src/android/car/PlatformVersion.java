@@ -18,7 +18,6 @@ package android.car;
 import android.annotation.NonNull;
 import android.car.annotation.ApiRequirements;
 import android.car.annotation.ApiRequirements.CarVersion;
-import android.car.annotation.ApiRequirements.PlatformVersion;
 import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -27,33 +26,33 @@ import android.os.Parcelable;
  * Represents the API version of the standard Android SDK.
  */
 @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
-        minPlatformVersion = PlatformVersion.TIRAMISU_0)
-public final class PlatformApiVersion extends ApiVersion<PlatformApiVersion> implements Parcelable {
+        minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
+public final class PlatformVersion extends ApiVersion<PlatformVersion> implements Parcelable {
 
     /**
      * Contains pre-defined versions matching Car releases.
      */
     @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
-            minPlatformVersion = PlatformVersion.TIRAMISU_0)
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     public static class VERSION_CODES {
 
         /**
          * Helper object for main version of Android 13.
          */
         @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
-                minPlatformVersion = PlatformVersion.TIRAMISU_0)
+                minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
         @NonNull
-        public static final PlatformApiVersion TIRAMISU_0 =
-                forMajorAndMinorVersions(Build.VERSION_CODES.TIRAMISU, 0);
+        public static final PlatformVersion TIRAMISU_0 =
+                new PlatformVersion("TIRAMISU_0", Build.VERSION_CODES.TIRAMISU, 0);
 
         /**
          * Helper object for first minor upgrade of Android 13.
          */
         @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
-                minPlatformVersion = PlatformVersion.TIRAMISU_0)
+                minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
         @NonNull
-        public static final PlatformApiVersion TIRAMISU_1 =
-                forMajorAndMinorVersions(Build.VERSION_CODES.TIRAMISU, 1);
+        public static final PlatformVersion TIRAMISU_1 =
+                new PlatformVersion("TIRAMISU_1", Build.VERSION_CODES.TIRAMISU, 1);
 
         private VERSION_CODES() {
             throw new UnsupportedOperationException("Only provide constants");
@@ -61,58 +60,72 @@ public final class PlatformApiVersion extends ApiVersion<PlatformApiVersion> imp
     }
 
     /**
+     * Creates a named instance with the given major and minor versions.
+     */
+    // TODO(b/243429779): should not need @ApiRequirements as it's package-protected
+    @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
+    static PlatformVersion newInstance(String versionName, int majorVersion, int minorVersion) {
+        return new PlatformVersion(versionName, majorVersion, minorVersion);
+    }
+
+    /**
      * Creates a new instance with the given major and minor versions.
      */
     @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
-            minPlatformVersion = PlatformVersion.TIRAMISU_0)
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     @NonNull
-    public static PlatformApiVersion forMajorAndMinorVersions(int majorVersion, int minorVersion) {
-        return new PlatformApiVersion(majorVersion, minorVersion);
+    public static PlatformVersion forMajorAndMinorVersions(int majorVersion, int minorVersion) {
+        return new PlatformVersion(majorVersion, minorVersion);
     }
 
     /**
      * Creates a new instance for a major version (i.e., the minor version will be {@code 0}.
      */
     @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
-            minPlatformVersion = PlatformVersion.TIRAMISU_0)
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     @NonNull
-    public static PlatformApiVersion forMajorVersion(int majorVersion) {
-        return new PlatformApiVersion(majorVersion, /* minorVersion= */ 0);
+    public static PlatformVersion forMajorVersion(int majorVersion) {
+        return new PlatformVersion(majorVersion, /* minorVersion= */ 0);
     }
 
-    private PlatformApiVersion(int majorVersion, int minorVersion) {
+    private PlatformVersion(String name, int majorVersion, int minorVersion) {
+        super(name, majorVersion, minorVersion);
+    }
+
+    private PlatformVersion(int majorVersion, int minorVersion) {
         super(majorVersion, minorVersion);
     }
 
     @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
-            minPlatformVersion = PlatformVersion.TIRAMISU_0)
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     @Override
     public int describeContents() {
         return 0;
     }
 
     @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
-            minPlatformVersion = PlatformVersion.TIRAMISU_0)
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         writeToParcel(dest);
     }
 
     @ApiRequirements(minCarVersion = CarVersion.TIRAMISU_1,
-            minPlatformVersion = PlatformVersion.TIRAMISU_0)
+            minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     @NonNull
-    public static final Parcelable.Creator<PlatformApiVersion> CREATOR =
-            new Parcelable.Creator<PlatformApiVersion>() {
+    public static final Parcelable.Creator<PlatformVersion> CREATOR =
+            new Parcelable.Creator<PlatformVersion>() {
 
         @Override
-        public PlatformApiVersion createFromParcel(Parcel source) {
+        public PlatformVersion createFromParcel(Parcel source) {
             return ApiVersion.readFromParcel(source,
-                    (major, minor) -> forMajorAndMinorVersions(major, minor));
+                    (name, major, minor) -> new PlatformVersion(name, major, minor));
         }
 
         @Override
-        public PlatformApiVersion[] newArray(int size) {
-            return new PlatformApiVersion[size];
+        public PlatformVersion[] newArray(int size) {
+            return new PlatformVersion[size];
         }
     };
 }

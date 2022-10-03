@@ -186,10 +186,6 @@ Status WatchdogInternalHandler::notifySystemStateChange(aawi::StateType type, in
         case aawi::StateType::USER_STATE: {
             userid_t userId = static_cast<userid_t>(arg1);
             aawi::UserState userState = static_cast<aawi::UserState>(static_cast<uint32_t>(arg2));
-            if (userState >= aawi::UserState::NUM_USER_STATES) {
-                return fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT,
-                                         StringPrintf("Invalid user state %d", userState));
-            }
             return handleUserStateChange(userId, userState);
         }
         case aawi::StateType::BOOT_PHASE: {
@@ -229,22 +225,37 @@ Status WatchdogInternalHandler::handlePowerCycleChange(PowerCycle powerCycle) {
     return Status::ok();
 }
 
-Status WatchdogInternalHandler::handleUserStateChange(userid_t userId, aawi::UserState userState) {
+Status WatchdogInternalHandler::handleUserStateChange(userid_t userId,
+                                                      const aawi::UserState& userState) {
     std::string stateDesc;
     switch (userState) {
         case aawi::UserState::USER_STATE_STARTED:
             stateDesc = "started";
-            mWatchdogProcessService->notifyUserStateChange(userId, /*isStarted=*/true);
+            mWatchdogProcessService->onUserStateChange(userId, /*isStarted=*/true);
+            break;
+        case aawi::UserState::USER_STATE_SWITCHING:
+            stateDesc = "switching";
+            mWatchdogPerfService->onUserStateChange(userId, userState);
+            break;
+        case aawi::UserState::USER_STATE_UNLOCKING:
+            stateDesc = "unlocking";
+            mWatchdogPerfService->onUserStateChange(userId, userState);
+            break;
+        case aawi::UserState::USER_STATE_POST_UNLOCKED:
+            stateDesc = "post_unlocked";
+            mWatchdogPerfService->onUserStateChange(userId, userState);
             break;
         case aawi::UserState::USER_STATE_STOPPED:
             stateDesc = "stopped";
-            mWatchdogProcessService->notifyUserStateChange(userId, /*isStarted=*/false);
+            mWatchdogProcessService->onUserStateChange(userId, /*isStarted=*/false);
             break;
         case aawi::UserState::USER_STATE_REMOVED:
             stateDesc = "removed";
             mIoOveruseMonitor->removeStatsForUser(userId);
             break;
         default:
+            // UserState::USER_STATE_UNLOCKED is not sent by CarService to the daemon. If signal is
+            // received, an exception will be thrown.
             ALOGW("Unsupported user state: %d", userState);
             return Status::fromExceptionCode(Status::EX_ILLEGAL_ARGUMENT, "Unsupported user state");
     }

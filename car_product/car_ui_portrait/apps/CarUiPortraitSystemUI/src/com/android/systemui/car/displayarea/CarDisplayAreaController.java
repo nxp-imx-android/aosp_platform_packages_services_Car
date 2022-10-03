@@ -34,6 +34,7 @@ import static com.android.systemui.car.displayarea.DisplayAreaComponent.FOREGROU
 import static com.android.systemui.car.displayarea.DisplayAreaComponent.FOREGROUND_DA_STATE.FULL_TO_DEFAULT;
 import static com.android.systemui.car.displayarea.DisplayAreaComponent.INTENT_EXTRA_IS_DISPLAY_AREA_VISIBLE;
 import static com.android.wm.shell.ShellTaskOrganizer.TASK_LISTENER_TYPE_FULLSCREEN;
+import static com.android.wm.shell.ShellTaskOrganizer.TASK_LISTENER_TYPE_MULTI_WINDOW;
 
 import android.app.ActivityManager;
 import android.app.ActivityTaskManager;
@@ -489,6 +490,17 @@ public class CarDisplayAreaController implements ConfigurationController.Configu
         mApplicationContext.startActivityAsUser(intent, UserHandle.CURRENT);
     }
 
+    @Override
+    public void animateCollapsePanels(int flags, boolean force) {
+        if (mIsForegroundDaFullScreen) {
+            return;
+        }
+        Intent homeActivityIntent = new Intent(Intent.ACTION_MAIN);
+        homeActivityIntent.addCategory(Intent.CATEGORY_HOME);
+        homeActivityIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        mApplicationContext.startActivityAsUser(homeActivityIntent, UserHandle.CURRENT);
+    }
+
     /**
      * Returns options that specify the {@link RootDisplayArea} to attach the confirmation window.
      * {@code null} if the {@code rootDisplayAreaId} is {@link FEATURE_UNDEFINED}.
@@ -658,6 +670,11 @@ public class CarDisplayAreaController implements ConfigurationController.Configu
 
         ShellTaskOrganizer taskOrganizer = new ShellTaskOrganizer(mShellExecutor);
         taskOrganizer.addListenerForType(mCarFullscreenTaskListener, TASK_LISTENER_TYPE_FULLSCREEN);
+        // Use the same TaskListener for MULTI_WINDOW windowing mode as there is nothing that has
+        // to be done differently. This is because the tasks are still running in 'fullscreen'
+        // within a DisplayArea.
+        taskOrganizer.addListenerForType(mCarFullscreenTaskListener,
+                TASK_LISTENER_TYPE_MULTI_WINDOW);
 
         taskOrganizer.registerOrganizer();
         // Register DA organizer.
