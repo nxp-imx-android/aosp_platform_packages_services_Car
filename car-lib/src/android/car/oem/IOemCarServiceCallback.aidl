@@ -16,10 +16,9 @@
 
 package android.car.oem;
 
-import android.media.AudioFocusInfo;
+import android.os.Bundle;
 
 /** @hide */
-interface IOemCarAudioFocusService {
-    void audioFocusChanged(in List<AudioFocusInfo> currentFocusHolders,
-           in List<AudioFocusInfo> currentFocusLosers, int zoneId);
+interface IOemCarServiceCallback {
+    void sendOemCarServiceReady();
 }
