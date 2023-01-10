@@ -37,6 +37,7 @@
 #include <IVhalClient.h>
 #include <VehicleHalTypes.h>
 
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -92,7 +93,7 @@ public:
             const android::automotive::watchdog::internal::ProcessIdentifier&
                     processIdentifier) = 0;
     virtual void setEnabled(bool isEnabled) = 0;
-    virtual void notifyUserStateChange(userid_t userId, bool isStarted) = 0;
+    virtual void onUserStateChange(userid_t userId, bool isStarted) = 0;
 };
 
 class WatchdogProcessService final : public WatchdogProcessServiceInterface {
@@ -133,7 +134,7 @@ public:
                     monitor,
             const android::automotive::watchdog::internal::ProcessIdentifier& processIdentifier);
     virtual void setEnabled(bool isEnabled);
-    virtual void notifyUserStateChange(userid_t userId, bool isStarted);
+    virtual void onUserStateChange(userid_t userId, bool isStarted);
 
 private:
     enum ClientType {
@@ -249,6 +250,7 @@ private:
             const aidl::android::hardware::automotive::vehicle::VehiclePropValue& value);
     android::base::Result<void> connectToVhalLocked();
     void subscribeToVhalHeartBeatLocked();
+    bool cacheVhalProcessIdentifier();
     void reportWatchdogAliveToVhal();
     void reportTerminatedProcessToVhal(
             const std::vector<android::automotive::watchdog::internal::ProcessIdentifier>&
@@ -295,6 +297,8 @@ private:
             GUARDED_BY(mMutex);
     bool mIsEnabled GUARDED_BY(mMutex);
     std::shared_ptr<android::frameworks::automotive::vhal::IVhalClient> mVhalService
+            GUARDED_BY(mMutex);
+    std::optional<android::automotive::watchdog::internal::ProcessIdentifier> mVhalProcessIdentifier
             GUARDED_BY(mMutex);
     HeartBeat mVhalHeartBeat GUARDED_BY(mMutex);
     android::sp<WatchdogServiceHelperInterface> mWatchdogServiceHelper GUARDED_BY(mMutex);

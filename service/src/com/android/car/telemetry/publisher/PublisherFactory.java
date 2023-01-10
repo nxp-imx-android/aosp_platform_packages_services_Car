@@ -95,7 +95,7 @@ public class PublisherFactory {
                 case TelemetryProto.Publisher.CARTELEMETRYD_FIELD_NUMBER:
                     if (mCarTelemetrydPublisher == null) {
                         mCarTelemetrydPublisher = new CarTelemetrydPublisher(
-                                mPublisherListener, mTelemetryHandler);
+                                mPublisherListener, mTelemetryHandler, mSessionController);
                     }
                     return mCarTelemetrydPublisher;
                 case TelemetryProto.Publisher.STATS_FIELD_NUMBER:
@@ -123,7 +123,7 @@ public class PublisherFactory {
                 case TelemetryProto.Publisher.MEMORY_FIELD_NUMBER:
                     if (mMemoryPublisher == null) {
                         mMemoryPublisher = new MemoryPublisher(
-                                mPublisherListener, mTelemetryHandler, mResultStore,
+                                mContext, mPublisherListener, mTelemetryHandler, mResultStore,
                                 mSessionController);
                     }
                     return mMemoryPublisher;

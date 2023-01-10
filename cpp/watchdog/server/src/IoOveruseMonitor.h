@@ -113,12 +113,37 @@ public:
     // Below methods implement DataProcessorInterface.
     std::string name() const override { return "IoOveruseMonitor"; }
     friend std::ostream& operator<<(std::ostream& os, const IoOveruseMonitor& monitor);
+
+    android::base::Result<void> onSystemStartup() {
+        // No tracking of boot-time and wake-up events in I/O overuse monitoring.
+        return {};
+    }
+
     android::base::Result<void> onBoottimeCollection(
             [[maybe_unused]] time_t time,
             [[maybe_unused]] const android::wp<UidStatsCollectorInterface>& uidStatsCollector,
             [[maybe_unused]] const android::wp<ProcStatCollectorInterface>& procStatCollector)
             override {
         // No I/O overuse monitoring during boot-time.
+        return {};
+    }
+
+    android::base::Result<void> onWakeUpCollection(
+            [[maybe_unused]] time_t time,
+            [[maybe_unused]] const android::wp<UidStatsCollectorInterface>& uidStatsCollector,
+            [[maybe_unused]] const android::wp<ProcStatCollectorInterface>& procStatCollector)
+            override {
+        // No I/O overuse monitoring during wake up.
+        return {};
+    }
+
+    android::base::Result<void> onUserSwitchCollection(
+            [[maybe_unused]] time_t time, [[maybe_unused]] userid_t from,
+            [[maybe_unused]] userid_t to,
+            [[maybe_unused]] const android::wp<UidStatsCollectorInterface>& uidStatsCollector,
+            [[maybe_unused]] const android::wp<ProcStatCollectorInterface>& procStatCollector)
+            override {
+        // No I/O overuse monitoring during user switch.
         return {};
     }
 

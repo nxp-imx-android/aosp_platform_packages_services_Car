@@ -16,8 +16,12 @@
 
 package com.android.car.watchdog;
 
+import static android.car.PlatformVersion.VERSION_CODES;
+import static android.car.user.CarUserManager.USER_LIFECYCLE_EVENT_TYPE_POST_UNLOCKED;
 import static android.car.user.CarUserManager.USER_LIFECYCLE_EVENT_TYPE_STARTING;
 import static android.car.user.CarUserManager.USER_LIFECYCLE_EVENT_TYPE_STOPPED;
+import static android.car.user.CarUserManager.USER_LIFECYCLE_EVENT_TYPE_SWITCHING;
+import static android.car.user.CarUserManager.USER_LIFECYCLE_EVENT_TYPE_UNLOCKING;
 import static android.content.Intent.ACTION_PACKAGE_CHANGED;
 import static android.content.Intent.ACTION_REBOOT;
 import static android.content.Intent.ACTION_SHUTDOWN;
@@ -97,6 +101,13 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
             "com.android.car.watchdog.ACTION_LAUNCH_APP_SETTINGS";
     static final String ACTION_DISMISS_RESOURCE_OVERUSE_NOTIFICATION =
             "com.android.car.watchdog.ACTION_DISMISS_RESOURCE_OVERUSE_NOTIFICATION";
+    // TODO(b/244474850): Delete the intent in W release. After TM-QPR2, it is not used anymore by
+    //  the notification helper.
+    /**
+     * @deprecated - Prefer dismissing resource over notifications using the
+     * {@code ACTION_DISMISS_RESOURCE_OVERUSE_NOTIFICATION} intent action.
+     */
+    @Deprecated
     static final String ACTION_RESOURCE_OVERUSE_DISABLE_APP =
             "com.android.car.watchdog.ACTION_RESOURCE_OVERUSE_DISABLE_APP";
 
@@ -220,6 +231,8 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
                     // Watchdog service and daemon performs garage mode monitoring so delay writing
                     // to database until after shutdown enter.
                     mWatchdogPerfHandler.writeToDatabase();
+                    break;
+                case PowerCycle.POWER_CYCLE_SUSPEND_EXIT:
                     break;
                 // ON covers resume.
                 case PowerCycle.POWER_CYCLE_RESUME:
@@ -583,8 +596,8 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
     }
 
     private void notifyPowerCycleChange(@PowerCycle int powerCycle) {
-        if (powerCycle == PowerCycle.NUM_POWER_CYLES) {
-            Slogf.e(TAG, "Skipping notifying invalid power cycle (%d)", powerCycle);
+        if (!Car.getPlatformVersion().isAtLeast(VERSION_CODES.TIRAMISU_2)
+                && powerCycle == PowerCycle.POWER_CYCLE_SUSPEND_EXIT) {
             return;
         }
         try {
@@ -645,7 +658,7 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
         if (powerService != null) {
             int powerState = powerService.getPowerState();
             int powerCycle = carPowerStateToPowerCycle(powerState);
-            if (powerCycle != PowerCycle.NUM_POWER_CYLES) {
+            if (powerCycle >= 0) {
                 notifyPowerCycleChange(powerCycle);
             } else {
                 Slogf.i(TAG, "Skipping notifying %d power state", powerState);
@@ -705,12 +718,21 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
             Slogf.w(TAG, "Cannot get CarUserService");
             return;
         }
-        UserLifecycleEventFilter userStartingOrStoppedEventFilter =
+        UserLifecycleEventFilter userEventFilter =
                 new UserLifecycleEventFilter.Builder()
                         .addEventType(USER_LIFECYCLE_EVENT_TYPE_STARTING)
+                        .addEventType(USER_LIFECYCLE_EVENT_TYPE_SWITCHING)
+                        .addEventType(USER_LIFECYCLE_EVENT_TYPE_UNLOCKING)
+                        .addEventType(USER_LIFECYCLE_EVENT_TYPE_POST_UNLOCKED)
                         .addEventType(USER_LIFECYCLE_EVENT_TYPE_STOPPED).build();
-        userService.addUserLifecycleListener(userStartingOrStoppedEventFilter, (event) -> {
+        userService.addUserLifecycleListener(userEventFilter, (event) -> {
             if (!isEventAnyOfTypes(TAG, event, USER_LIFECYCLE_EVENT_TYPE_STARTING,
+                    USER_LIFECYCLE_EVENT_TYPE_SWITCHING, USER_LIFECYCLE_EVENT_TYPE_UNLOCKING,
+                    USER_LIFECYCLE_EVENT_TYPE_POST_UNLOCKED, USER_LIFECYCLE_EVENT_TYPE_STOPPED)) {
+                return;
+            }
+            if (!Car.getPlatformVersion().isAtLeast(VERSION_CODES.TIRAMISU_1)
+                    && !isEventAnyOfTypes(TAG, event, USER_LIFECYCLE_EVENT_TYPE_STARTING,
                     USER_LIFECYCLE_EVENT_TYPE_STOPPED)) {
                 return;
             }
@@ -723,6 +745,18 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
                     mWatchdogProcessHandler.updateUserState(userId, /*isStopped=*/ false);
                     userState = UserState.USER_STATE_STARTED;
                     userStateDesc = "STARTING";
+                    break;
+                case USER_LIFECYCLE_EVENT_TYPE_SWITCHING:
+                    userState = UserState.USER_STATE_SWITCHING;
+                    userStateDesc = "SWITCHING";
+                    break;
+                case USER_LIFECYCLE_EVENT_TYPE_UNLOCKING:
+                    userState = UserState.USER_STATE_UNLOCKING;
+                    userStateDesc = "UNLOCKING";
+                    break;
+                case USER_LIFECYCLE_EVENT_TYPE_POST_UNLOCKED:
+                    userState = UserState.USER_STATE_POST_UNLOCKED;
+                    userStateDesc = "POST_UNLOCKED";
                     break;
                 case USER_LIFECYCLE_EVENT_TYPE_STOPPED:
                     mWatchdogProcessHandler.updateUserState(userId, /*isStopped=*/ true);
@@ -774,7 +808,7 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
                 Context.RECEIVER_NOT_EXPORTED);
     }
 
-    private static @PowerCycle int carPowerStateToPowerCycle(int powerState) {
+    private static int carPowerStateToPowerCycle(int powerState) {
         switch (powerState) {
             // SHUTDOWN_PREPARE covers suspend and shutdown.
             case CarPowerManager.STATE_SHUTDOWN_PREPARE:
@@ -783,11 +817,14 @@ public final class CarWatchdogService extends ICarWatchdogService.Stub implement
             case CarPowerManager.STATE_SUSPEND_ENTER:
             case CarPowerManager.STATE_HIBERNATION_ENTER:
                 return PowerCycle.POWER_CYCLE_SHUTDOWN_ENTER;
+            case CarPowerManager.STATE_SUSPEND_EXIT:
+            case CarPowerManager.STATE_HIBERNATION_EXIT:
+                return PowerCycle.POWER_CYCLE_SUSPEND_EXIT;
             // ON covers resume.
             case CarPowerManager.STATE_ON:
                 return PowerCycle.POWER_CYCLE_RESUME;
         }
-        return PowerCycle.NUM_POWER_CYLES;
+        return -1;
     }
 
     private static String toGarageModeString(@GarageMode int garageMode) {

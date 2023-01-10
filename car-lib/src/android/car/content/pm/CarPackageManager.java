@@ -28,10 +28,10 @@ import android.annotation.TestApi;
 import android.annotation.UserIdInt;
 import android.app.PendingIntent;
 import android.car.Car;
-import android.car.CarApiVersion;
 import android.car.CarManagerBase;
-import android.car.annotation.AddedIn;
+import android.car.CarVersion;
 import android.car.annotation.AddedInOrBefore;
+import android.car.annotation.ApiRequirements;
 import android.content.ComponentName;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.IBinder;
@@ -177,22 +177,20 @@ public final class CarPackageManager extends CarManagerBase {
      * <p>Format is in the form {@code major:minor} or {@code major}.
      *
      * <p>For example, for {@link Build.VERSION_CODES#TIRAMISU Android 13}, it would be:
-     * <code><meta-data android:name="android.car.targetCarApiVersion" android:value="33"/></code>
+     * <code><meta-data android:name="android.car.targetCarVersion" android:value="33"/></code>
      *
      * <p>Or:
      *
-     * <code><meta-data android:name="android.car.targetCarApiVersion" android:value="33:0"/></code>
+     * <code><meta-data android:name="android.car.targetCarVersion" android:value="33:0"/></code>
      *
      * <p>And for {@link Build.VERSION_CODES#TIRAMISU Android 13} first update:
      *
-     * <code><meta-data android:name="android.car.targetCarApiVersion" android:value="33:1"/></code>
-     *
-     * @hide
+     * <code><meta-data android:name="android.car.targetCarVersion" android:value="33:1"/></code>
      */
-    @AddedIn(majorVersion = 33, minorVersion = 1)
-    @SystemApi
-    public static final String MANIFEST_METADATA_TARGET_CAR_API_VERSION =
-            "android.car.targetCarApiVersion";
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
+             minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
+    public static final String MANIFEST_METADATA_TARGET_CAR_VERSION =
+            "android.car.targetCarVersion";
 
 
     /** @hide */
@@ -472,32 +470,33 @@ public final class CarPackageManager extends CarManagerBase {
 
     /**
      * Gets the Car API version targeted by the given package (as defined by
-     * {@link #MANIFEST_METADATA_TARGET_CAR_API_VERSION}.
+     * {@link #MANIFEST_METADATA_TARGET_CAR_VERSION}.
      *
-     * <p>If the app manifest doesn't contain the {@link #MANIFEST_METADATA_TARGET_CAR_API_VERSION}
-     * metadata attribute, the attribute format is invalid, the returned {@code CarApiVersion} will
-     * be using the
+     * <p>If the app manifest doesn't contain the {@link #MANIFEST_METADATA_TARGET_CAR_VERSION}
+     * metadata attribute or if the attribute format is invalid, the returned {@code CarVersion}
+     * will be using the
      * {@link android.content.pm.ApplicationInfo#targetSdkVersion target platform version} as major
      * and {@code 0} as minor instead.
      *
-     * <p><b>Note: </b>to get the target {@link CarApiVersion} for your own app, use
-     * {@link #getTargetCarApiVersion()} instead.
+     * <p><b>Note: </b>to get the target {@link CarVersion} for your own app, use
+     * {@link #getTargetCarVersion()} instead.
      * @return Car API version targeted by the given package (as described above).
      *
      * @throws NameNotFoundException If the given package does not exist for the user.
      *
      * @hide
      */
-    @AddedIn(majorVersion = 33, minorVersion = 1)
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
+             minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     @SystemApi
     @RequiresPermission(Manifest.permission.QUERY_ALL_PACKAGES)
     @NonNull
-    public CarApiVersion getTargetCarApiVersion(@NonNull String packageName)
+    public CarVersion getTargetCarVersion(@NonNull String packageName)
             throws NameNotFoundException {
         try {
-            return mService.getTargetCarApiVersion(packageName);
+            return mService.getTargetCarVersion(packageName);
         } catch (ServiceSpecificException e) {
-            Log.w(TAG, "Failed to get CarApiVersion for " + packageName, e);
+            Log.w(TAG, "Failed to get CarVersion for " + packageName, e);
             handleServiceSpecificFromCarService(e, packageName);
         } catch (RemoteException e) {
             e.rethrowFromSystemServer();
@@ -507,23 +506,24 @@ public final class CarPackageManager extends CarManagerBase {
 
     /**
      * Gets the Car API version targeted by app (as defined by
-     * {@link #MANIFEST_METADATA_TARGET_CAR_API_VERSION}.
+     * {@link #MANIFEST_METADATA_TARGET_CAR_VERSION}.
      *
-     * <p>If the app manifest doesn't contain the {@link #MANIFEST_METADATA_TARGET_CAR_API_VERSION}
-     * metadata attribute, the attribute format is invalid, the returned {@code CarApiVersion} will
-     * be using the {@link android.content.pm.ApplicationInfo#targetSdkVersion target platform
+     * <p>If the app manifest doesn't contain the {@link #MANIFEST_METADATA_TARGET_CAR_VERSION}
+     * metadata attribute or if the attribute format is invalid, the returned {@code CarVersion}
+     * will be using the {@link android.content.pm.ApplicationInfo#targetSdkVersion target platform
      * version} as major and {@code 0} as minor instead.
      *
      * @return targeted Car API version (as defined above)
      */
-    @AddedIn(majorVersion = 33, minorVersion = 1)
+    @ApiRequirements(minCarVersion = ApiRequirements.CarVersion.TIRAMISU_1,
+             minPlatformVersion = ApiRequirements.PlatformVersion.TIRAMISU_0)
     @NonNull
-    public CarApiVersion getTargetCarApiVersion() {
+    public CarVersion getTargetCarVersion() {
         String pkgName = mCar.getContext().getPackageName();
         try {
-            return mService.getSelfTargetCarApiVersion(pkgName);
+            return mService.getSelfTargetCarVersion(pkgName);
         } catch (RemoteException e) {
-            Log.w(TAG_CAR, "Car service threw exception calling getTargetCarApiVersion(" + pkgName
+            Log.w(TAG_CAR, "Car service threw exception calling getTargetCarVersion(" + pkgName
                     + ")", e);
             e.rethrowFromSystemServer();
             return null;

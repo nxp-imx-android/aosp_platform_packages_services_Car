@@ -26,6 +26,9 @@ import static android.car.test.mocks.AndroidMockitoHelper.mockUmGetUserHandles;
 import static android.car.test.mocks.AndroidMockitoHelper.mockUmIsUserRunning;
 import static android.car.test.util.AndroidHelper.assertFilterHasActions;
 import static android.car.test.util.AndroidHelper.assertFilterHasDataScheme;
+import static android.car.user.CarUserManager.USER_LIFECYCLE_EVENT_TYPE_POST_UNLOCKED;
+import static android.car.user.CarUserManager.USER_LIFECYCLE_EVENT_TYPE_SWITCHING;
+import static android.car.user.CarUserManager.USER_LIFECYCLE_EVENT_TYPE_UNLOCKING;
 import static android.car.watchdog.CarWatchdogManager.TIMEOUT_CRITICAL;
 import static android.content.Intent.ACTION_PACKAGE_CHANGED;
 import static android.content.Intent.ACTION_USER_REMOVED;
@@ -115,6 +118,7 @@ import android.car.hardware.power.ICarPowerPolicyListener;
 import android.car.hardware.power.ICarPowerStateListener;
 import android.car.hardware.power.PowerComponent;
 import android.car.test.mocks.AbstractExtendedMockitoTestCase;
+import android.car.user.CarUserManager;
 import android.car.watchdog.CarWatchdogManager;
 import android.car.watchdog.ICarWatchdogServiceCallback;
 import android.car.watchdog.IResourceOveruseListener;
@@ -160,6 +164,7 @@ import com.android.car.CarUxRestrictionsManagerService;
 import com.android.car.admin.NotificationHelper;
 import com.android.car.power.CarPowerManagementService;
 import com.android.car.systeminterface.SystemInterface;
+import com.android.car.user.CarUserService;
 import com.android.car.util.Utils;
 
 import com.google.common.truth.Correspondence;
@@ -216,6 +221,7 @@ public final class CarWatchdogServiceUnitTest extends AbstractExtendedMockitoTes
     @Mock private UserManager mMockUserManager;
     @Mock private SystemInterface mMockSystemInterface;
     @Mock private CarPowerManagementService mMockCarPowerManagementService;
+    @Mock private CarUserService mMockCarUserService;
     @Mock private CarUxRestrictionsManagerService mMockCarUxRestrictionsManagerService;
     @Mock private Resources mMockResources;
     @Mock private IBinder mMockBinder;
@@ -228,6 +234,8 @@ public final class CarWatchdogServiceUnitTest extends AbstractExtendedMockitoTes
     @Captor private ArgumentCaptor<IntentFilter> mIntentFilterCaptor;
     @Captor private ArgumentCaptor<ICarUxRestrictionsChangeListener>
             mICarUxRestrictionsChangeListener;
+    @Captor private ArgumentCaptor<CarUserManager.UserLifecycleListener>
+            mUserLifecycleListenerCaptor;
     @Captor private ArgumentCaptor<IBinder.DeathRecipient> mDeathRecipientCaptor;
     @Captor private ArgumentCaptor<ICarWatchdogServiceForSystem>
             mICarWatchdogServiceForSystemCaptor;
@@ -257,6 +265,7 @@ public final class CarWatchdogServiceUnitTest extends AbstractExtendedMockitoTes
     private boolean mIsDaemonCrashed;
     private ICarPowerStateListener mCarPowerStateListener;
     private ICarPowerPolicyListener mCarPowerPolicyListener;
+    private CarUserManager.UserLifecycleListener mUserLifecycleListener;
     private ICarUxRestrictionsChangeListener mCarUxRestrictionsChangeListener;
     private StatsPullAtomCallback mStatsPullAtomCallback;
     private File mTempSystemCarDir;
@@ -322,6 +331,8 @@ public final class CarWatchdogServiceUnitTest extends AbstractExtendedMockitoTes
                 .when(() -> CarLocalServices.getService(SystemInterface.class));
         doReturn(mMockCarPowerManagementService)
                 .when(() -> CarLocalServices.getService(CarPowerManagementService.class));
+        doReturn(mMockCarUserService)
+                .when(() -> CarLocalServices.getService(CarUserService.class));
         doReturn(mMockCarUxRestrictionsManagerService)
                 .when(() -> CarLocalServices.getService(CarUxRestrictionsManagerService.class));
         doReturn(mSpiedPackageManager).when(() -> ActivityThread.getPackageManager());
@@ -424,6 +435,9 @@ public final class CarWatchdogServiceUnitTest extends AbstractExtendedMockitoTes
         testClientHealthCheck(new BadTestClient(), 1);
     }
 
+    // TODO(b/262301082): Add a unit test to verify the race condition that caused watchdog to
+    //  incorrectly terminate clients that were recently unregistered - b/261766872.
+
     @Test
     public void testGarageModeStateChangeToOn() throws Exception {
         mBroadcastReceiver.onReceive(mMockContext,
@@ -468,6 +482,25 @@ public final class CarWatchdogServiceUnitTest extends AbstractExtendedMockitoTes
     }
 
     @Test
+    public void testUserSwitchingLifecycleEvents() throws Exception {
+        mUserLifecycleListener.onEvent(
+                new CarUserManager.UserLifecycleEvent(
+                        USER_LIFECYCLE_EVENT_TYPE_SWITCHING, 100, 101));
+        mUserLifecycleListener.onEvent(
+                new CarUserManager.UserLifecycleEvent(USER_LIFECYCLE_EVENT_TYPE_UNLOCKING, 101));
+        mUserLifecycleListener.onEvent(
+                new CarUserManager.UserLifecycleEvent(
+                        USER_LIFECYCLE_EVENT_TYPE_POST_UNLOCKED, 101));
+
+        verify(mMockCarWatchdogDaemon).notifySystemStateChange(StateType.USER_STATE, 101,
+                UserState.USER_STATE_SWITCHING);
+        verify(mMockCarWatchdogDaemon).notifySystemStateChange(StateType.USER_STATE, 101,
+                UserState.USER_STATE_UNLOCKING);
+        verify(mMockCarWatchdogDaemon).notifySystemStateChange(StateType.USER_STATE, 101,
+                UserState.USER_STATE_POST_UNLOCKED);
+    }
+
+    @Test
     public void testUserRemovedBroadcast() throws Exception {
         mockUmGetUserHandles(mMockUserManager, /* excludeDying= */ true, 101, 102);
         mBroadcastReceiver.onReceive(mMockContext,
@@ -476,6 +509,34 @@ public final class CarWatchdogServiceUnitTest extends AbstractExtendedMockitoTes
         verify(mMockCarWatchdogDaemon).notifySystemStateChange(StateType.USER_STATE, 100,
                 UserState.USER_STATE_REMOVED);
         verify(mSpiedWatchdogStorage).syncUsers(new int[] {101, 102});
+    }
+
+    @Test
+    public void testPowerCycleStateChangesDuringSuspend() throws Exception {
+        setCarPowerState(CarPowerManager.STATE_SUSPEND_ENTER);
+        setCarPowerState(CarPowerManager.STATE_SUSPEND_EXIT);
+        setCarPowerState(CarPowerManager.STATE_ON);
+
+        verify(mMockCarWatchdogDaemon).notifySystemStateChange(StateType.POWER_CYCLE,
+                PowerCycle.POWER_CYCLE_SHUTDOWN_ENTER, MISSING_ARG_VALUE);
+        verify(mMockCarWatchdogDaemon).notifySystemStateChange(StateType.POWER_CYCLE,
+                PowerCycle.POWER_CYCLE_SUSPEND_EXIT, MISSING_ARG_VALUE);
+        verify(mMockCarWatchdogDaemon).notifySystemStateChange(StateType.POWER_CYCLE,
+                PowerCycle.POWER_CYCLE_RESUME, MISSING_ARG_VALUE);
+    }
+
+    @Test
+    public void testPowerCycleStateChangesDuringHibernation() throws Exception {
+        setCarPowerState(CarPowerManager.STATE_HIBERNATION_ENTER);
+        setCarPowerState(CarPowerManager.STATE_HIBERNATION_EXIT);
+        setCarPowerState(CarPowerManager.STATE_ON);
+
+        verify(mMockCarWatchdogDaemon).notifySystemStateChange(StateType.POWER_CYCLE,
+                PowerCycle.POWER_CYCLE_SHUTDOWN_ENTER, MISSING_ARG_VALUE);
+        verify(mMockCarWatchdogDaemon).notifySystemStateChange(StateType.POWER_CYCLE,
+                PowerCycle.POWER_CYCLE_SUSPEND_EXIT, MISSING_ARG_VALUE);
+        verify(mMockCarWatchdogDaemon).notifySystemStateChange(StateType.POWER_CYCLE,
+                PowerCycle.POWER_CYCLE_RESUME, MISSING_ARG_VALUE);
     }
 
     @Test
@@ -4003,6 +4064,7 @@ public final class CarWatchdogServiceUnitTest extends AbstractExtendedMockitoTes
         mCarWatchdogService.init();
         captureCarPowerListeners(wantedInvocations);
         captureBroadcastReceiver(wantedInvocations);
+        captureUserLifecycleListener(wantedInvocations);
         captureCarUxRestrictionsChangeListener(wantedInvocations);
         captureAndVerifyRegistrationWithDaemon(/* waitOnMain= */ true);
         verifyDatabaseInit(wantedInvocations);
@@ -4056,6 +4118,13 @@ public final class CarWatchdogServiceUnitTest extends AbstractExtendedMockitoTes
         filter = filters.get(totalFilters - 1);
         assertFilterHasActions(filter, ACTION_PACKAGE_CHANGED);
         assertFilterHasDataScheme(filter, /* dataScheme= */ "package");
+    }
+
+    private void captureUserLifecycleListener(int wantedInvocations) {
+        verify(mMockCarUserService, times(wantedInvocations)).addUserLifecycleListener(any(),
+                mUserLifecycleListenerCaptor.capture());
+        mUserLifecycleListener = mUserLifecycleListenerCaptor.getValue();
+        assertWithMessage("User lifecycle listener").that(mUserLifecycleListener).isNotNull();
     }
 
     private void captureCarUxRestrictionsChangeListener(int wantedInvocations) {
@@ -4499,11 +4568,7 @@ public final class CarWatchdogServiceUnitTest extends AbstractExtendedMockitoTes
             int userId = userIds[i];
             UserHandle userHandle = UserHandle.of(userId);
 
-            mBroadcastReceiver
-                    .onReceive(mMockContext, new Intent(ACTION_RESOURCE_OVERUSE_DISABLE_APP)
-                    .putExtra(Intent.EXTRA_PACKAGE_NAME, packageName)
-                    .putExtra(Intent.EXTRA_USER, userHandle)
-                    .putExtra(INTENT_EXTRA_NOTIFICATION_ID, RESOURCE_OVERUSE_NOTIFICATION_BASE_ID));
+            mCarWatchdogService.performResourceOveruseKill(packageName, userId);
 
             verify(mSpiedPackageManager, atLeastOnce())
                     .getApplicationEnabledSetting(packageName, userId);

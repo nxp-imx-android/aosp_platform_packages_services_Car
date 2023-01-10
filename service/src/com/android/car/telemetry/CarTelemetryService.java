@@ -58,6 +58,7 @@ import com.android.car.CarServiceUtils;
 import com.android.car.OnShutdownReboot;
 import com.android.car.internal.ExcludeFromCodeCoverageGeneratedReport;
 import com.android.car.internal.util.IndentingPrintWriter;
+import com.android.car.power.CarPowerManagementService;
 import com.android.car.systeminterface.SystemInterface;
 import com.android.car.telemetry.MetricsReportProto.MetricsReportContainer;
 import com.android.car.telemetry.MetricsReportProto.MetricsReportList;
@@ -78,7 +79,6 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -107,6 +107,7 @@ public class CarTelemetryService extends ICarTelemetryService.Stub implements Ca
     public static final int TASK_PRIORITY_LOW = 100;
 
     private final Context mContext;
+    private final CarPowerManagementService mCarPowerManagementService;
     private final CarPropertyService mCarPropertyService;
     private final Dependencies mDependencies;
     private final HandlerThread mTelemetryThread = CarServiceUtils.getHandlerThread(
@@ -195,18 +196,24 @@ public class CarTelemetryService extends ICarTelemetryService.Stub implements Ca
         }
     }
 
-    public CarTelemetryService(Context context, CarPropertyService carPropertyService) {
-        this(context, carPropertyService, new Dependencies(), null, null);
+    public CarTelemetryService(
+            Context context,
+            CarPowerManagementService carPowerManagementService,
+            CarPropertyService carPropertyService) {
+        this(context, carPowerManagementService, carPropertyService, new Dependencies(),
+                /* dataBroker = */ null, /* sessionController = */ null);
     }
 
     @VisibleForTesting
     CarTelemetryService(
             Context context,
+            CarPowerManagementService carPowerManagementService,
             CarPropertyService carPropertyService,
             Dependencies deps,
             DataBroker dataBroker,
             SessionController sessionController) {
         mContext = context;
+        mCarPowerManagementService = carPowerManagementService;
         mCarPropertyService = carPropertyService;
         mDependencies = deps;
         mUidMapper = mDependencies.getUidPackageMapper(mContext, mTelemetryHandler);
@@ -221,9 +228,8 @@ public class CarTelemetryService extends ICarTelemetryService.Stub implements Ca
                     CarLog.TAG_TELEMETRY, TraceHelper.TRACE_TAG_CAR_SERVICE);
             mTelemetryThreadTraceLog.traceBegin("init");
             SystemInterface systemInterface = CarLocalServices.getService(SystemInterface.class);
-            // starts metrics collection after boot complete
-            systemInterface.scheduleActionForBootCompleted(
-                    this::startMetricsCollection, Duration.ZERO);
+            // starts metrics collection after CarService initializes.
+            CarServiceUtils.runOnMain(this::startMetricsCollection);
             // full root directory path is /data/system/car/telemetry
             File rootDirectory = new File(systemInterface.getSystemCarDir(), TELEMETRY_DIR);
             // initialize all necessary components
@@ -231,7 +237,8 @@ public class CarTelemetryService extends ICarTelemetryService.Stub implements Ca
             mMetricsConfigStore = new MetricsConfigStore(rootDirectory);
             mResultStore = new ResultStore(mContext, rootDirectory);
             if (mSessionController == null) {
-                mSessionController = new SessionController(mContext, mTelemetryHandler);
+                mSessionController = new SessionController(
+                        mCarPowerManagementService, mTelemetryHandler);
             }
             mPublisherFactory = mDependencies.getPublisherFactory(mCarPropertyService,
                     mTelemetryHandler, mContext, mSessionController, mResultStore, mUidMapper);
@@ -265,7 +272,7 @@ public class CarTelemetryService extends ICarTelemetryService.Stub implements Ca
             mUidMapper.release();
             mTelemetryThreadTraceLog.traceEnd();
         });
-        mTelemetryThread.quitSafely();
+        CarServiceUtils.runOnLooperSync(mTelemetryThread.getLooper(), () -> {});
     }
 
     @Override
