@@ -16,12 +16,27 @@
 
 #include "EvsServiceContext.h"
 
+#include <android-base/chrono_utils.h>
 #include <android-base/logging.h>
+#include <android/hardware_buffer.h>
+#include <android_runtime/android_hardware_HardwareBuffer.h>
 #include <nativehelper/JNIHelp.h>
+#include <ui/GraphicBuffer.h>
+#include <utils/Errors.h>
+#include <utils/Mutex.h>
+#include <utils/StrongPointer.h>
+#include <vndk/hardware_buffer.h>
 
 #include <jni.h>
 
+#include <map>
+
+using ::android::GraphicBuffer;
+using ::android::Mutex;
+using ::android::sp;
 using ::android::automotive::evs::EvsServiceContext;
+
+using namespace ::android::hardware::automotive::evs::V1_1;
 
 namespace {
 
