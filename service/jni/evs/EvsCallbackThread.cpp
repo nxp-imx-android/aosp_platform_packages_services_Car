@@ -18,13 +18,9 @@
 
 #include <android-base/logging.h>
 
-namespace {
-
-constexpr const char kCallbackThreadName[] = "EvsCallbackThread";
-
-}  // namespace
-
-namespace android::automotive::evs {
+namespace android {
+namespace automotive {
+namespace evs {
 
 EvsCallbackThread::EvsCallbackThread(JavaVM* vm) :
       mVm(vm), mRunning(true), mThread(&EvsCallbackThread::threadLoop, this) {
@@ -39,7 +35,7 @@ EvsCallbackThread::~EvsCallbackThread() {
 void EvsCallbackThread::threadLoop() {
     // Attaches the current thread to the Java VM.
     JNIEnv* env = nullptr;
-    JavaVMAttachArgs args = {JNI_VERSION_1_4, kCallbackThreadName, nullptr};
+    JavaVMAttachArgs args = {JNI_VERSION_1_4, "EvsCallbackThread", nullptr};
     if (mVm->AttachCurrentThread(&env, &args) != JNI_OK || env == nullptr) {
         LOG(ERROR) << "Failed to be attached to the VM.";
         mRunning = false;
@@ -123,4 +119,6 @@ void EvsCallbackThread::stop() {
     }
 }
 
-}  // namespace android::automotive::evs
+}  // namespace evs
+}  // namespace automotive
+}  // namespace android

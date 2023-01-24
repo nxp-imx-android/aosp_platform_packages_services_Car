@@ -16,10 +16,12 @@
 #ifndef ANDROID_CARSERVICE_EVSSERVICECALLBACK_H
 #define ANDROID_CARSERVICE_EVSSERVICECALLBACK_H
 
-#include <aidl/android/hardware/automotive/evs/BufferDesc.h>
-#include <aidl/android/hardware/automotive/evs/EvsEventDesc.h>
+#include <android/hardware/automotive/evs/1.1/types.h>
+#include <hidl/HidlTransportSupport.h>
 
-namespace android::automotive::evs {
+namespace android {
+namespace automotive {
+namespace evs {
 
 /*
  * This abstract class defines callback methods to listen to the native Extended
@@ -30,12 +32,17 @@ public:
     virtual ~EvsServiceCallback(){};
 
     // Called upon the arrival of the new stream event.
-    virtual void onNewEvent(const ::aidl::android::hardware::automotive::evs::EvsEventDesc&) = 0;
+    virtual void onNewEvent(hardware::automotive::evs::V1_1::EvsEventDesc) = 0;
 
     // Called upon the arrival of the new frame.
-    virtual bool onNewFrame(const ::aidl::android::hardware::automotive::evs::BufferDesc&) = 0;
+    virtual void onNewFrame(hardware::automotive::evs::V1_1::BufferDesc) = 0;
+
+    // Called upon the death of the native Extended View System service.
+    virtual void onServiceDied(const wp<hidl::base::V1_0::IBase>&) = 0;
 };
 
-}  // namespace android::automotive::evs
+}  // namespace evs
+}  // namespace automotive
+}  // namespace android
 
 #endif  // ANDROID_CARSERVICE_EVSSERVICECALLBACK_H
