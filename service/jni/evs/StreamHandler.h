@@ -13,22 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef SERVICE_JNI_EVS_STREAMHANDLER_H_
-#define SERVICE_JNI_EVS_STREAMHANDLER_H_
+#ifndef ANDROID_CARSERVICE_STREAMHANDLER_H
+#define ANDROID_CARSERVICE_STREAMHANDLER_H
 
 #include "EvsServiceCallback.h"
 
-#include <aidl/android/hardware/automotive/evs/BnEvsCameraStream.h>
-#include <aidl/android/hardware/automotive/evs/BufferDesc.h>
-#include <aidl/android/hardware/automotive/evs/EvsEventDesc.h>
-#include <aidl/android/hardware/automotive/evs/IEvsCamera.h>
-#include <aidl/android/hardware/graphics/common/HardwareBuffer.h>
-#include <android-base/thread_annotations.h>
-#include <android/binder_auto_utils.h>
+#include <android/hardware/automotive/evs/1.1/IEvsCamera.h>
+#include <android/hardware/automotive/evs/1.1/IEvsCameraStream.h>
+#include <android/hardware/automotive/evs/1.1/IEvsDisplay.h>
+#include <ui/GraphicBuffer.h>
 
 #include <list>
 
-namespace android::automotive::evs {
+namespace android {
+namespace automotive {
+namespace evs {
 
 /*
  * StreamHandler:
@@ -37,46 +36,50 @@ namespace android::automotive::evs {
  * Note that the video frames are delivered on a background thread, while the control interface
  * is actuated from the applications foreground thread.
  */
-class StreamHandler final : public ::aidl::android::hardware::automotive::evs::BnEvsCameraStream {
+class StreamHandler : public android::hardware::automotive::evs::V1_1::IEvsCameraStream {
 public:
-    StreamHandler(
-            const std::shared_ptr<::aidl::android::hardware::automotive::evs::IEvsCamera>& camObj,
-            EvsServiceCallback* callback, int maxNumFramesInFlight);
+    StreamHandler(android::sp<android::hardware::automotive::evs::V1_1::IEvsCamera>& pCamera,
+                  EvsServiceCallback* callback, int maxNumFramesInFlight);
     virtual ~StreamHandler();
     void shutdown();
     bool startStream();
     bool asyncStopStream();
     void blockingStopStream();
     bool isRunning();
-    void doneWithFrame(const ::aidl::android::hardware::automotive::evs::BufferDesc& buffer);
-    void doneWithFrame(int bufferId);
+    void doneWithFrame(const android::hardware::automotive::evs::V1_1::BufferDesc& buffer);
 
 private:
-    // Implementation for ::aidl::android::hardware::automotive::evs::IEvsCameraStream
-    ::ndk::ScopedAStatus deliverFrame(
-            const std::vector<::aidl::android::hardware::automotive::evs::BufferDesc>& buffer)
-            override;
-    ::ndk::ScopedAStatus notify(
-            const ::aidl::android::hardware::automotive::evs::EvsEventDesc& event) override;
+    // Implementation for ::android::hardware::automotive::evs::V1_0::IEvsCameraStream
+    android::hardware::Return<void> deliverFrame(
+            const android::hardware::automotive::evs::V1_0::BufferDesc& buffer) override;
+
+    // Implementation for ::android::hardware::automotive::evs::V1_1::IEvsCameraStream
+    android::hardware::Return<void> deliverFrame_1_1(
+            const android::hardware::hidl_vec<android::hardware::automotive::evs::V1_1::BufferDesc>&
+                    buffer) override;
+    android::hardware::Return<void> notify(
+            const android::hardware::automotive::evs::V1_1::EvsEventDesc& event) override;
 
     // Values initialized as startup
-    std::shared_ptr<::aidl::android::hardware::automotive::evs::IEvsCamera> mEvsCamera;
+    android::sp<android::hardware::automotive::evs::V1_1::IEvsCamera> mEvsCamera;
 
     // Since we get frames delivered to us asnchronously via the ICarCameraStream interface,
     // we need to protect all member variables that may be modified while we're streaming
     // (ie: those below)
     std::mutex mLock;
     std::condition_variable mCondition;
-    bool mRunning GUARDED_BY(mLock) = false;
+    bool mRunning = false;
 
     // Callbacks to forward EVS events and frames
     EvsServiceCallback* mCallback;
 
-    std::list<::aidl::android::hardware::automotive::evs::BufferDesc> mReceivedBuffers
+    std::list<android::hardware::automotive::evs::V1_1::BufferDesc> mReceivedBuffers
             GUARDED_BY(mLock);
     int mMaxNumFramesInFlight;
 };
 
-}  // namespace android::automotive::evs
+}  // namespace evs
+}  // namespace automotive
+}  // namespace android
 
-#endif  // SERVICE_JNI_EVS_STREAMHANDLER_H_
+#endif  // ANDROID_CARSERVICE_STREAMHANDLER_H
