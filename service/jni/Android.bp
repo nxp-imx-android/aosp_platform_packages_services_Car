@@ -26,22 +26,18 @@ cc_library_shared {
     ],
 
     shared_libs: [
-        "android.hardware.automotive.evs-V1-ndk",
-        "android.hardware.common-V2-ndk",
-        "android.hardware.graphics.common-V3-ndk",
-        "libandroid",
+        "android.hardware.automotive.evs@1.0",
+        "android.hardware.automotive.evs@1.1",
+        "libandroid_runtime",
         "libbase",
-        "libbinder_ndk",
+        "libbinder",
+        "libhardware",
+        "libhidlbase",
         "liblog",
         "libnativehelper",
         "libnativewindow",
+        "libui",
         "libutils",
-    ],
-
-    min_sdk_version: "31",
-    apex_available: [
-        "//apex_available:platform",
-        "com.android.car.framework"
     ],
 
     strip: {
