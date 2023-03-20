@@ -160,6 +160,12 @@ PRODUCT_PACKAGES += \
     com.android.car.procfsinspector \
     com.android.permission \
 
+ifeq ($(PRODUCT_IMX_CAR),true)
+else
+PRODUCT_PACKAGES += \
+    CarMapsPlaceholder
+endif
+
 # RROs
 PRODUCT_PACKAGES += \
     CarPermissionControllerRRO \
